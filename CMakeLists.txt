@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(WizardRoguelike)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+link_directories(${SDL2_LIBRARY_DIRS})
+
+find_package(SDL2_ttf REQUIRED)
+include_directories(${SDL2_TTF_INCLUDE_DIRS})
+link_directories(${SDL2_TTF_LIBRARY_DIRS})
+
+find_package(SDL2_image REQUIRED)
+include_directories(${SDL2_IMAGE_INCLUDE_DIRS})
+link_directories(${SDL2_IMAGE_LIBRARY_DIRS})
+
+add_executable(WizardRoguelike src/main.cpp)
+target_link_libraries(WizardRoguelike ${SDL2_LIBRARIES} SDL2::SDL2main ${SDL2_TTF_LIBRARIES} SDL2_ttf SDL2_image) # Try linking with just 'SDL2_image'
