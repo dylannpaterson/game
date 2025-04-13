@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+#All game assets
+/assets/*
+
+#Any other files related to compilation and build
+/build/*
