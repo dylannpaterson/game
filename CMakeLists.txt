@@ -17,5 +17,17 @@ find_package(SDL2_image REQUIRED)
 include_directories(${SDL2_IMAGE_INCLUDE_DIRS})
 link_directories(${SDL2_IMAGE_LIBRARY_DIRS})
 
-add_executable(WizardRoguelike src/main.cpp)
-target_link_libraries(WizardRoguelike ${SDL2_LIBRARIES} SDL2::SDL2main ${SDL2_TTF_LIBRARIES} SDL2_ttf SDL2_image) # Try linking with just 'SDL2_image'
+add_executable(WizardRoguelike
+    src/main.cpp
+    src/menu.cpp
+    src/character_select.cpp
+)
+
+target_link_libraries(WizardRoguelike
+    ${SDL2_LIBRARIES}
+    SDL2::SDL2main
+    ${SDL2_TTF_LIBRARIES}
+    SDL2_ttf # While redundant with the above, sometimes necessary for clarity
+    ${SDL2_IMAGE_LIBRARIES}
+    SDL2_image # Similar to SDL2_ttf
+)
