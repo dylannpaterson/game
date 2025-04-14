@@ -5,7 +5,7 @@
 #include <string>
 
 void displayMenu(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* splashTexture, const std::vector<std::string>& menuItems, int selectedIndex, bool isPanning, int splashPanOffset, int initialPanOffset, int windowWidth, int windowHeight) {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_SetRenderDrawColor(renderer, 50, 50, 50, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
 
     if (splashTexture != nullptr) {

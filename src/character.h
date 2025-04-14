@@ -8,7 +8,11 @@ enum class CharacterType {
 
 struct PlayerCharacter {
     CharacterType type;
-    // We can add more attributes later, such as name, level, stats, etc.
+    int health;
+    int maxHealth;
+    int mana;
+    int maxMana;
+    int level;
 };
 
 #endif // CHARACTER_H

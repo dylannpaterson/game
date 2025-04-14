@@ -21,6 +21,7 @@ add_executable(WizardRoguelike
     src/main.cpp
     src/menu.cpp
     src/character_select.cpp
+    src/level.cpp
 )
 
 target_link_libraries(WizardRoguelike
