@@ -1,0 +1,3 @@
+/home/dylan/game/build-windows/CMakeFiles/WizardRoguelike.dir
+/home/dylan/game/build-windows/CMakeFiles/edit_cache.dir
+/home/dylan/game/build-windows/CMakeFiles/rebuild_cache.dir

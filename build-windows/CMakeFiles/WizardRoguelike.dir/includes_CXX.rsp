@@ -1,0 +1,1 @@
+-I"/home/dylan/game/windows_libs/SDL2-2.32.4/x86_64-w64-mingw32/include" -I"/home/dylan/game/windows_libs/SDL2-2.32.4/x86_64-w64-mingw32/include/SDL2" -I"/home/dylan/game/windows_libs/SDL2-2.32.4/include" -I"/home/dylan/game/windows_libs/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include" -I"/home/dylan/game/windows_libs/SDL2_image-2.8.8/include"

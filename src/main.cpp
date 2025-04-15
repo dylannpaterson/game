@@ -34,7 +34,7 @@ bool isWithinBounds(int x, int y, int width, int height) {
     return x >= 0 && x < width && y >= 0 && y < height;
 }
 
-void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, int playerX, int playerY, int hallwayVisibilityDistance, std::vector<std::vector<int>>& visibilityMap) {
+void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, int playerX, int playerY, int hallwayVisibilityDistance, std::vector<std::vector<float>>& visibilityMap) {
     int width = level.width;
     int height = level.height;
     int brightRadius = 7;
@@ -43,15 +43,19 @@ void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, in
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            visibilityMap[y][x] = 0;
+            visibilityMap[y][x] = 0.0f; // Initialize with float
         }
     }
 
-    auto canPass = [&](int x, int y) {
-        return isWithinBounds(x, y, width, height) && level.tiles[y][x] != '#';
+    auto isWithinBoundsFunc = [&](int x, int y, int w, int h) {
+        return x >= 0 && x < w && y >= 0 && y < h;
     };
 
-    auto castRay = [&](int startX, int startY, int endX, int endY, int visibilityLevel) {
+    auto canPass = [&](int x, int y) {
+        return isWithinBoundsFunc(x, y, width, height) && level.tiles[y][x] != '#';
+    };
+
+    auto castRay = [&](int startX, int startY, int endX, int endY, float brightness) {
         for (int offsetX = -rayThickness; offsetX <= rayThickness; ++offsetX) {
             for (int offsetY = -rayThickness; offsetY <= rayThickness; ++offsetY) {
                 int x0 = startX + offsetX;
@@ -59,7 +63,7 @@ void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, in
                 int x1 = endX;
                 int y1 = endY;
 
-                if (isWithinBounds(x0, y0, width, height) && level.tiles[y0][x0] != '#') {
+                if (isWithinBoundsFunc(x0, y0, width, height) && level.tiles[y0][x0] != '#') {
                     int dx_ray = std::abs(x1 - x0);
                     int dy_ray = std::abs(y1 - y0);
                     int sx = (x0 < x1) ? 1 : -1;
@@ -70,9 +74,9 @@ void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, in
                     bool blocked = false;
 
                     while (true) {
-                        if (isWithinBounds(currentX, currentY, width, height)) {
+                        if (isWithinBoundsFunc(currentX, currentY, width, height)) {
                             if (currentX == endX && currentY == endY) {
-                                visibilityMap[currentY][currentX] = std::max(visibilityMap[currentY][currentX], visibilityLevel);
+                                visibilityMap[currentY][currentX] = std::max(visibilityMap[currentY][currentX], brightness);
                                 return true;
                             }
                             if ((level.tiles[currentY][currentX] == '#' || level.tiles[currentY][currentX] == 'V') && (currentX != x0 || currentY != y0)) {
@@ -105,14 +109,21 @@ void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, in
             int targetX = playerX + dx;
             int targetY = playerY + dy;
 
-            if (!isWithinBounds(targetX, targetY, width, height) || level.tiles[targetY][targetX] == 'V') continue;
+            if (!isWithinBoundsFunc(targetX, targetY, width, height) || level.tiles[targetY][targetX] == 'V') continue;
 
-            int distanceSq = dx * dx + dy * dy;
-            if (distanceSq <= dimRadius * dimRadius) {
-                int visibilityLevel = (distanceSq <= brightRadius * brightRadius) ? 2 : 1;
-                if (visibilityLevel > 0) {
-                    castRay(playerX, playerY, targetX, targetY, visibilityLevel);
-                }
+            float distance = std::sqrt(dx * dx + dy * dy);
+            float brightness = 0.0f;
+
+            if (distance < brightRadius) {
+                brightness = 1.0f; // 100% bright
+            } else if (distance >= brightRadius && distance < dimRadius) {
+                // Linear falloff from 100% to 0%
+                brightness = 1.0f - (distance - brightRadius) / (dimRadius - brightRadius);
+                brightness = std::max(0.0f, std::min(1.0f, brightness)); // Ensure within 0-1
+            }
+
+            if (brightness > 0.0f) {
+                castRay(playerX, playerY, targetX, targetY, brightness);
             }
         }
     }
@@ -239,19 +250,25 @@ int main(int argc, char* argv[]) {
     int playerY = 0;
     int cameraX = 0;
     int cameraY = 0;
-    int tileWidth = 64;   // Assuming your tile size is 32x32
-    int tileHeight = 64;  // Assuming your tile size is 32x32
+    int tileWidth = 64;   // Assuming your tile size is 64x64
+    int tileHeight = 64;  // Assuming your tile size is 64x64
     int levelWidth = 120;
     int levelHeight = 75;
     int levelMaxRooms = 15;
     int levelMinRoomSize = 8;
     int levelMaxRoomSize = 15;
     int currentLevelIndex = 1; // Start with level 1
-    PlayerCharacter currentGamePlayer;
-    std::vector<std::vector<int>> visibilityMap; // Add this line
+    PlayerCharacter currentGamePlayer({CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight}); // Initialize here with tile dimensions
+    std::vector<std::vector<float>> visibilityMap; // Updated to float
     int hallwayVisibilityDistance = 5; // Adjust this value as needed
 
+    Uint32 lastFrameTime = SDL_GetTicks(); // For calculating deltaTime
+
     while (running) {
+        Uint32 currentFrameTime = SDL_GetTicks();
+        float deltaTime = static_cast<float>(currentFrameTime - lastFrameTime) / 1000.0f;
+        lastFrameTime = currentFrameTime;
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
@@ -300,40 +317,28 @@ int main(int argc, char* argv[]) {
                             running = false;
                             break;
                     }
-                } else if (gameStarted && !inCharacterSelect) { // Game input (movement already handled above)
+                } else if (gameStarted && !inCharacterSelect && !currentGamePlayer.isMoving) { // Game input (movement)
+                    int targetX = currentGamePlayer.targetTileX; // Use targetTileX
+                    int targetY = currentGamePlayer.targetTileY; // Use targetTileY
                     switch (event.key.keysym.sym) {
-                        case SDLK_UP: {
-                            int newY = playerY - 1;
-                            if (newY >= 0 && newY < currentLevel.height && currentLevel.tiles[newY][playerX] != '#') {
-                                playerY = newY;
-                                updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
-                            }
+                        case SDLK_UP:
+                            targetY--;
                             break;
-                        }
-                        case SDLK_DOWN: {
-                            int newY = playerY + 1;
-                            if (newY < currentLevel.height && currentLevel.tiles[newY][playerX] != '#') {
-                                playerY = newY;
-                                updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
-                            }
+                        case SDLK_DOWN:
+                            targetY++;
                             break;
-                        }
-                        case SDLK_LEFT: {
-                            int newX = playerX - 1;
-                            if (newX >= 0 && newX < currentLevel.width && currentLevel.tiles[playerY][newX] != '#') {
-                                playerX = newX;
-                                updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
-                            }
+                        case SDLK_LEFT:
+                            targetX--;
                             break;
-                        }
-                        case SDLK_RIGHT: {
-                            int newX = playerX + 1;
-                            if (newX < currentLevel.width && currentLevel.tiles[playerY][newX] != '#') {
-                                playerX = newX;
-                                updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
-                            }
+                        case SDLK_RIGHT:
+                            targetX++;
                             break;
-                        }
+                    }
+                    if (isWithinBounds(targetX, targetY, currentLevel.width, currentLevel.height) && currentLevel.tiles[targetY][targetX] != '#') {
+                        currentGamePlayer.startMove(targetX, targetY); // Call startMove
+                        updateVisibility(currentLevel, levelRooms, targetX, targetY, hallwayVisibilityDistance, visibilityMap);
+                        playerX = targetX; // Update playerX and Y for visibility
+                        playerY = targetY;
                     }
                 } else if (inCharacterSelect) { // Character select input
                     switch (event.key.keysym.sym) {
@@ -344,14 +349,10 @@ int main(int argc, char* argv[]) {
                             selectedCharacterIndex = (selectedCharacterIndex < 1) ? selectedCharacterIndex + 1 : 0; // Cycle between 0 and 1
                             break;
                         case SDLK_RETURN: // Enter key
-                            PlayerCharacter player; // Create an instance of our structure
+                        { // Start of new scope to fix "jump to case label"
+                            PlayerCharacter player({CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight}); // Create an instance
                             if (selectedCharacterIndex == 0) {
                                 player.type = CharacterType::FemaleMage;
-                                player.health = 100;
-                                player.maxHealth = 100;
-                                player.mana = 150;
-                                player.maxMana = 150;
-                                player.level = 1;
                                 std::cout << "\nCharacter Selected: Female Mage" << std::endl;
                             } else if (selectedCharacterIndex == 1) {
                                 player.type = CharacterType::MaleMage;
@@ -359,7 +360,6 @@ int main(int argc, char* argv[]) {
                                 player.maxHealth = 120;
                                 player.mana = 130;
                                 player.maxMana = 130;
-                                player.level = 1;
                                 std::cout << "\nCharacter Selected: Male Mage" << std::endl;
                             }
                             // Character selected, load the level here
@@ -380,19 +380,29 @@ int main(int argc, char* argv[]) {
                             playerX = currentLevel.startCol; // Set player X from level data
                             playerY = currentLevel.startRow; // Set player Y from level data
                             currentGamePlayer = player;
-                            visibilityMap.resize(currentLevel.height, std::vector<int>(currentLevel.width, 0)); // Initialize with int
+                            currentGamePlayer.targetTileX = playerX; // Initialize targetTileX
+                            currentGamePlayer.targetTileY = playerY; // Initialize targetTileY
+                            currentGamePlayer.x = playerX * tileWidth + tileWidth / 2.0f; // Initialize visual x
+                            currentGamePlayer.y = playerY * tileHeight + tileHeight / 2.0f; // Initialize visual y
+                            visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Initialize with float
                             updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
                             gameStarted = true; // Keep gameStarted true as we are now in the game loop
                             inCharacterSelect = false; // Exit character select state
                             // Next, we would transition to the game loop
                             std::cout << "\n--- Preparing to Enter the Game Loop ---" << std::endl;
                             break;
+                        } // End of new scope
                         case SDLK_ESCAPE: // Optional: Handle Escape key to quit
                             running = false;
                             break;
                     }
                 }
             }
+        }
+
+        // Update game state
+        if (gameStarted && !inCharacterSelect) {
+            currentGamePlayer.update(deltaTime, tileWidth, tileHeight); // Call the update function
         }
 
         if (!gameStarted) {
@@ -404,12 +414,12 @@ int main(int argc, char* argv[]) {
         } else if (gameStarted && !inCharacterSelect) {
             // Game loop
 
-            // Update camera position to center on the player
+            // Update camera position to center on the player's visual position
             int halfWidth = windowWidth / 2;
             int halfHeight = windowHeight / 2;
 
-            int idealCameraX = (playerX * tileWidth) - halfWidth;
-            int idealCameraY = (playerY * tileHeight) - halfHeight;
+            int idealCameraX = static_cast<int>(currentGamePlayer.x) - halfWidth;
+            int idealCameraY = static_cast<int>(currentGamePlayer.y) - halfHeight;
 
             // Constrain the camera to the level boundaries
             cameraX = idealCameraX;
@@ -428,16 +438,18 @@ int main(int argc, char* argv[]) {
             }
 
             // Check for exit collision AFTER player movement
-            if (playerY == currentLevel.endRow && playerX == currentLevel.endCol) {
+            if (currentGamePlayer.targetTileY == currentLevel.endRow && currentGamePlayer.targetTileX == currentLevel.endCol && !currentGamePlayer.isMoving) { // Use targetTileX and targetTileY
                 currentLevelIndex++; // Increment to the next level
                 Level nextLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize); // Example parameters
                 if (!nextLevel.tiles.empty()) {
                     currentLevel = nextLevel;
                     levelRooms = currentLevel.rooms;
-                    playerX = currentLevel.startCol;
-                    playerY = currentLevel.startRow;
-                    visibilityMap.resize(currentLevel.height, std::vector<int>(currentLevel.width, 0)); // Re-initialize with int
-                    updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
+                    currentGamePlayer.targetTileX = currentLevel.startCol; // Use targetTileX
+                    currentGamePlayer.targetTileY = currentLevel.startRow; // Use targetTileY
+                    currentGamePlayer.x = currentGamePlayer.targetTileX * tileWidth + tileWidth / 2.0f;
+                    currentGamePlayer.y = currentGamePlayer.targetTileY * tileHeight + tileHeight / 2.0f;
+                    visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Re-initialize with float
+                    updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap); // Use targetTileX and targetTileY
                     std::cout << "--- Entering Level " << currentLevelIndex << " ---" << std::endl;
                 } else {
                     // If the next level file doesn't exist, perhaps we've reached the end
@@ -445,10 +457,12 @@ int main(int argc, char* argv[]) {
                     currentLevelIndex = 1; // Loop back to the first level for now
                     currentLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize); // Example parameters
                     levelRooms = currentLevel.rooms;
-                    playerX = currentLevel.startCol;
-                    playerY = currentLevel.startRow;
-                    visibilityMap.resize(currentLevel.height, std::vector<int>(currentLevel.width, 0)); // Re-initialize with int
-                    updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
+                    currentGamePlayer.targetTileX = currentLevel.startCol; // Use targetTileX
+                    currentGamePlayer.targetTileY = currentLevel.startRow; // Use targetTileY
+                    currentGamePlayer.x = currentGamePlayer.targetTileX * tileWidth + tileWidth / 2.0f;
+                    currentGamePlayer.y = currentGamePlayer.targetTileY * tileHeight + tileHeight / 2.0f;
+                    visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Re-initialize with float
+                    updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap); // Use targetTileX and targetTileY
                     std::cout << "--- Returning to Level " << currentLevelIndex << " ---" << std::endl;
                 }
             }
@@ -462,7 +476,8 @@ int main(int argc, char* argv[]) {
                 for (int y = 0; y < currentLevel.height; ++y) {
                     for (int x = 0; x < currentLevel.width; ++x) {
                         SDL_Rect tileRect = {(x * tileWidth) - cameraX, (y * tileHeight) - cameraY, tileWidth, tileHeight};
-                        if (visibilityMap[y][x] > 0) { // Only render visible tiles
+                        if (visibilityMap[y][x] > 0.0f) { // Only render visible tiles
+                            // Render the base tile color as before
                             if (y == currentLevel.startRow && x == currentLevel.startCol) {
                                 if (startTexture != nullptr) {
                                     SDL_RenderCopy(renderer, startTexture, nullptr, &tileRect);
@@ -484,27 +499,31 @@ int main(int argc, char* argv[]) {
                                 SDL_SetRenderDrawColor(renderer, 200, 200, 200, SDL_ALPHA_OPAQUE); // Light grey for floor
                                 SDL_RenderFillRect(renderer, &tileRect);
                             } else if (currentLevel.tiles[y][x] == 'V') {
-                                // Render void as grey (same as not visible)
                                 SDL_SetRenderDrawColor(renderer, 100, 100, 100, SDL_ALPHA_OPAQUE);
                                 SDL_RenderFillRect(renderer, &tileRect);
                             }
 
-                            // Apply dimming
-                            if (visibilityMap[y][x] == 1) {
-                                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150); // Semi-transparent black
-                                SDL_RenderFillRect(renderer, &tileRect);
-                            }
+                            // Apply brightness overlay using a black rectangle with alpha
+                            float brightness = visibilityMap[y][x];
+                            int alpha = static_cast<int>((1.0f - brightness) * 255); // Invert for dimming effect (0 alpha = full bright)
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, alpha); // Use black overlay for dimming
+                            SDL_RenderFillRect(renderer, &tileRect);
+
                         } else {
-                            // Render non-visible tiles as grey
-                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE); // Grey for invisible
+                            // Render non-visible tiles as black
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
                             SDL_RenderFillRect(renderer, &tileRect);
                         }
                     }
                 }
             }
 
-            // Render the player character
-            SDL_Rect playerRect = {(playerX * tileWidth) - cameraX, (playerY * tileHeight) - cameraY, tileWidth, tileHeight};
+            // Render the player character at the interpolated position
+            SDL_Rect playerRect;
+            playerRect.w = tileWidth;
+            playerRect.h = tileHeight;
+            playerRect.x = static_cast<int>(currentGamePlayer.x - tileWidth / 2) - cameraX; // Apply camera offset
+            playerRect.y = static_cast<int>(currentGamePlayer.y - tileHeight / 2) - cameraY; // Apply camera offset
             SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
             SDL_RenderFillRect(renderer, &playerRect);
 
@@ -552,7 +571,7 @@ int main(int argc, char* argv[]) {
 
         if (isPanning) {
             splashPanOffset = 456 - panCounter;
-            panCounter += 5;
+            panCounter += 10;
             if (splashPanOffset <= 0) {
                 splashPanOffset = 0;
                 isPanning = false;
@@ -569,7 +588,7 @@ int main(int argc, char* argv[]) {
 
         if (isCharacterSelectFadingIn) {
             Uint8 previousAlpha = characterSelectAlpha;
-            characterSelectAlpha += 10; // Using the problematic speed
+            characterSelectAlpha += 20; // Using the problematic speed
 
             if (characterSelectAlpha < previousAlpha) { // Check for wrap-around
                 characterSelectAlpha = 255; // Cap it at 255
@@ -579,7 +598,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        SDL_Delay(20);
+        SDL_Delay(10);
     }
 
 
