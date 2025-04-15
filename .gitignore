@@ -36,3 +36,8 @@
 
 #Any other files related to compilation and build
 /build/*
+
+#windows libraries
+/windows_libs/*
+/windows_dlls/*
+
