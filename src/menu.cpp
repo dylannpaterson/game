@@ -8,6 +8,8 @@ void displayMenu(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* splashText
     SDL_SetRenderDrawColor(renderer, 50, 50, 50, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
 
+    // Temporarily comment out the splash image rendering
+    
     if (splashTexture != nullptr) {
         SDL_Rect srcRect;
         SDL_Rect destRect = {0, 0, windowWidth, windowHeight};
@@ -29,6 +31,7 @@ void displayMenu(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* splashText
         }
         SDL_RenderCopy(renderer, splashTexture, &srcRect, &destRect);
     }
+    
 
     SDL_Color textColor = {255, 255, 255}; // White text
     SDL_Color selectedColor = {255, 255, 0}; // Yellow for selected item
@@ -44,7 +47,7 @@ void displayMenu(SDL_Renderer* renderer, TTF_Font* font, SDL_Texture* splashText
 
         SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
         if (textTexture == nullptr) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateTextureFromSurface failed! SDL_Error: %s\n", SDL_GetError());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_CreateTextureFromSurface failed! SDL_Error: %s\n", TTF_GetError());
             SDL_FreeSurface(textSurface);
             continue;
         }

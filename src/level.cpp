@@ -16,7 +16,7 @@ int manhattanDistance(const SDL_Rect& room1, const SDL_Rect& room2) {
     return std::abs(x1 - x2) + std::abs(y1 - y2);
 }
 
-Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize) {
+Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies ) {
     Level level;
     level.width = width;
     level.height = height;
@@ -169,6 +169,33 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
             level.endRow = rooms[endRoomIndex].y + rooms[endRoomIndex].h - 2;
             level.endCol = rooms[endRoomIndex].x + rooms[endRoomIndex].w - 2;
             level.tiles[level.endRow][level.endCol] = '.';
+        }
+    }
+
+    // 5. Spawn enemies
+    int numEnemiesToSpawn = 3 /* Logic to determine the number of enemies */;
+
+    for (int i = 0; i < numEnemiesToSpawn; ++i) {
+        int spawnX, spawnY;
+        bool foundSpawn = false;
+        int attempts = 0;
+        int maxAttempts = width * height * 2; // Avoid infinite loops
+
+        while (!foundSpawn && attempts < maxAttempts) {
+            spawnX = rand() % width;
+            spawnY = rand() % height;
+            if (level.tiles[spawnY][spawnX] == '.' &&
+                !(spawnY == level.startRow && spawnX == level.startCol) &&
+                !(spawnY == level.endRow && spawnX == level.endCol)) {
+                foundSpawn = true;
+            }
+            attempts++;
+        }
+
+        if (foundSpawn) {
+            // Determine the type of enemy to spawn (you might have different enemy types)
+            // For now, we'll just spawn a generic enemy
+            enemies.emplace_back(spawnX, spawnY, 20, 64, 64); // Assuming tileWidth and tileHeight are known here
         }
     }
 

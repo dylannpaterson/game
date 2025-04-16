@@ -3,12 +3,20 @@
 #include "menu.h"
 #include "character_select.h"
 #include "level.h" // Include the level header
+#include "enemy.h" // Include the enemy header
+#include"utils.h"
+#include "visibility.h"
+#include "ui.h"
 #include <vector>
 #include <string>
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h> // Include SDL_image
 #include <cmath> // For std::abs
+#include <cstdlib> // For rand() and srand()
+#include <ctime>   // For time()
+#include <random>
+
 
 #ifdef _WIN32
 #pragma comment(lib, "SDL2.lib")
@@ -18,143 +26,35 @@
 #pragma comment(lib, "SDL2_image.lib")
 #endif
 
-// Function to render text to a texture
-SDL_Texture* renderText(SDL_Renderer* renderer, TTF_Font* font, const std::string& text, SDL_Color color) {
-    SDL_Surface* textSurface = TTF_RenderText_Solid(font, text.c_str(), color);
-    if (textSurface == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "TTF_RenderText_Solid Error: %s\n", TTF_GetError());
-        return nullptr;
-    }
-    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-    SDL_FreeSurface(textSurface);
-    return textTexture;
-}
+enum class GameState {
+    MainMenu,
+    CharacterSelect,
+    GamePlay,
+    PlayerTurn,
+    EnemyTurn,
+    GameOver // Add this state
+};
 
-bool isWithinBounds(int x, int y, int width, int height) {
-    return x >= 0 && x < width && y >= 0 && y < height;
-}
-
-void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, int playerX, int playerY, int hallwayVisibilityDistance, std::vector<std::vector<float>>& visibilityMap) {
-    int width = level.width;
-    int height = level.height;
-    int brightRadius = 7;
-    int dimRadius = 10;
-    int rayThickness = 1;
-
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            visibilityMap[y][x] = 0.0f; // Initialize with float
-        }
-    }
-
-    auto isWithinBoundsFunc = [&](int x, int y, int w, int h) {
-        return x >= 0 && x < w && y >= 0 && y < h;
-    };
-
-    auto canPass = [&](int x, int y) {
-        return isWithinBoundsFunc(x, y, width, height) && level.tiles[y][x] != '#';
-    };
-
-    auto castRay = [&](int startX, int startY, int endX, int endY, float brightness) {
-        for (int offsetX = -rayThickness; offsetX <= rayThickness; ++offsetX) {
-            for (int offsetY = -rayThickness; offsetY <= rayThickness; ++offsetY) {
-                int x0 = startX + offsetX;
-                int y0 = startY + offsetY;
-                int x1 = endX;
-                int y1 = endY;
-
-                if (isWithinBoundsFunc(x0, y0, width, height) && level.tiles[y0][x0] != '#') {
-                    int dx_ray = std::abs(x1 - x0);
-                    int dy_ray = std::abs(y1 - y0);
-                    int sx = (x0 < x1) ? 1 : -1;
-                    int sy = (y0 < y1) ? 1 : -1;
-                    int err = dx_ray - dy_ray;
-                    int currentX = x0;
-                    int currentY = y0;
-                    bool blocked = false;
-
-                    while (true) {
-                        if (isWithinBoundsFunc(currentX, currentY, width, height)) {
-                            if (currentX == endX && currentY == endY) {
-                                visibilityMap[currentY][currentX] = std::max(visibilityMap[currentY][currentX], brightness);
-                                return true;
-                            }
-                            if ((level.tiles[currentY][currentX] == '#' || level.tiles[currentY][currentX] == 'V') && (currentX != x0 || currentY != y0)) {
-                                blocked = true;
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-
-                        int e2 = 2 * err;
-                        if (e2 > -dy_ray) {
-                            err -= dy_ray;
-                            currentX += sx;
-                        }
-                        if (e2 < dx_ray) {
-                            err += dx_ray;
-                            currentY += sy;
-                        }
-                    }
-                    if (!blocked && (currentX == endX && currentY == endY)) return true;
-                }
-            }
-        }
-        return false;
-    };
-
-    for (int dy = -dimRadius; dy <= dimRadius; ++dy) {
-        for (int dx = -dimRadius; dx <= dimRadius; ++dx) {
-            int targetX = playerX + dx;
-            int targetY = playerY + dy;
-
-            if (!isWithinBoundsFunc(targetX, targetY, width, height) || level.tiles[targetY][targetX] == 'V') continue;
-
-            float distance = std::sqrt(dx * dx + dy * dy);
-            float brightness = 0.0f;
-
-            if (distance < brightRadius) {
-                brightness = 1.0f; // 100% bright
-            } else if (distance >= brightRadius && distance < dimRadius) {
-                // Linear falloff from 100% to 0%
-                brightness = 1.0f - (distance - brightRadius) / (dimRadius - brightRadius);
-                brightness = std::max(0.0f, std::min(1.0f, brightness)); // Ensure within 0-1
-            }
-
-            if (brightness > 0.0f) {
-                castRay(playerX, playerY, targetX, targetY, brightness);
-            }
-        }
-    }
-}
+GameState currentGameState = GameState::MainMenu; // Start at the MainMenu
+std::vector<Enemy> enemies;
 
 int main(int argc, char* argv[]) {
+    srand(time(0)); // Seed the random number generator
 
     int windowWidth = 1920;
     int windowHeight = 1080;
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) { // Initialize only the video subsystem for now
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    // Initialize SDL
+    SDL_Context sdlContext = initializeSDL(windowWidth, windowHeight);
+    if (sdlContext.window == nullptr || sdlContext.renderer == nullptr || sdlContext.font == nullptr) {
+        // Initialization failed, cleanup and exit
+        cleanupSDL(sdlContext);
         return 1;
     }
 
-    if (TTF_Init() < 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_ttf could not initialize! TTF_Error: %s\n", TTF_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    // Initialize SDL_image
-    int imgFlags = IMG_INIT_PNG; // You can add other formats like IMG_INIT_JPG
-    if (!(IMG_Init(imgFlags) & imgFlags)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_image could not initialize! IMG_Error: %s\n", IMG_GetError());
-        TTF_Quit();
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Window* window = SDL_CreateWindow("Wizard Roguelike", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
+    SDL_Window* window = sdlContext.window;
+    SDL_Renderer* renderer = sdlContext.renderer;
+    TTF_Font* font = sdlContext.font;
 
     float aspectRatio = static_cast<float>(windowWidth) / windowHeight;
 
@@ -166,9 +66,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (renderer == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Renderer could not be created! SDL_Error: %s\n", IMG_GetError());
         SDL_DestroyWindow(window);
         IMG_Quit();
         TTF_Quit();
@@ -178,7 +77,8 @@ int main(int argc, char* argv[]) {
 
     SDL_RenderSetLogicalSize(renderer, windowWidth, windowHeight); // Set your initial resolution as the logical size
 
-    TTF_Font* font = TTF_OpenFont("../assets/fonts/LUMOS.TTF", 36);
+    font = TTF_OpenFont("../assets/fonts/LUMOS.TTF", 36);
+
     if (font == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font! TTF_Error: %s\n", TTF_GetError());
         SDL_DestroyRenderer(renderer);
@@ -241,7 +141,7 @@ int main(int argc, char* argv[]) {
     int panCounter = 0;
 
     bool isCharacterSelectFadingIn = false; // New variable for fade state
-    Uint8 characterSelectAlpha = 0;         // New variable for alpha value
+    Uint8 characterSelectAlpha = 0;          // New variable for alpha value
     bool hasCharacterSelectStartedFading = false; // New flag to track if fade started
 
     Level currentLevel; // Variable to hold the loaded level
@@ -258,7 +158,7 @@ int main(int argc, char* argv[]) {
     int levelMinRoomSize = 8;
     int levelMaxRoomSize = 15;
     int currentLevelIndex = 1; // Start with level 1
-    PlayerCharacter currentGamePlayer({CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight}); // Initialize here with tile dimensions
+    PlayerCharacter currentGamePlayer(CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight); // Initialize here with tile dimensions
     std::vector<std::vector<float>> visibilityMap; // Updated to float
     int hallwayVisibilityDistance = 5; // Adjust this value as needed
 
@@ -292,192 +192,193 @@ int main(int argc, char* argv[]) {
                         SDL_SetWindowSize(window, correctWidth, correctHeight);
                     }
                 }
-            } else if (event.type == SDL_KEYDOWN) {
-                if (!gameStarted && !isPanning) { // Menu input
-                    switch (event.key.keysym.sym) {
-                        case SDLK_UP:
-                            selectedIndex = (selectedIndex > 0) ? selectedIndex - 1 : menuItems.size() - 1;
-                            break;
-                        case SDLK_DOWN:
-                            selectedIndex = (selectedIndex < menuItems.size() - 1) ? selectedIndex + 1 : 0;
-                            break;
-                        case SDLK_RETURN: // Enter key
-                            if (selectedIndex == 0) {
-                                std::cout << "\nEmbarking on the adventure (SDL with Image)..." << std::endl;
-                                gameStarted = true;
-                                isPanning = true; // Start panning
-                            } else if (selectedIndex == 1) {
-                                std::cout << "\nOptions menu not implemented yet (SDL with Image)." << std::endl;
-                            } else if (selectedIndex == 2) {
-                                std::cout << "\nExiting game (SDL with Image). Farewell, Mortal." << std::endl;
-                                running = false;
-                            }
-                            break;
-                        case SDLK_ESCAPE: // Optional: Handle Escape key to quit
-                            running = false;
-                            break;
-                    }
-                } else if (gameStarted && !inCharacterSelect && !currentGamePlayer.isMoving) { // Game input (movement)
-                    int targetX = currentGamePlayer.targetTileX; // Use targetTileX
-                    int targetY = currentGamePlayer.targetTileY; // Use targetTileY
-                    switch (event.key.keysym.sym) {
-                        case SDLK_UP:
-                            targetY--;
-                            break;
-                        case SDLK_DOWN:
-                            targetY++;
-                            break;
-                        case SDLK_LEFT:
-                            targetX--;
-                            break;
-                        case SDLK_RIGHT:
-                            targetX++;
-                            break;
-                    }
-                    if (isWithinBounds(targetX, targetY, currentLevel.width, currentLevel.height) && currentLevel.tiles[targetY][targetX] != '#') {
-                        currentGamePlayer.startMove(targetX, targetY); // Call startMove
-                        updateVisibility(currentLevel, levelRooms, targetX, targetY, hallwayVisibilityDistance, visibilityMap);
-                        playerX = targetX; // Update playerX and Y for visibility
-                        playerY = targetY;
-                    }
-                } else if (inCharacterSelect) { // Character select input
-                    switch (event.key.keysym.sym) {
-                        case SDLK_LEFT:
-                            selectedCharacterIndex = (selectedCharacterIndex > 0) ? selectedCharacterIndex - 1 : 1; // Cycle between 0 and 1
-                            break;
-                        case SDLK_RIGHT:
-                            selectedCharacterIndex = (selectedCharacterIndex < 1) ? selectedCharacterIndex + 1 : 0; // Cycle between 0 and 1
-                            break;
-                        case SDLK_RETURN: // Enter key
-                        { // Start of new scope to fix "jump to case label"
-                            PlayerCharacter player({CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight}); // Create an instance
-                            if (selectedCharacterIndex == 0) {
-                                player.type = CharacterType::FemaleMage;
-                                std::cout << "\nCharacter Selected: Female Mage" << std::endl;
-                            } else if (selectedCharacterIndex == 1) {
-                                player.type = CharacterType::MaleMage;
-                                player.health = 120;
-                                player.maxHealth = 120;
-                                player.mana = 130;
-                                player.maxMana = 130;
-                                std::cout << "\nCharacter Selected: Male Mage" << std::endl;
-                            }
-                            // Character selected, load the level here
-                            currentLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize); // Example parameters
-                            levelRooms = currentLevel.rooms;
+            }
 
-                            std::cout << "Number of rooms: " << levelRooms.size() << std::endl;
-                            for (size_t i = 0; i < levelRooms.size(); ++i) {
-                                std::cout << "Room " << i << ": x=" << levelRooms[i].x
-                                          << ", y=" << levelRooms[i].y
-                                          << ", w=" << levelRooms[i].w
-                                          << ", h=" << levelRooms[i].h << std::endl;
+            switch (currentGameState) {
+                case GameState::MainMenu:
+                    if (!gameStarted && !isPanning) { // Menu input
+                        if (event.type == SDL_KEYDOWN) {
+                            switch (event.key.keysym.sym) {
+                                case SDLK_UP:
+                                    selectedIndex = (selectedIndex > 0) ? selectedIndex - 1 : menuItems.size() - 1;
+                                    break;
+                                case SDLK_DOWN:
+                                    selectedIndex = (selectedIndex < menuItems.size() - 1) ? selectedIndex + 1 : 0;
+                                    break;
+                                case SDLK_RETURN: // Enter key
+                                    if (selectedIndex == 0) {
+                                        std::cout << "\nEmbarking on the adventure (SDL with Image)..." << std::endl;
+                                        gameStarted = true;
+                                        isPanning = true; // Start panning
+                                    } else if (selectedIndex == 1) {
+                                        std::cout << "\nOptions menu not implemented yet (SDL with Image)." << std::endl;
+                                    } else if (selectedIndex == 2) {
+                                        std::cout << "\nExiting game (SDL with Image). Farewell, Mortal." << std::endl;
+                                        running = false;
+                                    }
+                                    break;
+                                case SDLK_ESCAPE: // Optional: Handle Escape key to quit
+                                    running = false;
+                                    break;
                             }
-                            std::cout << "Player starting position: x=" << playerX << ", y=" << playerY << std::endl;
-
-                            std::cout << "Number of rooms after assignment in main.cpp: " << levelRooms.size() << std::endl; // ADD THIS LINE
-
-                            playerX = currentLevel.startCol; // Set player X from level data
-                            playerY = currentLevel.startRow; // Set player Y from level data
-                            currentGamePlayer = player;
-                            currentGamePlayer.targetTileX = playerX; // Initialize targetTileX
-                            currentGamePlayer.targetTileY = playerY; // Initialize targetTileY
-                            currentGamePlayer.x = playerX * tileWidth + tileWidth / 2.0f; // Initialize visual x
-                            currentGamePlayer.y = playerY * tileHeight + tileHeight / 2.0f; // Initialize visual y
-                            visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Initialize with float
-                            updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
-                            gameStarted = true; // Keep gameStarted true as we are now in the game loop
-                            inCharacterSelect = false; // Exit character select state
-                            // Next, we would transition to the game loop
-                            std::cout << "\n--- Preparing to Enter the Game Loop ---" << std::endl;
-                            break;
-                        } // End of new scope
-                        case SDLK_ESCAPE: // Optional: Handle Escape key to quit
-                            running = false;
-                            break;
+                        }
                     }
-                }
+                    break;
+
+                case GameState::CharacterSelect:
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+                    SDL_RenderClear(renderer); // Clear only when in character select
+                    displayCharacterSelect(renderer, font, selectedCharacterIndex, windowWidth, windowHeight, characterSelectAlpha); // Pass the alpha value
+                    if (inCharacterSelect) { // Character select input
+                        if (event.type == SDL_KEYDOWN) {
+                            switch (event.key.keysym.sym) {
+                                case SDLK_LEFT:
+                                    selectedCharacterIndex = (selectedCharacterIndex > 0) ? selectedCharacterIndex - 1 : 1; // Cycle between 0 and 1
+                                    break;
+                                case SDLK_RIGHT:
+                                    selectedCharacterIndex = (selectedCharacterIndex < 1) ? selectedCharacterIndex + 1 : 0; // Cycle between 0 and 1
+                                    break;
+                                case SDLK_RETURN: // Enter key
+                                { // Start of new scope to fix "jump to case label"
+                                    PlayerCharacter player(CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0, tileWidth, tileHeight); // Create an instance
+                                    if (selectedCharacterIndex == 0) {
+                                        player.type = CharacterType::FemaleMage;
+                                        std::cout << "\nCharacter Selected: Female Mage" << std::endl;
+                                    } else if (selectedCharacterIndex == 1) {
+                                        player.type = CharacterType::MaleMage;
+                                        player.health = 120;
+                                        player.maxHealth = 120;
+                                        player.mana = 130;
+                                        player.maxMana = 130;
+                                        std::cout << "\nCharacter Selected: Male Mage" << std::endl;
+                                    }
+                                    // Character selected, load the level here
+                                    enemies.clear(); // Clear previous enemies
+                                    currentLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize, enemies); // Pass enemies vector
+                                    levelRooms = currentLevel.rooms;
+                                    playerX = currentLevel.startCol; // Set player X from level data
+                                    playerY = currentLevel.startRow; // Set player Y from level data
+                                    currentGamePlayer = player;
+                                    currentGamePlayer.targetTileX = playerX; // Initialize targetTileX
+                                    currentGamePlayer.targetTileY = playerY; // Initialize targetTileY
+                                    currentGamePlayer.x = playerX * tileWidth + tileWidth / 2.0f; // Initialize visual x
+                                    currentGamePlayer.y = playerY * tileHeight + tileHeight / 2.0f; // Initialize visual y
+                                    visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Initialize with float
+                                    updateVisibility(currentLevel, levelRooms, playerX, playerY, hallwayVisibilityDistance, visibilityMap);
+                                    gameStarted = true; // Keep gameStarted true as we are now in the game loop
+                                    inCharacterSelect = false; // Exit character select state
+                                    // Next, we would transition to the game loop
+                                    std::cout << "\n--- Preparing to Enter the Game Loop ---" << std::endl;
+                                    currentGameState = GameState::PlayerTurn;
+                                    break;
+                                } // End of new scope
+                                case SDLK_ESCAPE: // Optional: Handle Escape key to quit
+                                    running = false;
+                                    break;
+                            }
+                        }
+                    }
+                    break;
+
+                    case GameState::PlayerTurn:
+                    
+                    if (!currentGamePlayer.isMoving) {
+                        if (event.type == SDL_KEYDOWN) {
+                            int moveX = 0;
+                            int moveY = 0;
+                            switch (event.key.keysym.sym) {
+                                case SDLK_UP: moveY = -1; break;
+                                case SDLK_DOWN: moveY = 1; break;
+                                case SDLK_LEFT: moveX = -1; break;
+                                case SDLK_RIGHT: moveX = 1; break;
+                                default: break;
+                            }
+                
+                            if (moveX != 0 || moveY != 0) {
+                                int newPlayerTargetX = currentGamePlayer.targetTileX + moveX;
+                                int newPlayerTargetY = currentGamePlayer.targetTileY + moveY;
+                
+                                if (isWithinBounds(newPlayerTargetX, newPlayerTargetY, currentLevel.width, currentLevel.height) && currentLevel.tiles[newPlayerTargetY][newPlayerTargetX] != '#') {
+                                    bool collision = false;
+                                    for (const auto& enemy : enemies) {
+                                        if (enemy.x == newPlayerTargetX && enemy.y == newPlayerTargetY) {
+                                            collision = true;
+                                            break;
+                                        }
+                                    }
+                
+                                    if (!collision) {
+                                        currentGamePlayer.startMove(newPlayerTargetX, newPlayerTargetY);
+                                        updateVisibility(currentLevel, levelRooms, newPlayerTargetX, newPlayerTargetY, hallwayVisibilityDistance, visibilityMap);
+                                        playerX = newPlayerTargetX;
+                                        playerY = newPlayerTargetY;
+                                    } else {
+                                        SDL_Log("Player tried to move into an enemy!");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // The "Exiting PlayerTurn state." should NOT be here.
+                    break;
+
+                    case GameState::EnemyTurn:
+                    {
+                        bool allEnemiesActed = true;
+                        for (const auto& enemy : enemies) {
+                            if (!enemy.hasTakenActionThisTurn) {
+                                allEnemiesActed = false;
+                                break;
+                            }
+                        }
+
+                        if (!allEnemiesActed) {
+                            bool foundActionThisFrame = false;
+                            for (size_t i = 0; i < enemies.size(); ++i) {
+                                if (!enemies[i].isMoving && !enemies[i].hasTakenActionThisTurn && !foundActionThisFrame) {
+                                    enemies[i].takeAction(currentLevel, currentGamePlayer);
+                                    foundActionThisFrame = true;
+                                    break; // Allow one action per frame for clarity
+                                }
+                            }
+                        } else {
+                            bool allEnemiesIdle = true;
+                            for (const auto& enemy : enemies) {
+                                if (enemy.isMoving) {
+                                    allEnemiesIdle = false;
+                                    break;
+                                }
+                            }
+                            if (allEnemiesIdle) {
+                                // Reset action flags for the next turn
+                                for (auto& enemy : enemies) {
+                                    enemy.hasTakenActionThisTurn = false;
+                                }
+                                currentGameState = GameState::PlayerTurn;
+                                updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap);
+                            }
+                        }
+                    }
+                    break;
+
+                case GameState::GameOver:
+                    // Handle game over logic
+                    break;
             }
         }
 
-        // Update game state
-        if (gameStarted && !inCharacterSelect) {
-            currentGamePlayer.update(deltaTime, tileWidth, tileHeight); // Call the update function
-        }
+        // Rendering
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_RenderClear(renderer);
 
-        if (!gameStarted) {
-            displayMenu(renderer, font, splashTexture, menuItems, selectedIndex, isPanning, splashPanOffset,456, windowWidth, windowHeight);
-        } else if (isPanning) {
-            displayMenu(renderer, font, splashTexture, menuItems, selectedIndex, isPanning, splashPanOffset,456, windowWidth, windowHeight);
-        } else if (inCharacterSelect) {
-            displayCharacterSelect(renderer, font, selectedCharacterIndex, windowWidth, windowHeight, characterSelectAlpha); // Pass the alpha value
-        } else if (gameStarted && !inCharacterSelect) {
-            // Game loop
-
-            // Update camera position to center on the player's visual position
-            int halfWidth = windowWidth / 2;
-            int halfHeight = windowHeight / 2;
-
-            int idealCameraX = static_cast<int>(currentGamePlayer.x) - halfWidth;
-            int idealCameraY = static_cast<int>(currentGamePlayer.y) - halfHeight;
-
-            // Constrain the camera to the level boundaries
-            cameraX = idealCameraX;
-            cameraY = idealCameraY;
-
-            if (cameraX < 0) {
-                cameraX = 0;
-            } else if (cameraX > (currentLevel.width * tileWidth) - windowWidth) {
-                cameraX = (currentLevel.width * tileWidth) - windowWidth;
-            }
-
-            if (cameraY < 0) {
-                cameraY = 0;
-            } else if (cameraY > (currentLevel.height * tileHeight) - windowHeight) {
-                cameraY = (currentLevel.height * tileHeight) - windowHeight;
-            }
-
-            // Check for exit collision AFTER player movement
-            if (currentGamePlayer.targetTileY == currentLevel.endRow && currentGamePlayer.targetTileX == currentLevel.endCol && !currentGamePlayer.isMoving) { // Use targetTileX and targetTileY
-                currentLevelIndex++; // Increment to the next level
-                Level nextLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize); // Example parameters
-                if (!nextLevel.tiles.empty()) {
-                    currentLevel = nextLevel;
-                    levelRooms = currentLevel.rooms;
-                    currentGamePlayer.targetTileX = currentLevel.startCol; // Use targetTileX
-                    currentGamePlayer.targetTileY = currentLevel.startRow; // Use targetTileY
-                    currentGamePlayer.x = currentGamePlayer.targetTileX * tileWidth + tileWidth / 2.0f;
-                    currentGamePlayer.y = currentGamePlayer.targetTileY * tileHeight + tileHeight / 2.0f;
-                    visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Re-initialize with float
-                    updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap); // Use targetTileX and targetTileY
-                    std::cout << "--- Entering Level " << currentLevelIndex << " ---" << std::endl;
-                } else {
-                    // If the next level file doesn't exist, perhaps we've reached the end
-                    std::cout << "--- End of Levels ---" << std::endl;
-                    currentLevelIndex = 1; // Loop back to the first level for now
-                    currentLevel = generateLevel(levelWidth, levelHeight, levelMaxRooms, levelMinRoomSize, levelMaxRoomSize); // Example parameters
-                    levelRooms = currentLevel.rooms;
-                    currentGamePlayer.targetTileX = currentLevel.startCol; // Use targetTileX
-                    currentGamePlayer.targetTileY = currentLevel.startRow; // Use targetTileY
-                    currentGamePlayer.x = currentGamePlayer.targetTileX * tileWidth + tileWidth / 2.0f;
-                    currentGamePlayer.y = currentGamePlayer.targetTileY * tileHeight + tileHeight / 2.0f;
-                    visibilityMap.resize(currentLevel.height, std::vector<float>(currentLevel.width, 0.0f)); // Re-initialize with float
-                    updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap); // Use targetTileX and targetTileY
-                    std::cout << "--- Returning to Level " << currentLevelIndex << " ---" << std::endl;
-                }
-            }
-
-            // 3. Render the Game World
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-            SDL_RenderClear(renderer);
-
+        // Render based on game state
+        if (currentGameState != GameState::MainMenu && currentGameState != GameState::CharacterSelect) {
             // Render the level
             if (!currentLevel.tiles.empty()) {
                 for (int y = 0; y < currentLevel.height; ++y) {
                     for (int x = 0; x < currentLevel.width; ++x) {
                         SDL_Rect tileRect = {(x * tileWidth) - cameraX, (y * tileHeight) - cameraY, tileWidth, tileHeight};
                         if (visibilityMap[y][x] > 0.0f) { // Only render visible tiles
-                            // Render the base tile color as before
                             if (y == currentLevel.startRow && x == currentLevel.startCol) {
                                 if (startTexture != nullptr) {
                                     SDL_RenderCopy(renderer, startTexture, nullptr, &tileRect);
@@ -517,8 +418,25 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
+            
 
-            // Render the player character at the interpolated position
+            // Render enemies
+            for (const auto& enemy : enemies) {
+                int enemyTileX = static_cast<int>(enemy.x);
+                int enemyTileY = static_cast<int>(enemy.y);
+                float visibility = 0.0f;
+
+                if (enemyTileY >= 0 && enemyTileY < currentLevel.height && enemyTileX >= 0 && enemyTileX < currentLevel.width) {
+                    visibility = visibilityMap[enemyTileY][enemyTileX];
+                }
+
+                if (visibility > 0.0f) {
+                    enemy.render(renderer, cameraX, cameraY, tileWidth, tileHeight, visibility);
+                }
+            }
+            
+
+            // Render the player character
             SDL_Rect playerRect;
             playerRect.w = tileWidth;
             playerRect.h = tileHeight;
@@ -526,48 +444,17 @@ int main(int argc, char* argv[]) {
             playerRect.y = static_cast<int>(currentGamePlayer.y - tileHeight / 2) - cameraY; // Apply camera offset
             SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
             SDL_RenderFillRect(renderer, &playerRect);
+            
 
             // Render UI elements
-            SDL_Color textColor = {255, 255, 255, 255}; // White color
-
-            std::string healthText = "Health: " + std::to_string(currentGamePlayer.health) + "/" + std::to_string(currentGamePlayer.maxHealth);
-            SDL_Texture* healthTexture = renderText(renderer, font, healthText, textColor);
-            if (healthTexture != nullptr) {
-                SDL_Rect healthRect = {10, 10, 0, 0}; // Position at top-left
-                SDL_QueryTexture(healthTexture, nullptr, nullptr, &healthRect.w, &healthRect.h);
-                SDL_RenderCopy(renderer, healthTexture, nullptr, &healthRect);
-                SDL_DestroyTexture(healthTexture);
-            }
-
-            std::string manaText = "Mana: " + std::to_string(currentGamePlayer.mana) + "/" + std::to_string(currentGamePlayer.maxMana);
-            SDL_Texture* manaTexture = renderText(renderer, font, manaText, textColor);
-            if (manaTexture != nullptr) {
-                SDL_Rect manaRect = {10, 40, 0, 0}; // Position below health
-                SDL_QueryTexture(manaTexture, nullptr, nullptr, &manaRect.w, &manaRect.h);
-                SDL_RenderCopy(renderer, manaTexture, nullptr, &manaRect);
-                SDL_DestroyTexture(manaTexture);
-            }
-
-            std::string levelText = "Level: " + std::to_string(currentGamePlayer.level);
-            SDL_Texture* levelTexture = renderText(renderer, font, levelText, textColor);
-            if (levelTexture != nullptr) {
-                SDL_Rect levelRect = {windowWidth - 150, 10, 0, 0}; // Position at top-right
-                SDL_QueryTexture(levelTexture, nullptr, nullptr, &levelRect.w, &levelRect.h);
-                SDL_RenderCopy(renderer, levelTexture, nullptr, &levelRect);
-                SDL_DestroyTexture(levelTexture);
-            }
-
-            std::string floorText = "Floor: " + std::to_string(currentLevelIndex);
-            SDL_Texture* floorTexture = renderText(renderer, font, floorText, textColor);
-            if (floorTexture != nullptr) {
-                SDL_Rect floorRect = {windowWidth - 150, 40, 0, 0}; // Position below level
-                SDL_QueryTexture(floorTexture, nullptr, nullptr, &floorRect.w, &floorRect.h);
-                SDL_RenderCopy(renderer, floorTexture, nullptr, &floorRect);
-                SDL_DestroyTexture(floorTexture);
-            }
-
-            SDL_RenderPresent(renderer);
+            renderUI(renderer, font, currentGamePlayer, currentLevelIndex, windowWidth);
+        } else if (currentGameState == GameState::MainMenu) {
+            displayMenu(renderer, font, splashTexture, menuItems, selectedIndex, isPanning, splashPanOffset, 456, windowWidth, windowHeight);
+        } else if (currentGameState == GameState::CharacterSelect) {
+            displayCharacterSelect(renderer, font, selectedCharacterIndex, windowWidth, windowHeight, characterSelectAlpha); // Pass the alpha value
         }
+
+        SDL_RenderPresent(renderer);
 
         if (isPanning) {
             splashPanOffset = 456 - panCounter;
@@ -576,6 +463,7 @@ int main(int argc, char* argv[]) {
                 splashPanOffset = 0;
                 isPanning = false;
                 inCharacterSelect = true;
+                currentGameState = GameState::CharacterSelect; // Transition to Character Select
                 panCounter = 0;
             }
         }
@@ -598,19 +486,82 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        // Update game state (animations, etc.)
+        if (currentGameState == GameState::PlayerTurn || currentGameState == GameState::EnemyTurn) {
+            bool playerWasMoving = currentGamePlayer.isMoving;
+            currentGamePlayer.update(deltaTime, tileWidth, tileHeight);
+
+            bool playerIsNowIdle = !currentGamePlayer.isMoving; // Check state AFTER update
+
+            if (currentGameState == GameState::PlayerTurn && playerWasMoving && playerIsNowIdle) {
+                currentGameState = GameState::EnemyTurn;
+
+
+                for (auto& enemy : enemies) {
+                     enemy.hasTakenActionThisTurn = false; 
+                }
+            }
+
+            for (auto& enemy : enemies) {
+                enemy.update(deltaTime, tileWidth, tileHeight); // Update enemies (handles movement progress)
+            }
+
+            // --- Enemy Turn Logic Adjustment ---
+            if (currentGameState == GameState::EnemyTurn) {
+                // Check if ALL enemies have finished their actions AND animations
+                bool allEnemiesActed = true;
+                bool allEnemiesIdle = true;
+                for (auto& enemy : enemies) { // Use reference to modify hasTakenActionThisTurn if needed
+                    if (!enemy.hasTakenActionThisTurn) {
+                        allEnemiesActed = false;
+                        // Try to make an enemy act if it hasn't
+                        if (!enemy.isMoving) {
+                             enemy.takeAction(currentLevel, currentGamePlayer); // Let enemy decide action
+                             // Assuming takeAction sets isMoving if it decides to move
+                        }
+                    }
+                    if (enemy.isMoving) {
+                        allEnemiesIdle = false; // If any enemy is still moving, wait
+                    }
+                }
+
+                // Transition back to PlayerTurn ONLY if all enemies have acted AND finished moving
+                if (allEnemiesActed && allEnemiesIdle) {
+                    currentGameState = GameState::PlayerTurn;
+                    updateVisibility(currentLevel, levelRooms, currentGamePlayer.targetTileX, currentGamePlayer.targetTileY, hallwayVisibilityDistance, visibilityMap); // Update visibility at start of player turn
+                    // Enemy action flags are reset when transitioning *to* EnemyTurn, so no reset needed here.
+                }
+            }
+            // Update camera position to center on the player's visual position
+            int halfWidth = windowWidth / 2;
+            int halfHeight = windowHeight / 2;
+
+            int idealCameraX = static_cast<int>(currentGamePlayer.x) - halfWidth;
+            int idealCameraY = static_cast<int>(currentGamePlayer.y) - halfHeight;
+
+            // Constrain the camera to the level boundaries
+            cameraX = idealCameraX;
+            cameraY = idealCameraY;
+
+            if (cameraX < 0) {
+                cameraX = 0;
+            } else if (cameraX > (currentLevel.width * tileWidth) - windowWidth) {
+                cameraX = (currentLevel.width * tileWidth) - windowWidth;
+            }
+
+            if (cameraY < 0) {
+                cameraY = 0;
+            } else if (cameraY > (currentLevel.height * tileHeight) - windowHeight) {
+                cameraY = (currentLevel.height * tileHeight) - windowHeight; // Corrected line
+            }
+        }
+
         SDL_Delay(10);
     }
 
 
-    SDL_DestroyTexture(exitTexture);
-    SDL_DestroyTexture(startTexture);
-    SDL_DestroyTexture(splashTexture);
-    TTF_CloseFont(font);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    TTF_Quit();
-    SDL_Quit();
+    // Cleanup SDL resources
+    cleanupSDL(sdlContext);
 
     return 0;
 }
