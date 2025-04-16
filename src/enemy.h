@@ -32,6 +32,7 @@ class Enemy {
     void render(SDL_Renderer* renderer, int cameraX, int cameraY, int tileWidth, int tileHeight, float visibilityAlpha) const;
     void update(float deltaTime, int tileWidth, int tileHeight); // New update function
     void startMove(int targetX, int targetY);
+    void takeDamage(int amount);
 };
 
 #endif // ENEMY_H

@@ -114,3 +114,26 @@ void Enemy::render(SDL_Renderer* renderer, int cameraX, int cameraY, int tileWid
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, alpha); // Red with variable alpha
     SDL_RenderFillRect(renderer, &enemyRect);
 }
+void Enemy::takeDamage(int amount) {
+    if (health <= 0) {
+        return; // Already defeated, cannot take more damage
+    }
+
+    health -= amount;
+    SDL_Log("Enemy at (%d, %d) took %d damage.", x, y, amount); // Use SDL_Log for consistency if you prefer
+
+    if (health <= 0) {
+        health = 0; // Ensure health doesn't go negative
+        SDL_Log("Enemy at (%d, %d) has been vanquished!", x, y);
+        // --- Important Note on Enemy Death ---
+        // DO NOT try to delete the enemy or remove it from a vector *here*.
+        // This function only changes the enemy's state (health).
+        // The main game loop (in main.cpp) should be responsible for checking
+        // enemy health each turn (or after actions) and removing enemies
+        // with health <= 0 from the 'enemies' vector.
+        // You might add an 'isDead' boolean flag here if it helps your main loop logic.
+        // For example: isDead = true;
+    } else {
+        SDL_Log("Enemy health remaining: %d", health);
+    }
+}
