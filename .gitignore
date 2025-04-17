@@ -41,3 +41,5 @@
 /windows_libs/*
 /windows_dlls/*
 
+#c-lang cache files
+/.cache/*
