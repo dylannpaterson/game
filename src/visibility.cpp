@@ -9,9 +9,9 @@
 void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, int playerX, int playerY, int hallwayVisibilityDistance, std::vector<std::vector<float>>& visibilityMap) {
     int width = level.width;
     int height = level.height;
-    int brightRadius = 7;
-    int dimRadius = 10;
-    int rayThickness = 1;
+    int brightRadius = 4;
+    int dimRadius = 7;
+    int rayThickness = 2;
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {

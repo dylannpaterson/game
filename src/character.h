@@ -8,8 +8,7 @@
 #include "projectile.h" // Include projectile definition for casting spells
 
 // Forward declaration if Enemy methods are used only in .cpp
-// If Enemy objects/references are used directly in PlayerCharacter members/method signatures in the header, include enemy.h
-// For castSpell, we pass std::vector<Enemy>&, so a forward declaration isn't enough here if Enemy itself isn't defined.
+
 #include "enemy.h" // Assuming Enemy definition is needed for castSpell signature
 
 enum class CharacterType {

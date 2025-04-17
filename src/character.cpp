@@ -28,8 +28,8 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int hp, int maxHp, int mp, int
     // --- Initialize Spellbook (Example) ---
     // Grant starting spells based on type - just like before
     if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
-        knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy, SpellEffectType::Damage, 25.0f);
-        knownSpells.emplace_back("Minor Heal", 15, 0, SpellTargetType::Self, SpellEffectType::Heal, 30.0f);
+        knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy, SpellEffectType::Damage, 25.0f, "fireball_icon");
+        knownSpells.emplace_back("Minor Heal", 15, 0, SpellTargetType::Self, SpellEffectType::Heal, 30.0f, "minor_heal_icon");
          // Add more default spells here
     }
     // Add spells for other classes if you introduce them
@@ -185,7 +185,7 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX, int castTargetY
                     float targetVisualX = castTargetX * tileWidth + tileWidth / 2.0f;
                     float targetVisualY = castTargetY * tileHeight + tileHeight / 2.0f;
                     float projectileSpeed = 450.0f; // Adjust speed as needed
-                    int projWidth = 16, projHeight = 16; // Example size
+                    int projWidth = 64, projHeight = 64; // Example size
     
                     // TODO: Select correct texture based on spell.name or type
                     SDL_Texture* texToUse = projectileTexture; // Use the passed texture for now

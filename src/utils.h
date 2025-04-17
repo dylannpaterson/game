@@ -12,7 +12,6 @@ bool isWithinBounds(int x, int y, int width, int height);
 struct SDL_Context {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
-    TTF_Font* font = nullptr;
 };
 
 SDL_Context initializeSDL(int width, int height);

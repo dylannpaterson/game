@@ -24,13 +24,16 @@ class Enemy {
     float moveDuration;
     float moveTimer;
 
+    int tileWidth;  // Store the tile context
+    int tileHeight;
+
     bool hasTakenActionThisTurn;
 
-    Enemy(int startX, int startY);
-    Enemy(int startX, int startY, int initialHealth, int enemyWidth, int enemyHeight);
+    Enemy(int startX, int startY, int tileW, int tileH); // Add tile dims
+    Enemy(int startX, int startY, int initialHealth, int enemyW, int enemyH, int tileW, int tileH); // Add tile dims
     void takeAction(const class Level& level, PlayerCharacter& player);
-    void render(SDL_Renderer* renderer, int cameraX, int cameraY, int tileWidth, int tileHeight, float visibilityAlpha) const;
-    void update(float deltaTime, int tileWidth, int tileHeight); // New update function
+    void update(float deltaTime);
+    void render(SDL_Renderer* renderer, int cameraX, int cameraY, float visibilityAlpha) const;
     void startMove(int targetX, int targetY);
     void takeDamage(int amount);
 };

@@ -21,6 +21,6 @@ struct Level {
 int manhattanDistance(const SDL_Rect& room1, const SDL_Rect& room2);
 
 // Declaration of the generateLevel function (CRITICAL UPDATE HERE)
-Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies);
+Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH);
 
 #endif

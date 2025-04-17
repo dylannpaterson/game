@@ -63,25 +63,12 @@ SDL_Context initializeSDL(int width, int height) {
 
     SDL_RenderSetLogicalSize(context.renderer, width, height);
 
-    context.font = TTF_OpenFont("../assets/fonts/LUMOS.TTF", 36);
-    if (context.font == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load font! TTF_Error: %s\n", TTF_GetError());
-        SDL_DestroyRenderer(context.renderer);
-        SDL_DestroyWindow(context.window);
-        IMG_Quit();
-        TTF_Quit();
-        SDL_Quit();
-        return context; // Return empty context on error
-    }
 
     return context;
 }
 
 // Define the cleanup function
 void cleanupSDL(SDL_Context& context) {
-    if (context.font != nullptr) {
-        TTF_CloseFont(context.font);
-    }
     if (context.renderer != nullptr) {
         SDL_DestroyRenderer(context.renderer);
     }

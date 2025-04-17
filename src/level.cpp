@@ -16,7 +16,7 @@ int manhattanDistance(const SDL_Rect& room1, const SDL_Rect& room2) {
     return std::abs(x1 - x2) + std::abs(y1 - y2);
 }
 
-Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies ) {
+Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH) {
     Level level;
     level.width = width;
     level.height = height;
@@ -195,7 +195,7 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
         if (foundSpawn) {
             // Determine the type of enemy to spawn (you might have different enemy types)
             // For now, we'll just spawn a generic enemy
-            enemies.emplace_back(spawnX, spawnY, 20, 64, 64); // Assuming tileWidth and tileHeight are known here
+            enemies.emplace_back(spawnX, spawnY, 20,tileW, tileH, tileW, tileH); // Assuming tileWidth and tileHeight are known here
         }
     }
 

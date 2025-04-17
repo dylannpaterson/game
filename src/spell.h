@@ -34,13 +34,14 @@ struct Spell {
     SpellEffectType effectType;
     float value; // Magnitude of the effect (e.g., damage amount, heal amount)
     int areaOfEffectRadius; // 0 for single target/tile
+    std::string iconName;
 
     // Optional: Add fields for visual effects (particle system name, sound effect name, etc.)
     // std::string visualEffectName;
     // std::string soundEffectName;
 
-    Spell(std::string n, int cost, int rng, SpellTargetType tt, SpellEffectType et, float val, int aoe = 0)
-        : name(std::move(n)), manaCost(cost), range(rng), targetType(tt), effectType(et), value(val), areaOfEffectRadius(aoe) {}
+    Spell(std::string n, int cost, int rng, SpellTargetType tt, SpellEffectType et, float val, std::string iconKey, int aoe = 0)
+        : name(std::move(n)), manaCost(cost), range(rng), targetType(tt), effectType(et), value(val), iconName(std::move(iconKey)), areaOfEffectRadius(aoe) {}
 
     // Potentially add a function to apply the effect, though this might be better handled elsewhere
     // void applyEffect(PlayerCharacter& caster, /* target(s) */ );
