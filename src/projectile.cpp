@@ -4,13 +4,14 @@
 #include <SDL.h> // For SDL_Log if debugging
 
 Projectile::Projectile(ProjectileType pType, SDL_Texture* tex, int w, int h,
-                       float sX, float sY, float tX, float tY, float spd)
+                       float sX, float sY, float tX, float tY, float spd, int dmg)
     : type(pType),
       isActive(true), // Start active
       startX(sX), startY(sY),
       targetX(tX), targetY(tY),
       currentX(sX), currentY(sY), // Start at the beginning
       speed(spd),
+      damage(dmg),
       dx(0.0f), dy(0.0f), // Initialize direction
       texture(tex),       // Store pointer to existing texture
       width(w), height(h)

@@ -27,6 +27,7 @@ public:
     float currentX, currentY; // Current visual world coordinates
     float speed;          // Pixels per second
     float dx, dy;           // Normalized direction vector components (-1.0 to 1.0)
+    int damage;
 
     // --- Visuals ---
     SDL_Texture* texture; // Pointer to the texture to render (MUST NOT be null)
@@ -34,7 +35,7 @@ public:
 
     // --- Constructor ---
     Projectile(ProjectileType type, SDL_Texture* tex, int w, int h,
-               float startX, float startY, float targetX, float targetY, float speed);
+               float startX, float startY, float targetX, float targetY, float speed, int damage);
 
     // --- Methods ---
     // Updates position, returns true if target reached this frame, false otherwise

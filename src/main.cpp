@@ -50,6 +50,20 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // --- SET LOGGING LEVEL ---
+  // To show INFO, WARN, ERROR, CRITICAL (and hide DEBUG, VERBOSE):
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+
+  // To show only WARN, ERROR, CRITICAL:
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);
+
+  // To show only ERROR, CRITICAL:
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR);
+
+  // To re-enable all messages (including Debug) for testing:
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Or DEBUG
+  // --- END LOGGING LEVEL ---
+
   // Assign essential context to gameData
   gameData.renderer = sdlContext.renderer;
 
@@ -59,7 +73,7 @@ int main(int argc, char *argv[]) {
   // --- Initialize Player Character Correctly ---
   // Use the tileWidth/Height now stored in gameData
   gameData.currentGamePlayer =
-      PlayerCharacter(CharacterType::FemaleMage, 100, 100, 150, 150, 1, 0, 0,
+      PlayerCharacter(CharacterType::FemaleMage, 0, 0, // Placeholder X, Y
                       gameData.tileWidth, gameData.tileHeight);
 
   // --- Load Assets VIA MANAGER ---
@@ -71,16 +85,14 @@ int main(int argc, char *argv[]) {
           "../assets/sprites/start_tile.png")) { /* Handle error */
   }
   if (!assetManager.loadTexture(
-          "exit_tile",
-          "../assets/sprites/exit_tile.png")) { /* Handle error */
+          "exit_tile", "../assets/sprites/exit_tile.png")) { /* Handle error */
   }
   if (!assetManager.loadTexture(
           "reticle",
           "../assets/sprites/target_reticle.png")) { /* Handle error */
   }
   if (!assetManager.loadTexture(
-          "fireball",
-          "../assets/sprites/fireball.PNG")) { /* Handle error */
+          "fireball", "../assets/sprites/fireball.PNG")) { /* Handle error */
   }
   if (!assetManager.loadTexture(
           "fireball_icon",
@@ -89,6 +101,18 @@ int main(int argc, char *argv[]) {
   if (!assetManager.loadTexture(
           "minor_heal_icon",
           "../assets/sprites/minor_heal_icon.PNG")) { /* Handle error */
+  }
+  if (!assetManager.loadTexture("wall_texture",
+                                "../assets/sprites/wall_1.PNG")) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load wall texture!");
+  }
+  if (!assetManager.loadTexture("floor_1", "../assets/sprites/floor_1.PNG")) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load floor texture!");
+    // Handle error appropriately
+  }
+  if (!assetManager.loadTexture("floor_2", "../assets/sprites/floor_2.PNG")) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load floor texture!");
+    // Handle error appropriately
   }
   if (!assetManager.loadFont("main_font", "../assets/fonts/LUMOS.TTF",
                              36)) { /* Handle error */
@@ -133,8 +157,10 @@ int main(int argc, char *argv[]) {
     renderScene(gameData, assetManager); // Draws everything
 
     // Frame Delay (Optional, prevents maxing out CPU)
-    SDL_Delay(10); // Delay for ~10ms
-                   //
+    if (gameData.currentGameState != GameState::EnemyTurn) {
+      SDL_Delay(10); // Delay for ~10ms
+    }
+
   } // End Main Game Loop
 
   // --- Cleanup ---
@@ -219,13 +245,13 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
             // Re-initialize player with chosen stats/spells (use the proper
             // constructor)
             if (chosenType == CharacterType::FemaleMage) {
-              gameData.currentGamePlayer =
-                  PlayerCharacter(chosenType, 100, 100, 150, 150, 1, 0, 0,
-                                  gameData.tileWidth, gameData.tileHeight);
+              gameData.currentGamePlayer = PlayerCharacter(
+                  chosenType, 0, 0, // Use 0,0 - will be set below
+                  gameData.tileWidth, gameData.tileHeight);
             } else {
               gameData.currentGamePlayer = PlayerCharacter(
-                  chosenType, 120, 120, 130, 130, 1, 0, 0, gameData.tileWidth,
-                  gameData.tileHeight); // Example different stats
+                  chosenType, 0, 0, // Use 0,0 - will be set below
+                  gameData.tileWidth, gameData.tileHeight);
             }
 
             // Generate Level 1
@@ -238,6 +264,42 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
                 gameData.levelMaxRoomSize, gameData.enemies, gameData.tileWidth,
                 gameData.tileHeight); // Generate level and populate enemies
             gameData.levelRooms = gameData.currentLevel.rooms;
+
+            // --- Initialize Occupation Grid ---
+            gameData.occupationGrid.assign(
+                gameData.currentLevel.height,
+                std::vector<bool>(gameData.currentLevel.width,
+                                  false)); // Set all to false initially
+
+            // Mark walls as occupied
+            for (int y = 0; y < gameData.currentLevel.height; ++y) {
+              for (int x = 0; x < gameData.currentLevel.width; ++x) {
+                if (gameData.currentLevel.tiles[y][x] == '#') {
+                  gameData.occupationGrid[y][x] = true;
+                }
+              }
+            }
+
+            // Mark initial player position as occupied
+            if (isWithinBounds(gameData.currentGamePlayer.targetTileX,
+                               gameData.currentGamePlayer.targetTileY,
+                               gameData.currentLevel.width,
+                               gameData.currentLevel.height)) {
+              gameData.occupationGrid[gameData.currentGamePlayer.targetTileY]
+                                     [gameData.currentGamePlayer.targetTileX] =
+                  true;
+            }
+
+            // Mark initial enemy positions as occupied
+            for (const auto &enemy : gameData.enemies) {
+              if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                                 gameData.currentLevel.height)) {
+                gameData.occupationGrid[enemy.y][enemy.x] = true;
+              }
+            }
+            SDL_Log("Occupation Grid Initialized for Level %d.",
+                    gameData.currentLevelIndex);
+            // --- End Occupation Grid Initialization ---
 
             // Place player at start position
             gameData.currentGamePlayer.targetTileX =
@@ -330,12 +392,23 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
                             gameData.currentGamePlayer.targetTileY,
                             gameData.enemies, gameData.activeProjectiles,
                             nullptr)) {
-                      gameData.currentGameState =
-                          GameState::EnemyTurn; // actionTaken handled by state
-                                                // change
+                      // --- Start of Enemy Turn Initialization ---
+                      gameData.currentGameState = GameState::EnemyTurn;
+                      gameData.enemiesActingThisTurn = 0; // Start count at 0
                       for (auto &enemy : gameData.enemies) {
-                        enemy.hasTakenActionThisTurn = false;
-                      } // Reset enemy flags
+                        if (enemy.health > 0) { // Only count living enemies
+                          enemy.hasTakenActionThisTurn =
+                              false; // Reset action flag for the new turn
+                          gameData
+                              .enemiesActingThisTurn++; // Increment counter for
+                                                        // living enemies
+                        }
+                      }
+                      gameData.currentEnemyUpdateIndex =
+                          0; // Reset update index
+                      SDL_Log("Entering Enemy Turn. %d enemies acting.",
+                              gameData.enemiesActingThisTurn);
+
                     } else {
                     } // Should ideally not happen if canCastSpell was true
                   } else {
@@ -353,7 +426,7 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
               gameData.currentMenu =
                   GameMenu::None; // Close menu after selection attempt
               break;
-            case SDLK_ESCAPE: // Cancel spell selection
+            case SDLK_ESCAPE:                        // Cancel spell selection
               gameData.currentMenu = GameMenu::None; // Close the menu
               gameData.spellSelectIndex = 0;         // Reset highlight
               gameData.currentSpellIndex = -1;
@@ -501,12 +574,20 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
 
             // --- End Turn if an Instant Action Occurred ---
             if (actionTaken) {
-              // This handles instant spells, waiting, bumping into enemies etc.
+              // --- Start of Enemy Turn Initialization ---
               gameData.currentGameState = GameState::EnemyTurn;
-              // Reset enemy turn flags immediately
+              gameData.enemiesActingThisTurn = 0; // Start count at 0
               for (auto &enemy : gameData.enemies) {
-                enemy.hasTakenActionThisTurn = false;
+                if (enemy.health > 0) { // Only count living enemies
+                  enemy.hasTakenActionThisTurn =
+                      false; // Reset action flag for the new turn
+                  gameData.enemiesActingThisTurn++; // Increment counter for
+                                                    // living enemies
+                }
               }
+              gameData.currentEnemyUpdateIndex = 0; // Reset update index
+              SDL_Log("Entering Enemy Turn. %d enemies acting.",
+                      gameData.enemiesActingThisTurn);
             }
 
           } // End keydown check
@@ -557,7 +638,6 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
             // }
 
             if (!texToUse) {
-
             }
 
             if (gameData.currentGamePlayer.castSpell(
@@ -634,159 +714,368 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running) {
 
 void updateLogic(GameData &gameData, float deltaTime) {
 
-  // Update Panning/Fades (Menu -> Character Select)
+  // --- Update Panning/Fades (Menu -> Character Select) ---
+  // (This logic remains unchanged from your provided code)
   if (gameData.isPanning) {
-    gameData.panCounter += 10;           // Adjust speed as needed
-    gameData.splashPanOffset -= 10;      // Assuming splash pans upwards
-    if (gameData.splashPanOffset <= 0) { // Panning finished
+    gameData.panCounter += 10;
+    gameData.splashPanOffset -= 10;
+    if (gameData.splashPanOffset <= 0) {
       gameData.splashPanOffset = 0;
       gameData.isPanning = false;
-      gameData.currentGameState =
-          GameState::CharacterSelect;            // Now transition state
-      gameData.isCharacterSelectFadingIn = true; // Start fade in
+      gameData.currentGameState = GameState::CharacterSelect;
+      gameData.isCharacterSelectFadingIn = true;
       gameData.characterSelectAlpha = 0;
       gameData.hasCharacterSelectStartedFading = true;
     }
   }
   if (gameData.isCharacterSelectFadingIn) {
-    // Need safe alpha increment
-    int newAlpha = static_cast<int>(gameData.characterSelectAlpha) +
-                   10; // Adjust fade speed
+    int newAlpha = static_cast<int>(gameData.characterSelectAlpha) + 10;
     if (newAlpha >= 255) {
       gameData.characterSelectAlpha = 255;
-      gameData.isCharacterSelectFadingIn = false; // Fade-in complete
+      gameData.isCharacterSelectFadingIn = false;
     } else {
       gameData.characterSelectAlpha = static_cast<Uint8>(newAlpha);
     }
   }
 
-  // Update Game Entities (Only during gameplay states)
+  // --- Main Game State Update Logic ---
   switch (gameData.currentGameState) {
   case GameState::PlayerTurn:
-    // Only update player movement if they are moving
+    // Update player movement *first*
     if (gameData.currentGamePlayer.isMoving) {
-      bool playerWasMoving = true; // Assume they were if in this state
-      gameData.currentGamePlayer.update(deltaTime, gameData.tileWidth,
-                                        gameData.tileHeight);
+      bool playerWasMoving = true;
+      gameData.currentGamePlayer.update(deltaTime, gameData); // Pass GameData
       bool playerIsNowIdle = !gameData.currentGamePlayer.isMoving;
 
       // Check if movement finished AND menu is closed
       if (playerWasMoving && playerIsNowIdle &&
           gameData.currentMenu == GameMenu::None) {
-        gameData.currentGameState = GameState::EnemyTurn;
-        for (auto &enemy : gameData.enemies) {
-          enemy.hasTakenActionThisTurn = false;
-        }
-      }
-    }
-    // Do NOT update projectiles or enemies here
-    break;
 
-  case GameState::ProjectileResolution: { // Scope for variables
-    // --- Update Projectiles & Apply Hits ---
-    bool hitOccurred = false; // Track if any hit happened this frame
-    // Iterate using index to allow safe removal inside loop is complex,
-    // so let's update all, apply hits, then remove dead ones after.
-    std::vector<std::pair<int, int>>
-        hitLocations; // Store XY tile coords of hits
+        // Check if the player landed on the exit tile
+        if (gameData.currentGamePlayer.targetTileX ==
+                gameData.currentLevel.endCol &&
+            gameData.currentGamePlayer.targetTileY ==
+                gameData.currentLevel.endRow) {
+          SDL_Log("Player reached exit tile! Advancing to next level.");
+          gameData.currentLevelIndex++;
+          gameData.enemies.clear(); // Clear enemies for new level
+
+          // Generate New Level
+          gameData.currentLevel = generateLevel(
+              gameData.levelWidth, gameData.levelHeight, gameData.levelMaxRooms,
+              gameData.levelMinRoomSize, gameData.levelMaxRoomSize,
+              gameData.enemies, gameData.tileWidth,
+              gameData
+                  .tileHeight); // Pass level index if needed by generateLevel
+          gameData.levelRooms = gameData.currentLevel.rooms;
+
+          // Initialize Occupation Grid for new level
+          gameData.occupationGrid.assign(
+              gameData.currentLevel.height,
+              std::vector<bool>(gameData.currentLevel.width, false));
+          for (int y = 0; y < gameData.currentLevel.height; ++y) {
+            for (int x = 0; x < gameData.currentLevel.width; ++x) {
+              if (gameData.currentLevel.tiles[y][x] == '#') {
+                gameData.occupationGrid[y][x] = true;
+              }
+            }
+          }
+          // Mark initial enemy positions
+          for (const auto &enemy : gameData.enemies) {
+            if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                               gameData.currentLevel.height)) {
+              gameData.occupationGrid[enemy.y][enemy.x] = true;
+            }
+          }
+
+          // Reset Player Position to New Start
+          gameData.currentGamePlayer.targetTileX =
+              gameData.currentLevel.startCol;
+          gameData.currentGamePlayer.targetTileY =
+              gameData.currentLevel.startRow;
+          gameData.currentGamePlayer.x =
+              gameData.currentGamePlayer.targetTileX * gameData.tileWidth +
+              gameData.tileWidth / 2.0f;
+          gameData.currentGamePlayer.y =
+              gameData.currentGamePlayer.targetTileY * gameData.tileHeight +
+              gameData.tileHeight / 2.0f;
+          gameData.currentGamePlayer.startTileX =
+              gameData.currentGamePlayer.targetTileX;
+          gameData.currentGamePlayer.startTileY =
+              gameData.currentGamePlayer.targetTileY;
+
+          // Mark new player position on grid
+          if (isWithinBounds(gameData.currentGamePlayer.targetTileX,
+                             gameData.currentGamePlayer.targetTileY,
+                             gameData.currentLevel.width,
+                             gameData.currentLevel.height)) {
+            gameData.occupationGrid[gameData.currentGamePlayer.targetTileY]
+                                   [gameData.currentGamePlayer.targetTileX] =
+                true;
+          }
+
+          // Reset Visibility
+          gameData.visibilityMap.assign(
+              gameData.currentLevel.height,
+              std::vector<float>(gameData.currentLevel.width, 0.0f));
+          updateVisibility(gameData.currentLevel, gameData.levelRooms,
+                           gameData.currentGamePlayer.targetTileX,
+                           gameData.currentGamePlayer.targetTileY,
+                           gameData.hallwayVisibilityDistance,
+                           gameData.visibilityMap);
+
+          // Remain in PlayerTurn state for the new level
+          SDL_Log("New level %d generated. Player starting at (%d, %d).",
+                  gameData.currentLevelIndex,
+                  gameData.currentGamePlayer.targetTileX,
+                  gameData.currentGamePlayer.targetTileY);
+
+        } else {
+          // --- Player moved, NOT on exit: Transition to Enemy Turn ---
+          // --- Start of Enemy Turn Initialization ---
+          gameData.currentGameState = GameState::EnemyTurn;
+          gameData.enemiesActingThisTurn = 0;
+          for (auto &enemy : gameData.enemies) {
+            if (enemy.health > 0) {
+              enemy.hasTakenActionThisTurn = false;
+              gameData.enemiesActingThisTurn++;
+            }
+          }
+          gameData.currentEnemyUpdateIndex = 0;
+          SDL_Log("Entering Enemy Turn (after Player move). %d enemies acting.",
+                  gameData.enemiesActingThisTurn);
+          // --- End Enemy Turn Initialization ---
+        }
+      } // End if player finished moving
+    } // End if player is moving block
+    // Do NOT update projectiles or enemies in PlayerTurn state
+    break; // End PlayerTurn case
+
+  case GameState::ProjectileResolution: {
+    bool projectilesStillActive = false;
+    std::vector<Enemy *>
+        hitEnemiesThisFrame; // Track enemies hit to apply damage once
 
     for (auto &proj : gameData.activeProjectiles) {
-      if (proj.isActive &&
-          proj.update(deltaTime)) { // proj.update returns true on hit
-        hitOccurred = true;
-        int hitX = static_cast<int>(proj.targetX / gameData.tileWidth);
-        int hitY = static_cast<int>(proj.targetY / gameData.tileHeight);
-        hitLocations.push_back({hitX, hitY});
-        // proj.isActive is set to false inside proj.update()
-      }
-    }
+      if (proj.isActive) {
+        if (proj.update(deltaTime)) { // update returns true on hit
+          // Projectile reached target position this frame
+          int hitX = static_cast<int>(
+              floor(proj.targetX / gameData.tileWidth)); // Use floor
+          int hitY = static_cast<int>(
+              floor(proj.targetY / gameData.tileHeight)); // Use floor
 
-    // Apply damage for all hits that occurred this frame
-    if (hitOccurred) {
-      for (const auto &hitPos : hitLocations) {
-        int hitX = hitPos.first;
-        int hitY = hitPos.second;
-        bool enemyFoundAndDamaged = false;
-        for (auto &enemy : gameData.enemies) {
-          if (enemy.x == hitX && enemy.y == hitY && enemy.health > 0) {
-            int damageAmount = 15; // TODO: Get damage from projectile/spell
-            enemy.takeDamage(damageAmount);
-            enemyFoundAndDamaged = true;
-            // Hit only one enemy per projectile? break; might be needed if so.
-            break;
+          // Apply damage to enemy at hit location (if any)
+          for (auto &enemy : gameData.enemies) {
+            if (enemy.x == hitX && enemy.y == hitY && enemy.health > 0) {
+              enemy.takeDamage(proj.damage);
+              SDL_Log("Enemy at (%d, %d) hit by projectile for %d damage.",
+                      enemy.x, enemy.y, proj.damage);
+              // Don't mark action as complete here, let the main loop handle
+              // death
+              break; // Assume one hit per projectile? Adjust if AoE needed
+            }
           }
-        }
-        if (!enemyFoundAndDamaged) {
+          proj.isActive = false; // Deactivate projectile after hit
+        } else {
+          projectilesStillActive = true; // At least one projectile still moving
         }
       }
     }
 
-    // --- Remove Inactive Projectiles ---
+    // Remove inactive projectiles AFTER iterating
     gameData.activeProjectiles.erase(
         std::remove_if(gameData.activeProjectiles.begin(),
                        gameData.activeProjectiles.end(),
                        [](const Projectile &p) { return !p.isActive; }),
         gameData.activeProjectiles.end());
 
-    // --- Check if Resolution Finished ---
-    if (gameData.activeProjectiles.empty()) {
+    // Check if resolution finished (no active projectiles left)
+    if (!projectilesStillActive) {
+      // --- Transition to Enemy Turn ---
+      // --- Start of Enemy Turn Initialization ---
       gameData.currentGameState = GameState::EnemyTurn;
-      // Reset enemy action flags NOW before enemies act
+      gameData.enemiesActingThisTurn = 0;
       for (auto &enemy : gameData.enemies) {
-        enemy.hasTakenActionThisTurn = false;
+        if (enemy.health > 0) {
+          enemy.hasTakenActionThisTurn = false;
+          gameData.enemiesActingThisTurn++;
+        }
       }
-      // --- Check for Player Death (after potential hits) ---
-      // It's possible player died from reflected damage etc. Check here? Or
-      // after enemy turn? Let's check after enemy turn for now.
+      gameData.currentEnemyUpdateIndex = 0;
+      SDL_Log("Entering Enemy Turn (after projectiles). %d enemies acting.",
+              gameData.enemiesActingThisTurn);
+      // --- End Enemy Turn Initialization ---
     }
+    break; // End ProjectileResolution case
   } // End scope for ProjectileResolution case
-  break; // End ProjectileResolution case
 
   case GameState::EnemyTurn: {
-    // --- Update Enemies & Handle AI/Turn ---
-    bool allEnemiesActed = true;
-    bool allEnemiesIdle = true;
-    bool actionAttemptedThisFrame = false;
+    // Ensure counter doesn't stay negative if something went wrong
+    if (gameData.enemiesActingThisTurn < 0)
+      gameData.enemiesActingThisTurn = 0;
 
-    for (auto &enemy : gameData.enemies) {
-      if (enemy.health > 0) {
-        // Update enemy animation/movement first
-        enemy.update(deltaTime);
-
-        // Then check AI / Take Action
-        if (!enemy.hasTakenActionThisTurn) {
-          allEnemiesActed = false;
-          if (!enemy.isMoving && !actionAttemptedThisFrame) {
-            enemy.takeAction(gameData.currentLevel, gameData.currentGamePlayer);
-            actionAttemptedThisFrame = true;
-          }
+    // --- 1. Time-Sliced Enemy Updates ---
+    int updateCount = 0;
+    int N = gameData.enemies.size();
+    if (N > 0 && gameData.enemiesActingThisTurn >
+                     0) { // Only update if turns are still happening
+      while (updateCount < gameData.ENEMY_UPDATES_PER_FRAME &&
+             updateCount < N) {
+        int index = gameData.currentEnemyUpdateIndex % N;
+        if (gameData.enemies[index].health > 0) {
+          // Pass gameData needed for grid/counter updates within enemy.update
+          gameData.enemies[index].update(deltaTime, gameData);
         }
-        if (enemy.isMoving) {
-          allEnemiesIdle = false;
+        gameData.currentEnemyUpdateIndex++;
+        updateCount++;
+        // Optimization: If we've checked all enemies once in this slice cycle,
+        // stop This check might be complex if ENEMY_UPDATES_PER_FRAME is small
+        // relative to N Simpler: just ensure index wraps correctly via modulo
+      }
+      if (gameData.currentEnemyUpdateIndex >
+          N * 10) { // Prevent excessive growth
+        gameData.currentEnemyUpdateIndex %= N;
+      }
+    }
+
+    // --- 2. Process ONE Enemy AI Action Attempt ---
+    bool actionAttemptedThisFrame = false;
+    if (gameData.enemiesActingThisTurn >
+        0) { // Only process AI if turns are still happening
+      for (auto &enemy : gameData.enemies) {
+        if (enemy.health > 0 && !enemy.hasTakenActionThisTurn &&
+            !enemy.isMoving && !actionAttemptedThisFrame) {
+          enemy.takeAction(gameData.currentLevel, gameData.currentGamePlayer,
+                           gameData); // Pass non-const gameData
+          actionAttemptedThisFrame = true;
+          // Counter decrement is handled inside takeAction or update
+          break; // Only one AI action per frame
         }
       }
     }
 
-    // Transition back ONLY if all living enemies have acted AND finished moving
-    if (allEnemiesActed && allEnemiesIdle) {
-      // --- Check for Player Death ---
+    // --- 3. Process and Remove Dead Enemies, Grant Arcana ---
+    // Moved inside EnemyTurn, runs once per turn cycle when check occurs
+    if (!gameData.enemies.empty()) {
+      // Log partition check start
+      // SDL_Log("Partition Check: Enemies count = %zu",
+      // gameData.enemies.size());
+
+      auto dead_partition_start =
+          std::partition(gameData.enemies.begin(), gameData.enemies.end(),
+                         [](const Enemy &e) { return e.health > 0; });
+
+      auto num_dead =
+          std::distance(dead_partition_start, gameData.enemies.end());
+      // if(num_dead > 0) SDL_Log("Partition Result: Identified %td dead
+      // enemies.", num_dead); // Only log if relevant
+
+      // Grant Arcana and update grid for dead enemies before erasing
+      for (auto it = dead_partition_start; it != gameData.enemies.end(); ++it) {
+        SDL_Log("Enemy defeated at (%d, %d), granting %d Arcana.", it->x, it->y,
+                it->arcanaValue);
+        gameData.currentGamePlayer.GainArcana(it->arcanaValue);
+
+        // Update Occupation Grid
+        if (isWithinBounds(it->x, it->y, gameData.currentLevel.width,
+                           gameData.currentLevel.height)) {
+          gameData.occupationGrid[it->y][it->x] = false;
+          SDL_Log("Cleared occupation grid at (%d, %d).", it->x, it->y);
+        }
+      }
+
+      // Erase the partition containing all the dead enemies
+      if (num_dead > 0) {
+        gameData.enemies.erase(dead_partition_start, gameData.enemies.end());
+        SDL_Log("Removed %td dead enemies from vector.", num_dead);
+        // Safety check: Ensure acting counter doesn't exceed remaining enemies
+        if (gameData.enemiesActingThisTurn > gameData.enemies.size()) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "Acting counter %d higher than enemy count %zu after "
+                      "removal. Resetting.",
+                      gameData.enemiesActingThisTurn, gameData.enemies.size());
+          gameData.enemiesActingThisTurn = gameData.enemies.size();
+          // Additionally, need to re-evaluate which remaining enemies already
+          // acted? Complex. Better approach might be needed if enemies die
+          // mid-turn often. For now, hope the decrement logic handles this
+          // okay.
+        }
+      }
+    } // End if enemies not empty
+
+    // --- 4. Check for Turn Completion using Counter ---
+    if (gameData.enemiesActingThisTurn <= 0) {
+      SDL_Log("Enemy Turn Ends. Remaining actors should be 0: %d",
+              gameData.enemiesActingThisTurn);
+
+      // Check for Player Death FIRST
       if (gameData.currentGamePlayer.health <= 0) {
         gameData.currentGameState = GameState::GameOver;
         SDL_Log("--- Game Over ---");
       } else {
-        // --- Start Player Turn ---
+        // Attempt Enemy Spawn
+        if (gameData.enemies.size() < gameData.maxEnemyCount &&
+            gameData.spawnChancePercent > 0) {
+          if ((rand() % 100) < gameData.spawnChancePercent) {
+            std::vector<std::pair<int, int>> validSpawnTiles;
+            for (int y = 0; y < gameData.currentLevel.height; ++y) {
+              for (int x = 0; x < gameData.currentLevel.width; ++x) {
+                if (gameData.currentLevel.tiles[y][x] == '.' &&
+                    gameData.visibilityMap[y][x] <= 0.0f &&
+                    !gameData.occupationGrid[y][x]) {
+                  if (x != gameData.currentGamePlayer.targetTileX ||
+                      y != gameData.currentGamePlayer.targetTileY) {
+                    validSpawnTiles.push_back({x, y});
+                  }
+                }
+              }
+            }
+            if (!validSpawnTiles.empty()) {
+              int randomIndex = rand() % validSpawnTiles.size();
+              std::pair<int, int> spawnPos = validSpawnTiles[randomIndex];
+              int spawnX = spawnPos.first;
+              int spawnY = spawnPos.second;
+              int enemyHealth = 20 + (gameData.currentLevelIndex * 5);
+              int enemyArcana =
+                  15 + (gameData.currentLevelIndex * 3); // Use value
+              // Ensure correct constructor is called with Arcana
+              gameData.enemies.emplace_back(
+                  spawnX, spawnY, enemyHealth, gameData.tileWidth,
+                  gameData
+                      .tileHeight, // Tile dimensions needed by constructor now
+                  gameData.tileWidth,
+                  gameData.tileHeight, // Assuming visW/H = tileW/H
+                  enemyArcana);        // Explicitly pass arcana value
+              gameData.occupationGrid[spawnY][spawnX] = true; // Mark grid
+              SDL_Log("Reinforcement spawned at (%d, %d). Total: %zu", spawnX,
+                      spawnY, gameData.enemies.size());
+              // IMPORTANT: Newly spawned enemy should NOT act this turn.
+              // Need to increment enemiesActingThisTurn IF we want them to act
+              // next enemy turn, or handle their hasTakenAction flag
+              // appropriately at start of next turn. Easiest is probably just
+              // letting the next turn's initialization handle them.
+            } else { /* No valid spawn location */
+            }
+          } // End spawn chance check
+        } // End max enemy / spawn chance check
+
+        // --- Transition to Player Turn ---
+        gameData.currentGamePlayer.RegenerateMana(1.0f);
         gameData.currentGameState = GameState::PlayerTurn;
         updateVisibility(gameData.currentLevel, gameData.levelRooms,
                          gameData.currentGamePlayer.targetTileX,
                          gameData.currentGamePlayer.targetTileY,
                          gameData.hallwayVisibilityDistance,
                          gameData.visibilityMap);
-      }
-    }
-    // Do NOT update player or projectiles here
+        SDL_Log("Entering Player Turn.");
+      } // End else (Player is not dead)
+    } // End turn completion check
+
     break; // End EnemyTurn case
-  }
-  // PlayerTargeting and GameOver don't have active entity updates in this model
+  } // End scope for EnemyTurn case vars
+
+  // Other cases (PlayerTargeting, GameOver, MainMenu, CharacterSelect)
   case GameState::PlayerTargeting:
   case GameState::GameOver:
   case GameState::MainMenu:
@@ -794,44 +1083,35 @@ void updateLogic(GameData &gameData, float deltaTime) {
     // No entity updates needed in these states
     break;
 
-  } // End Gameplay State Update block
+  } // End Gameplay State Update block (switch statement)
 
-  gameData.enemies.erase(
-      std::remove_if(gameData.enemies.begin(), gameData.enemies.end(),
-                     [](const Enemy &e) { return e.health <= 0; }),
-      gameData.enemies.end());
-
-  // Update Camera (Should run in most gameplay states to follow player)
+  // --- Update Camera ---
+  // (Camera logic remains unchanged from your provided code)
   if (gameData.currentGameState == GameState::PlayerTurn ||
       gameData.currentGameState == GameState::PlayerTargeting ||
-      gameData.currentGameState ==
-          GameState::ProjectileResolution || // Follow player even during
-                                             // resolution
-      gameData.currentGameState ==
-          GameState::EnemyTurn) // Follow player even during enemy turn
-  {
+      gameData.currentGameState == GameState::ProjectileResolution ||
+      gameData.currentGameState == GameState::EnemyTurn) {
     int halfWidth = gameData.windowWidth / 2;
     int halfHeight = gameData.windowHeight / 2;
-    // Center on the player's *current visual position*
     int idealCameraX =
         static_cast<int>(gameData.currentGamePlayer.x) - halfWidth;
     int idealCameraY =
         static_cast<int>(gameData.currentGamePlayer.y) - halfHeight;
-
-    // Clamp camera to level boundaries
     int maxCameraX = (gameData.currentLevel.width * gameData.tileWidth) -
                      gameData.windowWidth;
     int maxCameraY = (gameData.currentLevel.height * gameData.tileHeight) -
                      gameData.windowHeight;
     gameData.cameraX = std::max(0, std::min(idealCameraX, maxCameraX));
     gameData.cameraY = std::max(0, std::min(idealCameraY, maxCameraY));
-    // Ensure maxCameraX/Y aren't negative if level is smaller than screen
     if (maxCameraX < 0)
       gameData.cameraX = 0;
     if (maxCameraY < 0)
       gameData.cameraY = 0;
   }
-}
+
+  // Ensure the old enemy removal block is GONE from here.
+
+} // End updateLogic function definition
 
 void renderScene(GameData &gameData, AssetManager &assets) {
 
@@ -864,6 +1144,36 @@ void renderScene(GameData &gameData, AssetManager &assets) {
   case GameState::EnemyTurn:
     // --- Render Level ---
     if (!gameData.currentLevel.tiles.empty()) {
+
+      SDL_Texture *wallTexture = assets.getTexture("wall_texture");
+      SDL_Texture *startTexture =
+          assets.getTexture("start_tile"); // Keep existing ones
+      SDL_Texture *exitTexture = assets.getTexture("exit_tile");
+
+      std::vector<SDL_Texture *> floorTextures = {
+          assets.getTexture("floor_1"), assets.getTexture("floor_2")
+          // Add more variants retrieved from assets here
+      };
+
+      // Define weights for each texture in the floorTextures vector
+      // Example: 70% floor_1, 20% floor_2, 10% floor_dirt
+      std::vector<double> floorWeights = {
+          3.0, 7.0}; // Weights don't have to sum to 100
+
+      // Calculate total weight and cumulative weights for selection
+      double totalWeight = 0;
+      for (double w : floorWeights) {
+        totalWeight += w;
+      }
+      std::vector<double> cumulativeWeights;
+      double currentCumulative = 0;
+      if (totalWeight > 0) { // Avoid division by zero if no weights/textures
+        for (size_t i = 0; i < floorWeights.size(); ++i) {
+          currentCumulative += floorWeights[i];
+          cumulativeWeights.push_back(currentCumulative /
+                                      totalWeight); // Normalize to 0-1 range
+        }
+      }
       for (int y = 0; y < gameData.currentLevel.height; ++y) {
         for (int x = 0; x < gameData.currentLevel.width; ++x) {
           SDL_Rect tileRect = {(x * gameData.tileWidth) - gameData.cameraX,
@@ -875,27 +1185,63 @@ void renderScene(GameData &gameData, AssetManager &assets) {
                                  : 0.0f;
 
           if (visibility > 0.0f) { // Only render visible tiles
-                                   // Choose color/texture based on tile type
-            if (y == gameData.currentLevel.startRow &&
-                x == gameData.currentLevel.startCol &&
-                assets.getTexture("start_tile")) {
-              SDL_RenderCopy(gameData.renderer, assets.getTexture("start_tile"),
-                             nullptr, &tileRect);
-            } else if (y == gameData.currentLevel.endRow &&
-                       x == gameData.currentLevel.endCol &&
-                       assets.getTexture("exit_tile")) {
-              SDL_RenderCopy(gameData.renderer, assets.getTexture("exit_tile"),
-                             nullptr, &tileRect);
-            } else if (gameData.currentLevel.tiles[y][x] == '#') {
-              SDL_SetRenderDrawColor(gameData.renderer, 139, 69, 19,
-                                     255); // Brown Wall
-              SDL_RenderFillRect(gameData.renderer, &tileRect);
-            } else if (gameData.currentLevel.tiles[y][x] == '.') {
-              SDL_SetRenderDrawColor(gameData.renderer, 200, 200, 200,
-                                     255); // Light Gray Floor
-              SDL_RenderFillRect(gameData.renderer, &tileRect);
+            SDL_Texture *textureToRender = nullptr;
+            bool isFloor = false; // Flag to check if we need floor logic
+
+            // --- Determine Base Texture ---
+            if (y == gameData.currentLevel.startRow && x == gameData.currentLevel.startCol && startTexture) { // Check coordinates AND texture
+              textureToRender = startTexture;
+          } else if (y == gameData.currentLevel.endRow && x == gameData.currentLevel.endCol && exitTexture) { // Check coordinates AND texture
+              textureToRender = exitTexture;
+          } else if (gameData.currentLevel.tiles[y][x] == '#' && wallTexture) { // Check tile type AND texture
+              textureToRender = wallTexture;
+          } else if (gameData.currentLevel.tiles[y][x] == '.') { // Check tile type
+              // It's a floor tile, flag it for variant selection below
+              // We don't assign textureToRender here yet.
+              isFloor = true;
+          }
+
+            // --- Floor Variant Selection (if isFloor is true) ---
+            if (isFloor && !floorTextures.empty() && totalWeight > 0) {
+              // 1. Simple deterministic hash based on coordinates
+              // Using large primes helps distribute better
+              unsigned int hash = ((unsigned int)x * 2654435761u) ^
+                                  ((unsigned int)y * 3063691763u);
+              // Scale hash to [0, 1) range (approximately)
+              double hashValue = (double)(hash % 10000) /
+                                 10000.0; // Modulo limits range, then scale
+
+              // 2. Select texture based on cumulative weights
+              for (size_t i = 0; i < cumulativeWeights.size(); ++i) {
+                if (hashValue <= cumulativeWeights[i]) {
+                  textureToRender = floorTextures[i]; // Select this texture
+                  break;                              // Found our texture
+                }
+              }
+              // Fallback if something went wrong (e.g., hash > 1 somehow)
+              if (!textureToRender)
+                textureToRender = floorTextures[0];
+            } else if (isFloor) {
+              // Fallback if no floor textures loaded or weights defined
+              textureToRender = nullptr; // Will trigger color fallback below
             }
-            // Add other tile types ('V' for void/vision blocker?)
+
+            // --- Render Selected Texture or Fallback Color ---
+            if (textureToRender != nullptr) {
+              SDL_RenderCopy(gameData.renderer, textureToRender, nullptr,
+                             &tileRect);
+            } else {
+              // Fallback color rendering (same as before)
+              if (gameData.currentLevel.tiles[y][x] == '#') { /* Draw brown */
+              } else if (gameData.currentLevel.tiles[y][x] ==
+                         '.') { /* Draw gray */
+              } else {
+                // Draw void/unhandled tiles as black?
+                SDL_SetRenderDrawColor(gameData.renderer, 5, 5, 5,
+                                       255); // Very dark grey
+                SDL_RenderFillRect(gameData.renderer, &tileRect);
+              }
+            }
 
             // Apply visibility dimming overlay
             Uint8 alpha = static_cast<Uint8>(

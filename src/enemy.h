@@ -2,7 +2,10 @@
 #define ENEMY_H
 
 #include <SDL.h>
-#include "character.h"
+
+struct PlayerCharacter; // Forward declare PlayerCharacter
+struct Level;           // Forward declare Level
+struct GameData;      // Forward declare GameData
 
 class Enemy {
     public:
@@ -29,10 +32,11 @@ class Enemy {
 
     bool hasTakenActionThisTurn;
 
-    Enemy(int startX, int startY, int tileW, int tileH); // Add tile dims
-    Enemy(int startX, int startY, int initialHealth, int enemyW, int enemyH, int tileW, int tileH); // Add tile dims
-    void takeAction(const class Level& level, PlayerCharacter& player);
-    void update(float deltaTime);
+    int arcanaValue = 10; // Default Arcana value if none provided
+
+    Enemy(int startX, int startY, int initialHealth, int enemyW, int enemyH, int tileW, int tileH, int arcValue = 10); // Add tile dims
+    void takeAction(const Level& level, PlayerCharacter& player, GameData& gameData);
+    void update(float deltaTime, GameData& gameData);
     void render(SDL_Renderer* renderer, int cameraX, int cameraY, float visibilityAlpha) const;
     void startMove(int targetX, int targetY);
     void takeDamage(int amount);

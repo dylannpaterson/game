@@ -195,7 +195,11 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
         if (foundSpawn) {
             // Determine the type of enemy to spawn (you might have different enemy types)
             // For now, we'll just spawn a generic enemy
-            enemies.emplace_back(spawnX, spawnY, 20,tileW, tileH, tileW, tileH); // Assuming tileWidth and tileHeight are known here
+
+            int enemyHealth = 20; // Scale health
+            int enemyArcana = 15; // Scale Arcana
+
+            enemies.emplace_back(spawnX, spawnY, enemyHealth,tileW, tileH, tileW, tileH,enemyArcana); // Assuming tileWidth and tileHeight are known here
         }
     }
 

@@ -8,59 +8,109 @@
 // 'utils.h') If renderText is still in main.cpp, you might need to move it to
 // utils.cpp and include utils.h here as well.
 
+// Definition for renderUI
 void renderUI(GameData &gameData, AssetManager &assets) {
   SDL_Color textColor = {255, 255, 255, 255}; // White color
+  TTF_Font* font = assets.getFont("main_font"); // Get the font once
 
+  if (!font) {
+      SDL_Log("UI Error: Font 'main_font' not loaded!");
+      return; // Cannot proceed without font
+  }
+
+  // --- Health Display ---
+  SDL_Rect healthRect = {10, 10, 0, 0}; // Position at top-left
   std::string healthText =
       "Health: " + std::to_string(gameData.currentGamePlayer.health) + "/" +
       std::to_string(gameData.currentGamePlayer.maxHealth);
   SDL_Texture *healthTexture = renderText(
-      gameData.renderer, assets.getFont("main_font"), healthText, textColor);
+      gameData.renderer, font, healthText, textColor); // Use the font variable
   if (healthTexture != nullptr) {
-    SDL_Rect healthRect = {10, 10, 0, 0}; // Position at top-left
-    SDL_QueryTexture(healthTexture, nullptr, nullptr, &healthRect.w,
-                     &healthRect.h);
-    SDL_RenderCopy(gameData.renderer, healthTexture, nullptr, &healthRect);
-    SDL_DestroyTexture(healthTexture);
+      SDL_QueryTexture(healthTexture, nullptr, nullptr, &healthRect.w, &healthRect.h);
+      SDL_RenderCopy(gameData.renderer, healthTexture, nullptr, &healthRect);
+      SDL_DestroyTexture(healthTexture);
+  } else {
+       SDL_Log("Failed to render health text."); // Error logged in renderText?
   }
 
+
+  // --- Mana Display ---
+  // Position below health, calculate exact Y based on healthRect height
+  SDL_Rect manaRect = {10, healthRect.y + healthRect.h + 5, 0, 0}; // Start Y based on health's bottom edge + padding
   std::string manaText =
       "Mana: " + std::to_string(gameData.currentGamePlayer.mana) + "/" +
       std::to_string(gameData.currentGamePlayer.maxMana);
   SDL_Texture *manaTexture = renderText(
-      gameData.renderer, assets.getFont("main_font"), manaText, textColor);
+      gameData.renderer, font, manaText, textColor); // Use the font variable
   if (manaTexture != nullptr) {
-    SDL_Rect manaRect = {10, 40, 0, 0}; // Position below health
-    SDL_QueryTexture(manaTexture, nullptr, nullptr, &manaRect.w, &manaRect.h);
-    SDL_RenderCopy(gameData.renderer, manaTexture, nullptr, &manaRect);
-    SDL_DestroyTexture(manaTexture);
+      SDL_QueryTexture(manaTexture, nullptr, nullptr, &manaRect.w, &manaRect.h); // Get dimensions
+      SDL_RenderCopy(gameData.renderer, manaTexture, nullptr, &manaRect);
+      SDL_DestroyTexture(manaTexture);
+  } else {
+       SDL_Log("Failed to render mana text.");
   }
 
+
+  // --- NEW: Arcana Display ---
+  // Position below mana, calculate exact Y based on manaRect height
+  SDL_Rect arcanaRect = {10, manaRect.y + manaRect.h + 5, 0, 0}; // Start Y based on mana's bottom edge + padding
+  std::string arcanaText = "Arcana: " + std::to_string(gameData.currentGamePlayer.currentArcana);
+  SDL_Texture *arcanaTexture = renderText(
+      gameData.renderer, font, arcanaText, textColor); // Use the font variable
+  if (arcanaTexture != nullptr) {
+       SDL_QueryTexture(arcanaTexture, nullptr, nullptr, &arcanaRect.w, &arcanaRect.h); // Get dimensions
+       SDL_RenderCopy(gameData.renderer, arcanaTexture, nullptr, &arcanaRect);
+       SDL_DestroyTexture(arcanaTexture);
+   } else {
+       SDL_Log("Failed to render Arcana text.");
+   }
+  // --- END NEW Arcana Display ---
+
+
+  // --- Level Display ---
+  // Keep existing logic, maybe ensure font variable is used if applicable
   std::string levelText =
       "Level: " + std::to_string(gameData.currentGamePlayer.level);
   SDL_Texture *levelTexture = renderText(
-      gameData.renderer, assets.getFont("main_font"), levelText, textColor);
+      gameData.renderer, font, levelText, textColor); // Use the font variable
   if (levelTexture != nullptr) {
-    SDL_Rect levelRect = {gameData.windowWidth - 150, 10, 0,
-                          0}; // Position at top-right
-    SDL_QueryTexture(levelTexture, nullptr, nullptr, &levelRect.w,
-                     &levelRect.h);
-    SDL_RenderCopy(gameData.renderer, levelTexture, nullptr, &levelRect);
-    SDL_DestroyTexture(levelTexture);
+      SDL_Rect levelRect = {gameData.windowWidth - 150, 10, 0, 0}; // Position at top-right (adjust X as needed)
+      SDL_QueryTexture(levelTexture, nullptr, nullptr, &levelRect.w, &levelRect.h);
+      // Adjust X position based on width to right-align if desired
+      levelRect.x = gameData.windowWidth - levelRect.w - 10; // Right-align with 10px padding
+      SDL_RenderCopy(gameData.renderer, levelTexture, nullptr, &levelRect);
+      SDL_DestroyTexture(levelTexture);
+  } else {
+       SDL_Log("Failed to render level text.");
   }
 
-  std::string floorText =
-      "Floor: " + std::to_string(gameData.currentLevelIndex);
-  SDL_Texture *floorTexture = renderText(
-      gameData.renderer, assets.getFont("main_font"), floorText, textColor);
-  if (floorTexture != nullptr) {
-    SDL_Rect floorRect = {gameData.windowWidth - 150, 40, 0,
-                          0}; // Position below level
-    SDL_QueryTexture(floorTexture, nullptr, nullptr, &floorRect.w,
-                     &floorRect.h);
-    SDL_RenderCopy(gameData.renderer, floorTexture, nullptr, &floorRect);
-    SDL_DestroyTexture(floorTexture);
-  }
+  // --- Floor Display ---
+   // Keep existing logic, position below level
+   SDL_Rect floorRect = {0, 0, 0, 0}; // Initialize floorRect
+   std::string floorText =
+       "Floor: " + std::to_string(gameData.currentLevelIndex);
+   SDL_Texture *floorTexture = renderText(
+       gameData.renderer, font, floorText, textColor); // Use the font variable
+   if (floorTexture != nullptr) {
+       SDL_QueryTexture(floorTexture, nullptr, nullptr, &floorRect.w, &floorRect.h);
+       // Position below Level text, aligning right edges
+       floorRect.x = gameData.windowWidth - floorRect.w - 10; // Right-align with 10px padding
+       // Assume levelRect was defined and used above for positioning
+       SDL_Rect levelRect = {gameData.windowWidth - 150, 10, 0, 0}; // Re-declare or ensure scope allows access
+       SDL_Texture *tempLevelTexture = renderText( gameData.renderer, font, levelText, textColor); // Need size again
+       if (tempLevelTexture) {
+           SDL_QueryTexture(tempLevelTexture, nullptr, nullptr, &levelRect.w, &levelRect.h);
+           SDL_DestroyTexture(tempLevelTexture); // Clean up temporary texture
+           floorRect.y = levelRect.y + levelRect.h + 5; // Position below level text
+       } else {
+          floorRect.y = 40; // Fallback position if level text failed
+       }
+
+       SDL_RenderCopy(gameData.renderer, floorTexture, nullptr, &floorRect);
+       SDL_DestroyTexture(floorTexture);
+   } else {
+       SDL_Log("Failed to render floor text.");
+   }
 }
 
 // --- Updated renderSpellMenu using existing utils::renderText ---
