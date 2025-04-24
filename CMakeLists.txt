@@ -21,7 +21,14 @@ add_executable(WizardRoguelike
     src/main.cpp
     src/menu.cpp
     src/character_select.cpp
+    src/character.cpp
     src/level.cpp
+    src/enemy.cpp
+    src/utils.cpp
+    src/ui.cpp
+    src/visibility.cpp
+    src/projectile.cpp
+    src/asset_manager.cpp
 )
 
 target_link_libraries(WizardRoguelike
