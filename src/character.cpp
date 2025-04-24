@@ -1,5 +1,6 @@
 // In character.cpp
 #include "character.h"
+#include "asset_manager.h"
 #include "enemy.h"
 #include "game_data.h"
 #include "projectile.h"
@@ -341,56 +342,159 @@ void PlayerCharacter::takeDamage(int amount) {
   }
 }
 // Placeholder for castSpell - NEEDS LATER MODIFICATION for damage based on Int
-bool PlayerCharacter::castSpell(
-    int spellIndex, int castTargetX, int castTargetY,
-    std::vector<Enemy> &enemies,
-    std::vector<Projectile> &projectiles, // <-- Add projectile list
-    SDL_Texture *projectileTexture) {
-  if (!canCastSpell(spellIndex)) {
+bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
+                                int castTargetY, std::vector<Enemy> &enemies,
+                                std::vector<Projectile> &projectiles,
+                                AssetManager *assets) // Changed parameter type
+{
+  // 1. Validate Spell Index and Mana Cost
+  if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "CastSpell: Invalid spell index %d", spellIndex);
     return false;
   }
-  const Spell &spell = getSpell(spellIndex);
+  const Spell &spell = knownSpells[spellIndex];
+  if (!canCastSpell(spellIndex)) {
+    SDL_Log("CastSpell: Cannot cast '%s', not enough mana (%d/%d).",
+            spell.name.c_str(), mana, spell.manaCost);
+    return false;
+  }
 
-  // Basic range check example
+  // 2. Check Range (if applicable)
   if (spell.targetType != SpellTargetType::Self) {
     int distance = std::abs(targetTileX - castTargetX) +
                    std::abs(targetTileY - castTargetY);
     if (distance > spell.range) {
-      return false;
+      SDL_Log("CastSpell: Target [%d,%d] out of range for '%s' (Range: %d, "
+              "Dist: %d).",
+              castTargetX, castTargetY, spell.name.c_str(), spell.range,
+              distance);
+      return false; // Target out of range
     }
   }
 
-  bool castSuccess = false;
-  // Simplified logic - needs proper implementation integrating stats later
-  if (spell.targetType == SpellTargetType::Self &&
-      spell.effectType == SpellEffectType::Heal) {
-    health += static_cast<int>(spell.value); // Use base value for now
-    health = std::min(health, maxHealth);
-    castSuccess = true;
-  } else if (spell.targetType == SpellTargetType::Enemy &&
-             spell.effectType == SpellEffectType::Damage && projectileTexture) {
+  // 3. Deduct Mana Cost (do this early)
+  mana -= spell.manaCost;
+  SDL_Log("CastSpell: Spent %d mana for '%s'. Remaining: %d/%d", spell.manaCost,
+          spell.name.c_str(), mana, maxMana);
 
-    // *** CALCULATE DAMAGE HERE ***
-    // Use the spell's base value and apply the character's modifier
-    int calculatedDamage = static_cast<int>(
-        spell.value * spellDamageModifier); // Use the modifier!
+  // 4. Apply Spell Effect / Create Projectile
+  bool effectApplied = false;
+  switch (spell.effectType) {
+  case SpellEffectType::Damage:
+    if (spell.targetType == SpellTargetType::Enemy ||
+        spell.targetType == SpellTargetType::Tile ||
+        spell.targetType == SpellTargetType::Area) {
 
-    float startVisualX = this->x;
-    float startVisualY = this->y;
-    float targetVisualX = castTargetX * tileWidth + tileWidth / 2.0f;
-    float targetVisualY = castTargetY * tileHeight + tileHeight / 2.0f;
-    float projectileSpeed = 900.0f;
-    int projWidth = 64, projHeight = 64;
-    ProjectileType pType = ProjectileType::Firebolt;
-    projectiles.emplace_back(pType, projectileTexture, projWidth, projHeight,
-                             startVisualX, startVisualY, targetVisualX,
-                             targetVisualY, projectileSpeed, calculatedDamage);
-    castSuccess = true;
+      // --- Find Target Enemy ID (for homing projectiles) ---
+      int targetId = -1; // Default: -1 indicates no specific enemy target
+                         // (e.g., targeting a tile)
+      // Only search for an enemy ID if the spell specifically targets enemies
+      if (spell.targetType == SpellTargetType::Enemy) {
+        for (const auto &enemy : enemies) {
+          // Check if a living enemy exists at the target logical coordinates
+          if (enemy.health > 0 && enemy.x == castTargetX &&
+              enemy.y == castTargetY) {
+            targetId = enemy.id; // Store the ID of the found enemy
+            SDL_Log("CastSpell: Found target Enemy ID %d at [%d,%d].", targetId,
+                    castTargetX, castTargetY);
+            break; // Stop searching once found
+          }
+        }
+        // Log if no enemy was found at the targeted tile
+        if (targetId == -1) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "CastSpell: Targeted enemy at [%d,%d] but no living "
+                      "enemy found there.",
+                      castTargetX, castTargetY);
+          // Depending on game design, spell might fizzle or still launch
+          // towards the tile
+        }
+      }
+      // ---------------------------------------------------------
+      // --- Create Projectile ---
+      // Determine projectile texture name (e.g., based on spell name)
+      std::string projectileTextureName;
+      if (spell.name == "Fireball")
+        projectileTextureName = "fireball"; // Example mapping
+      // Add mappings for other projectile spells here...
+      else
+        projectileTextureName = spell.iconName; // Fallback to icon name? Risky.
+
+      SDL_Texture *projTexture = nullptr;
+      if (assets &&
+          !projectileTextureName.empty()) { // Check if assets pointer is valid
+        projTexture = assets->getTexture(projectileTextureName);
+      }
+
+      if (projTexture) {
+        // Calculate damage based on spell value and player stats
+        int calculatedDamage =
+            static_cast<int>(spell.value * spellDamageModifier);
+
+        // Calculate visual start/end points
+        float startVisualX = this->x; // Player's current visual center X
+        float startVisualY = this->y; // Player's current visual center Y
+        float targetVisualX = castTargetX * tileWidth +
+                              tileWidth / 2.0f; // Center of target tile X
+        float targetVisualY = castTargetY * tileHeight +
+                              tileHeight / 2.0f; // Center of target tile Y
+
+        // Define projectile properties (speed, size)
+        float projectileSpeed = 600.0f; // Example speed (pixels per second)
+        int projWidth = 32, projHeight = 32; // Example size
+        ProjectileType pType =
+            ProjectileType::Firebolt; // Determine type based on spell if needed
+
+        // Add the projectile to the active list
+        projectiles.emplace_back(pType, projTexture, projWidth, projHeight,
+                                 startVisualX, startVisualY, targetVisualX,
+                                 targetVisualY, projectileSpeed,
+                                 calculatedDamage, targetId);
+        SDL_Log("CastSpell: Launched '%s' projectile towards [%d,%d] with %d "
+                "damage.",
+                spell.name.c_str(), castTargetX, castTargetY, calculatedDamage);
+        effectApplied = true;
+      } else {
+        SDL_LogWarn(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "CastSpell: Failed to get projectile texture '%s' for spell '%s'.",
+            projectileTextureName.c_str(), spell.name.c_str());
+        // Spell still cost mana, but projectile wasn't created.
+        // Depending on design, maybe refund mana? For now, mana is spent.
+      }
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "CastSpell: Damage effect type requires Enemy, Tile, or Area "
+                  "target type for projectile.");
+    }
+    break;
+
+  case SpellEffectType::Heal:
+    if (spell.targetType == SpellTargetType::Self) {
+      int healAmount = static_cast<int>(
+          spell.value); // Healing might not scale with Int/DmgMod
+      health = std::min(health + healAmount,
+                        maxHealth); // Apply healing, clamp to max
+      SDL_Log("CastSpell: Healed self for %d. Health: %d/%d", healAmount,
+              health, maxHealth);
+      effectApplied = true;
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "CastSpell: Heal effect type currently only supports Self "
+                  "target type.");
+    }
+    break;
+
+  // Add cases for Buff, Debuff, Summon, etc.
+  case SpellEffectType::Buff:
+  case SpellEffectType::Debuff:
+  case SpellEffectType::Summon:
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "CastSpell: Effect type %d not yet implemented.",
+                (int)spell.effectType);
+    break;
   }
-  // --- TODO: Add actual damage/effect calculation using effective stats! ---
 
-  if (castSuccess) {
-    mana -= spell.manaCost;
-  }
-  return castSuccess;
+  return effectApplied; // Return true if the spell had a resolvable effect
 }

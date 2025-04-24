@@ -1,103 +1,87 @@
 // src/enemy.cpp
 
 #include "enemy.h"
-#include "character.h"
+#include "character.h" // Include character.h for PlayerCharacter definition
 #include "level.h"
-#include "game_data.h"
-#include "asset_manager.h" // Include AssetManager header
+#include "game_data.h" // Include game_data.h for GameData and IntendedAction
+#include "asset_manager.h"
 #include "utils.h"
 #include <SDL.h>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include <stdexcept> // For std::runtime_error
+#include <stdexcept>
 
-// --- MODIFIED: Constructor Implementation ---
-Enemy::Enemy(EnemyType eType, int startX, int startY, int tileW, int tileH)
-    : type(eType), // Store the type
+// Initialize static ID counter
+int Enemy::nextId = 0;
+
+// --- Constructor Implementation (Assign ID) ---
+Enemy::Enemy(int uniqueId, EnemyType eType, int startX, int startY, int tileW, int tileH)
+    : id(uniqueId), // Assign the unique ID
+      type(eType),
       x(startX), y(startY),
       isMoving(false), startTileX(startX), startTileY(startY),
       targetTileX(startX), targetTileY(startY), moveProgress(0.0f),
-      moveTimer(0.0f), hasTakenActionThisTurn(false),
+      moveTimer(0.0f), // hasTakenActionThisTurn removed
       tileWidth(tileW), tileHeight(tileH)
 {
-    // Initialize visual position based on logical start position
+    // Initialize visual position
     visualX = startX * tileWidth + tileWidth / 2.0f;
     visualY = startY * tileHeight + tileHeight / 2.0f;
 
-    // *** Set attributes based on EnemyType ***
-    // (Consider moving this data to a map or data file later for better organization)
+    // Set attributes based on EnemyType
     switch (type) {
         case EnemyType::SLIME:
-            // --- Slime Specific Stats ---
-            health = 15;        // Example health
-            maxHealth = 15;
-            width = tileW * 0.8; // Slime slightly smaller than tile
-            height = tileH * 0.8;
-            arcanaValue = 12;
-            textureName = "slime_texture"; // Make sure this matches asset key
-            moveDuration = 0.25f; // Slimes might be slightly slower
-            // --------------------------
+            health = 15; maxHealth = 15;
+            width = tileW * 0.8; height = tileH * 0.8;
+            arcanaValue = 12; textureName = "slime_texture";
+            moveDuration = 0.18f;
+            baseAttackDamage = 8;
             break;
-        // case EnemyType::SKELETON:
-        //     health = 40;
-        //     maxHealth = 40;
-        //     width = tileW * 0.7;
-        //     height = tileH * 0.9;
-        //     arcanaValue = 20;
-        //     textureName = "skeleton_texture"; // Load this texture in main!
-        //     moveDuration = 0.2f;
-        //     break;
-        // // Add cases for other enemy types here...
         default:
-            // Throw error or default to a basic enemy if type is unknown
              SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unknown EnemyType encountered in constructor!");
-             // Default fallback (or throw exception)
-             health = 10; maxHealth = 10; width = tileW/2; height = tileH/2; arcanaValue = 5; textureName = ""; moveDuration = 0.3f;
-            // Optionally: throw std::runtime_error("Unknown EnemyType");
+             health = 10; maxHealth = 10; width = tileW/2; height = tileH/2; arcanaValue = 5; textureName = ""; moveDuration = 0.3f; baseAttackDamage = 10;
             break;
     }
-     SDL_Log("Enemy created: Type %d, HP %d, Pos (%d, %d), Texture '%s'", (int)type, health, x, y, textureName.c_str());
+     SDL_Log("Enemy %d created: Type %d, HP %d, Pos (%d, %d), Texture '%s'", id, (int)type, health, x, y, textureName.c_str());
 }
 // ------------------------------------------
 
-// --- takeAction Implementation (No changes needed for this refactor) ---
-void Enemy::takeAction(const Level &levelData, PlayerCharacter &player, GameData& gameData) {
-  if (hasTakenActionThisTurn || isMoving) {
-      return; // Already acted or currently moving (visible move in progress)
+// --- NEW: planAction Implementation ---
+// This function decides what the enemy *wants* to do, returning the plan.
+IntendedAction Enemy::planAction(const Level &levelData, const PlayerCharacter &player, const GameData& gameData) const {
+  IntendedAction plannedAction; // Start with ActionType::None
+
+  // Don't plan if already moving (shouldn't happen if called correctly, but safe)
+  if (isMoving) {
+      return plannedAction; // Return ActionType::None
   }
 
-  // --- Check Visibility ---
+  // --- Check Visibility (using const gameData) ---
   float visibility = 0.0f;
   if (isWithinBounds(x, y, gameData.currentLevel.width, gameData.currentLevel.height) &&
       y < (int)gameData.visibilityMap.size() && x < (int)gameData.visibilityMap[y].size()) {
        visibility = gameData.visibilityMap[y][x];
-  } else {
-       SDL_Log("Warning: Enemy at (%d, %d) out of bounds for visibility check.", x, y);
   }
   bool isVisible = (visibility > 0.0f);
 
-  bool performedPhysicalAction = false; // Flag if attacked or moved (visibly)
-  bool actionIsInstant = true;          // Assume instant unless a VISIBLE move starts
-
-  bool isValidMove = false;
-
+  // --- AI Logic (Similar to takeAction, but returns intent) ---
   if (isVisible) {
-      // --- Visible Logic: Attack or Move (Keep Existing Logic Here) ---
-      int playerTileX = player.targetTileX;
+      // Visible Logic: Plan Attack or Move
+      int playerTileX = player.targetTileX; // Use player's logical position
       int playerTileY = player.targetTileY;
       int dx = playerTileX - x;
       int dy = playerTileY - y;
 
-      // Check Adjacency for Attack
+      // Check Adjacency for Attack Plan
       if (std::abs(dx) <= 1 && std::abs(dy) <= 1 && (dx != 0 || dy != 0)) {
-          int damage = 10; // Example damage
-          player.takeDamage(damage);
-          SDL_Log("Visible Enemy at (%d, %d) attacked player! Player health: %d", x, y, player.health);
-          performedPhysicalAction = true;
-          actionIsInstant = true; // Attack is instant
+          plannedAction.type = ActionType::Attack;
+          // Target could be player's ID if implemented, or coords for now
+          plannedAction.targetX = playerTileX;
+          plannedAction.targetY = playerTileY;
+          SDL_Log("Enemy %d [%d,%d] plans ATTACK on player at [%d,%d]", id, x, y, playerTileX, playerTileY);
       } else {
-          // Not Adjacent: Try to Move Towards Player (Visible Movement)
+          // Not Adjacent: Plan to Move Towards Player
           int moveX = 0, moveY = 0;
           if (std::abs(dx) > std::abs(dy)) { moveX = (dx > 0) ? 1 : -1; }
           else if (dy != 0) { moveY = (dy > 0) ? 1 : -1; }
@@ -106,198 +90,134 @@ void Enemy::takeAction(const Level &levelData, PlayerCharacter &player, GameData
           int nextX = x + moveX;
           int nextY = y + moveY;
 
+          // Check primary direction validity (using gameData.occupationGrid)
+          // IMPORTANT: Use the *current* occupation grid for planning.
+          // The sequential planning in main.cpp will update this grid *after* each enemy plans.
           bool primaryMoveValid = isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
                                    levelData.tiles[nextY][nextX] != '#' &&
-                                   !gameData.occupationGrid[nextY][nextX];
+                                   !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
 
           if (primaryMoveValid) {
-              startMove(nextX, nextY); // <<< VISIBLE move starts here
-              performedPhysicalAction = true;
-              actionIsInstant = false; // Movement takes time WHEN VISIBLE
+              plannedAction.type = ActionType::Move;
+              plannedAction.targetX = nextX;
+              plannedAction.targetY = nextY;
+               SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Primary)", id, x, y, nextX, nextY);
           } else {
-               // Try alternative axis... (Existing logic for visible movement attempt)
-               if (moveX != 0 && dy != 0) { moveX = 0; moveY = (dy > 0) ? 1 : -1; }
-               else if (moveY != 0 && dx != 0) { moveY = 0; moveX = (dx > 0) ? 1 : -1; }
-               else { moveX = 0; moveY = 0; }
-               nextX = x + moveX;
-               nextY = y + moveY;
+              // Try alternative axis
+              if (moveX != 0 && dy != 0) { moveX = 0; moveY = (dy > 0) ? 1 : -1; }
+              else if (moveY != 0 && dx != 0) { moveY = 0; moveX = (dx > 0) ? 1 : -1; }
+              else { moveX = 0; moveY = 0; }
+              nextX = x + moveX;
+              nextY = y + moveY;
 
-               if (moveX != 0 || moveY != 0) {
-                    bool altMoveValid = isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
-                                        levelData.tiles[nextY][nextX] != '#' &&
-                                        !gameData.occupationGrid[nextY][nextX];
-                    if (altMoveValid) {
-                        startMove(nextX, nextY); // <<< VISIBLE move starts here
-                        performedPhysicalAction = true;
-                        actionIsInstant = false; // Movement takes time WHEN VISIBLE
-                    } else { actionIsInstant = true; /* Wait */ }
-                } else { actionIsInstant = true; /* Wait */ }
+              if (moveX != 0 || moveY != 0) {
+                   bool altMoveValid = isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
+                                       levelData.tiles[nextY][nextX] != '#' &&
+                                       !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
+                   if (altMoveValid) {
+                       plannedAction.type = ActionType::Move;
+                       plannedAction.targetX = nextX;
+                       plannedAction.targetY = nextY;
+                        SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Alt)", id, x, y, nextX, nextY);
+                   } else {
+                       plannedAction.type = ActionType::Wait; // Blocked
+                        SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Alt)", id, x, y);
+                   }
+               } else {
+                   plannedAction.type = ActionType::Wait; // Blocked
+                   SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Primary, No Alt)", id, x, y);
+               }
           }
-      } // End Visible Move Attempt block
+      }
   } else {
-      // --- Invisible Logic: Random Walk (MODIFIED FOR INSTANT RESOLUTION) ---
+      // Invisible Logic: Plan Random Walk
       int directions[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
       int randIndex = rand() % 4;
       int nextX = x + directions[randIndex][0];
       int nextY = y + directions[randIndex][1];
 
-      // Check Validity (including occupation grid bounds)
       bool isValidMove = isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
                          levelData.tiles[nextY][nextX] != '#' &&
-                         !gameData.occupationGrid[nextY][nextX];
+                         !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
 
-      if (isValidMove)
-      {
-          // *** INSTANT MOVE LOGIC ***
-          int oldX = x;
-          int oldY = y;
-
-          // 1. Update logical position directly
-          x = nextX;
-          y = nextY;
-
-          visualX = x * tileWidth + tileWidth / 2.0f;
-          visualY = y * tileHeight + tileHeight / 2.0f;
-
-          // 2. Update Occupation Grid (with bounds checks)
-          if (isWithinBounds(oldX, oldY, gameData.currentLevel.width, gameData.currentLevel.height)) {
-               gameData.occupationGrid[oldY][oldX] = false;
-          }
-          if (isWithinBounds(x, y, gameData.currentLevel.width, gameData.currentLevel.height)) {
-              gameData.occupationGrid[y][x] = true;
-          } else {
-               SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Invisible enemy moved OOB to (%d, %d)? Grid not updated.", x, y);
-          }
-
-          // 3. Mark action as complete for turn logic
-          hasTakenActionThisTurn = true; // Action completed now
-
-          // 4. Decrement counter immediately
-          if(gameData.enemiesActingThisTurn > 0) {
-               gameData.enemiesActingThisTurn--;
-               SDL_Log("Invisible enemy at (%d, %d) moved instantly. Remaining actors: %d", x, y, gameData.enemiesActingThisTurn);
-          } else {
-               SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Invisible enemy at (%d, %d) moved instantly, but counter already <= 0.", x, y);
-          }
-
-          // 5. Ensure actionIsInstant remains true (no timed movement)
-          actionIsInstant = true; // Confirming the action was instant
-          // DO NOT CALL startMove() here!
+      if (isValidMove) {
+          plannedAction.type = ActionType::Move;
+          plannedAction.targetX = nextX;
+          plannedAction.targetY = nextY;
+           SDL_Log("Enemy %d [%d,%d] plans INVISIBLE MOVE to [%d,%d]", id, x, y, nextX, nextY);
       } else {
-           // Cannot move randomly, treat as an instant "wait" action
-           actionIsInstant = true; // Waiting is instant
-      }
-  } // End if(isVisible)
-
-  // Mark that AI logic has run for this turn cycle (if not already marked by instant move)
-  if (!hasTakenActionThisTurn) { // Only set if not already set by instant invisible move
-       hasTakenActionThisTurn = true;
-  }
-
-
-  // Decrement counter ONLY if the action completed instantly AND WAS NOT the instant invisible move (which decremented already)
-  // This now primarily applies to visible attacks/waits, or failed invisible moves.
-  if (actionIsInstant && !(isVisible == false && isValidMove == true)) { // Check it wasn't the instant invisible move case
-      if(gameData.enemiesActingThisTurn > 0) {
-           gameData.enemiesActingThisTurn--;
-           SDL_Log("Enemy at (%d, %d) finished INSTANT action (Attack/Wait/Blocked Invisible). Remaining actors: %d", x, y, gameData.enemiesActingThisTurn);
-      } else {
-           SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy at (%d, %d) finished instant action, but counter already <= 0.", x, y);
+          plannedAction.type = ActionType::Wait; // Cannot move randomly
+           SDL_Log("Enemy %d [%d,%d] plans INVISIBLE WAIT (Blocked)", id, x, y);
       }
   }
-  // Note: The counter decrement for VISIBLE moves happens in Enemy::update when isMoving becomes false.
+
+  return plannedAction;
 }
+// ----------------------------------
 
-// --- update Implementation (No changes needed for this refactor) ---
+// --- update Implementation (Keep for visual movement interpolation) ---
 void Enemy::update(float deltaTime, GameData& gameData) {
-    // ... (Existing update logic remains the same) ...
-    // It uses member variables (isMoving, moveDuration, visualX/Y etc.)
-    // which are now set by the constructor based on type.
-        bool wasMoving = isMoving; // Store state *before* potentially changing it
+  // This function now ONLY handles the visual interpolation of movement
+  // initiated during the Resolution_Start phase.
+ bool wasMoving = isMoving; // Store state *before* potentially changing it
 
-    if (isMoving) {
-        moveTimer += deltaTime;
-        moveProgress = moveTimer / moveDuration; // Uses moveDuration set by type
+ if (isMoving) {
+     moveTimer += deltaTime;
+     moveProgress = moveTimer / moveDuration;
 
-        if (moveProgress >= 1.0f) {
-            // --- Movement Complete ---
-            moveProgress = 1.0f; // Clamp
+     if (moveProgress >= 1.0f) {
+         // --- Movement Complete ---
+         moveProgress = 1.0f;
 
-            int oldTileX = startTileX; // Store position *before* snapping
-            int oldTileY = startTileY;
+         // Snap logical position to the target (SHOULD already be there, but safe)
+         // Note: Occupation grid was updated when move was PLANNED/STARTED.
+         x = targetTileX;
+         y = targetTileY;
 
-            // Snap logical position to the target *now*
-            x = targetTileX;
-            y = targetTileY;
+         isMoving = false; // Stop moving
 
-            isMoving = false; // Update state AFTER snapping logical position
-
-            // Snap visual position to final destination
-            visualX = x * tileWidth + tileWidth / 2.0f;
-            visualY = y * tileHeight + tileHeight / 2.0f;
-
-            // Update Occupation Grid
-            // Clear old position (use stored oldTileX/Y)
-            if (isWithinBounds(oldTileX, oldTileY, gameData.currentLevel.width, gameData.currentLevel.height)) {
-                 gameData.occupationGrid[oldTileY][oldTileX] = false;
-            }
-            // Set new position (use final logical x/y)
-            if (isWithinBounds(x, y, gameData.currentLevel.width, gameData.currentLevel.height)) {
-                gameData.occupationGrid[y][x] = true;
-            } else {
-                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy moved out of bounds to (%d, %d)? Grid not updated.", x, y);
-            }
-
-            // --- Decrement Counter IF this move completed the turn's action ---
-            if (wasMoving && hasTakenActionThisTurn) {
-                 if(gameData.enemiesActingThisTurn > 0) {
-                     gameData.enemiesActingThisTurn--;
-                     SDL_Log("Enemy at (%d, %d) finished MOVE action. Remaining actors: %d", x, y, gameData.enemiesActingThisTurn);
-                 } else {
-                     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy at (%d, %d) finished move action, but counter already <= 0.", x, y);
-                 }
-            }
-            // --- End Counter Decrement ---
-
-        } else {
-            // Check visibility FIRST
-            float visibility = 0.0f;
-             if (isWithinBounds(x, y, gameData.currentLevel.width, gameData.currentLevel.height) &&
-                 y < (int)gameData.visibilityMap.size() && x < (int)gameData.visibilityMap[y].size()) {
-                  visibility = gameData.visibilityMap[y][x];
-             }
-            bool isVisible = (visibility > 0.0f);
-
-            // Conditional Interpolation
-            if (isVisible) {
-                float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
-                float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
-                float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
-                float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
-                visualX = startVisualX + (targetVisualX - startVisualX) * moveProgress;
-                visualY = startVisualY + (targetVisualY - startVisualY) * moveProgress;
-            } else {
-                visualX = targetTileX * tileWidth + tileWidth / 2.0f;
-                visualY = targetTileY * tileHeight + tileHeight / 2.0f;
-            }
-        }
-    } else {
+         // Snap visual position
          visualX = x * tileWidth + tileWidth / 2.0f;
          visualY = y * tileHeight + tileHeight / 2.0f;
+
+         // No counter decrement here anymore. Resolution phase tracks completion.
+         SDL_Log("Enemy %d finished move animation at [%d,%d]", id, x, y);
+
+     } else {
+         // Interpolate visual position
+         float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
+         float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
+         float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
+         float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
+         visualX = startVisualX + (targetVisualX - startVisualX) * moveProgress;
+         visualY = startVisualY + (targetVisualY - startVisualY) * moveProgress;
      }
+ } else {
+      // Ensure visual matches logical if not moving
+      visualX = x * tileWidth + tileWidth / 2.0f;
+      visualY = y * tileHeight + tileHeight / 2.0f;
+  }
 }
 
 
-// --- startMove Implementation (No changes needed for this refactor) ---
+// --- startMove Implementation (Keep - Called during Resolution_Start) ---
 void Enemy::startMove(int targetX, int targetY) {
+  // Only start if not already moving and target is different
+  // Note: Occupation grid should have been checked/updated BEFORE calling this
   if (!isMoving && (targetX != x || targetY != y)) {
-    startTileX = x;
+    startTileX = x; // Current logical pos is the start
     startTileY = y;
-    targetTileX = targetX;
+    targetTileX = targetX; // Target logical pos
     targetTileY = targetY;
     isMoving = true;
     moveProgress = 0.0f;
     moveTimer = 0.0f;
+    // Visuals will start interpolating in the next update() call
+    SDL_Log("Enemy %d starting move animation from [%d,%d] to [%d,%d]", id, startTileX, startTileY, targetTileX, targetTileY);
+  } else if (isMoving) {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d told to startMove while already moving.", id);
+  } else {
+       SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d told to startMove to its current location [%d,%d].", id, x, y);
   }
 }
 
@@ -339,4 +259,9 @@ void Enemy::takeDamage(int amount) {
         health = 0;
         SDL_Log("Enemy at (%d, %d) has been vanquished!", x, y);
     }
+}
+
+int Enemy::GetAttackDamage() const {
+  // For now, just return the base damage set in the constructor based on type
+  return baseAttackDamage;
 }

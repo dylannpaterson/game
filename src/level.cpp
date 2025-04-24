@@ -267,11 +267,10 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
             }
 
             if (!occupied) {
-                // *** MODIFIED: Use new Enemy constructor with EnemyType ***
-                // For now, always spawn SLIME. Later, you can add logic here
-                // to choose different types based on level index, randomness, etc.
-                enemies.emplace_back(EnemyType::SLIME, spawnX, spawnY, tileW, tileH);
-                // ---------------------------------------------------------
+                // *** MODIFIED: Assign unique ID using static member ***
+                int newId = Enemy::getNextId(); // Get next ID using the public static method
+                enemies.emplace_back(newId, EnemyType::SLIME, spawnX, spawnY, tileW, tileH);
+                // *****************************************************
                 spawnedCount++;
             }
         }

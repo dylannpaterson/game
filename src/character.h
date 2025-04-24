@@ -110,8 +110,8 @@ struct PlayerCharacter {
     bool canCastSpell(int spellIndex) const; // Existing - might check calculated maxMana now
     // Pass enemies by reference to allow modification (damage)
     bool castSpell(int spellIndex, int targetX, int targetY,
-                   std::vector<Enemy>& enemies, std::vector<Projectile>& projectiles,
-                   SDL_Texture* projectileTexture); // Existing - will need modification for damage calc
+        std::vector<Enemy>& enemies, std::vector<Projectile>& projectiles,
+        AssetManager* assets); // Existing - will need modification for damage calc
     const Spell& getSpell(int spellIndex) const; // Existing
 
     // --- Other Methods ---
