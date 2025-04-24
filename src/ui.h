@@ -15,6 +15,10 @@ class AssetManager;
 #include "utils.h"     // Make sure this is included if ui.cpp needs renderText directly
 
 // Existing renderUI declaration
+
+// --- Add declaration for renderCharacterSheet ---
+void renderCharacterSheet(GameData& gameData, AssetManager& assets);
+// ----------------------------------------------
 void renderUI(GameData& gameData, AssetManager& assets);
 
 // --- Add declaration for renderSpellMenu ---

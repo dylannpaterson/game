@@ -27,7 +27,8 @@ enum class GameState {
 
 enum class GameMenu {
   None,     // No menu overlay active
-  SpellMenu // Spell selection menu is active
+  SpellMenu, // Spell selection menu is active
+  CharacterSheet // Character info sheet is active
 };
 
 struct GameData {
@@ -54,7 +55,7 @@ struct GameData {
   // --- NEW: Enemy Turn Optimization State ---
   int enemiesActingThisTurn = 0; // Counter for enemies yet to finish their turn
   int currentEnemyUpdateIndex = 0; // Index for time-slicing updates
-  const int ENEMY_UPDATES_PER_FRAME = 10; // Max enemies to update per frame (tune this!)
+  const int ENEMY_UPDATES_PER_FRAME = 12; // Max enemies to update per frame (tune this!)
 
   // --- UI / Menu State ---
   std::vector<std::string> menuItems = {"Start Game", "Options", "Exit"};
