@@ -59,10 +59,10 @@ int main(int argc, char *argv[]) {
   }
 
   // *** Set SDL logging level ***
-  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO); // Show info, warnings,
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);    // Show warnings,
-   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
   // To hide *all* standard logs (including errors), set priority higher than
   // critical: SDL_LogSetAllPriority(SDL_NUM_LOG_PRIORITIES); // Effectively
   // disable standard logging
@@ -107,6 +107,43 @@ int main(int argc, char *argv[]) {
         "male_mage_portrait", "../assets/sprites/male_mage_portrait.PNG");
     loadSuccess &= assetManager.loadTexture("slime_texture",
                                             "../assets/sprites/slime.PNG");
+    // Idle animation frames
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_idle_1", "../assets/sprites/animations/female_mage/idle/"
+                              "female_mage_idle_0001.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_idle_2", "../assets/sprites/animations/female_mage/idle/"
+                              "female_mage_idle_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_idle_3", "../assets/sprites/animations/female_mage/idle/"
+                              "female_mage_idle_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_idle_4", "../assets/sprites/animations/female_mage/idle/"
+                              "female_mage_idle_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_idle_5", "../assets/sprites/animations/female_mage/idle/"
+                              "female_mage_idle_0005.png");
+
+    // --- ADDED: Load Walking Animation Frames ---
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_1",
+        "../assets/sprites/animations/female_mage/walk/" // Ensure path is
+                                                         // correct
+        "female_mage_walk_0001.png");                    // Example filename
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_2", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_3", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_4", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_5", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0005.png");
+    // --- END Load Walking Animation Frames ---
+
     if (!loadSuccess) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                    "Asset loading failed!"); /* Handle error */
@@ -579,11 +616,15 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                 case SDLK_KP_4:
                   SDL_Log("DEBUG: LEFT key processed.");
                   moveX = -1;
+                  gameData.currentGamePlayer.currentFacingDirection =
+                      PlayerCharacter::FacingDirection::Left;
                   break;
                 case SDLK_RIGHT:
                 case SDLK_KP_6:
                   SDL_Log("DEBUG: RIGHT key processed.");
                   moveX = 1;
+                  gameData.currentGamePlayer.currentFacingDirection =
+                      PlayerCharacter::FacingDirection::Right;
                   break;
                 case SDLK_KP_7:
                   SDL_Log("DEBUG: UP-LEFT key processed.");
@@ -844,6 +885,10 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
 
 // --- Rewritten updateLogic Function ---
 void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
+
+  //update player
+  gameData.currentGamePlayer.update(deltaTime, gameData);
+  
   // --- Update Camera ---
   if (gameData.currentLevel.width > 0 && gameData.currentLevel.height > 0 &&
       gameData.tileWidth > 0 && gameData.tileHeight > 0) {
@@ -887,153 +932,214 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     planningWallClockStartTime = 0; // Reset timers when in player input phase
     resolutionStartTime = 0;
     totalEnemyPlanningCpuTime = 0;
+
     break; // Waiting for input
 
-    case TurnPhase::Planning_EnemyAI: { // Scope for variables
-      // *** START TIMING Planning_EnemyAI (Wall Clock) ***
-      if (previousPhase == TurnPhase::Planning_PlayerInput) { // Only start timer on first frame entering this phase
-          planningWallClockStartTime = SDL_GetTicks();
-          totalEnemyPlanningCpuTime = 0; // Ensure accumulator is reset at start of phase
+  case TurnPhase::Planning_EnemyAI: { // Scope for variables
+    // *** START TIMING Planning_EnemyAI (Wall Clock) ***
+    if (previousPhase ==
+        TurnPhase::Planning_PlayerInput) { // Only start timer on first frame
+                                           // entering this phase
+      planningWallClockStartTime = SDL_GetTicks();
+      totalEnemyPlanningCpuTime =
+          0; // Ensure accumulator is reset at start of phase
+    }
+    // ***
+
+    // Update player animation during this phase (if they started moving)
+    if (gameData.currentGamePlayer.isMoving) {
+      gameData.currentGamePlayer.update(deltaTime, gameData);
+    }
+
+    // --- Process ALL Enemies in a single loop ---
+    // Ensure intended actions vector is sized correctly first
+    if (gameData.enemyIntendedActions.size() != gameData.enemies.size()) {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Resizing enemyIntendedActions from %zu to %zu during planning.",
+          gameData.enemyIntendedActions.size(), gameData.enemies.size());
+      gameData.enemyIntendedActions.resize(gameData.enemies.size());
+    }
+
+    // --- Main Planning Loop for All Enemies ---
+    for (int i = 0; i < gameData.enemies.size(); ++i) {
+      // Safety check for vector index just in case resize failed or size
+      // changed unexpectedly
+      if (i >= gameData.enemies.size() ||
+          i >= gameData.enemyIntendedActions.size()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Index %d out of bounds during enemy planning loop (Enemy "
+                     "Size: %zu, Action Size: %zu). Skipping.",
+                     i, gameData.enemies.size(),
+                     gameData.enemyIntendedActions.size());
+        continue; // Skip this iteration
       }
+
+      Enemy &currentEnemy = gameData.enemies[i];
+
+      // *** START TIMING Single Enemy CPU Time ***
+      Uint32 singleEnemyStartTime = SDL_GetTicks();
       // ***
 
-      // Update player animation during this phase (if they started moving)
-      if (gameData.currentGamePlayer.isMoving) {
-          gameData.currentGamePlayer.update(deltaTime, gameData);
-      }
+      if (currentEnemy.health > 0 && !currentEnemy.isMoving) {
+        // Enemy is alive and not currently animating a move, plan its action
+        IntendedAction plan = currentEnemy.planAction(
+            gameData.currentLevel, gameData.currentGamePlayer, gameData);
+        gameData.enemyIntendedActions[i] =
+            plan; // Store the plan using loop index 'i'
 
-      // --- Process ALL Enemies in a single loop ---
-      // Ensure intended actions vector is sized correctly first
-      if (gameData.enemyIntendedActions.size() != gameData.enemies.size()) {
-           SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Resizing enemyIntendedActions from %zu to %zu during planning.", gameData.enemyIntendedActions.size(), gameData.enemies.size());
-          gameData.enemyIntendedActions.resize(gameData.enemies.size());
-      }
+        // Handle tentative occupation and instant invisible moves logic
+        // immediately after planning
+        if (plan.type == ActionType::Move) {
+          if (isWithinBounds(plan.targetX, plan.targetY,
+                             gameData.currentLevel.width,
+                             gameData.currentLevel.height)) {
+            // Check if the target tile is *currently* free in the grid
+            if (!gameData.occupationGrid[plan.targetY][plan.targetX]) {
+              // Mark it as tentatively occupied for subsequent enemies in
+              // *this* planning pass
+              gameData.occupationGrid[plan.targetY][plan.targetX] = true;
+              // SDL_Log("INFO: Enemy %d tentatively occupies [%d,%d] for
+              // planning.", currentEnemy.id, plan.targetX, plan.targetY); //
+              // Optional Log
 
-      // --- Main Planning Loop for All Enemies ---
-      for (int i = 0; i < gameData.enemies.size(); ++i) {
-          // Safety check for vector index just in case resize failed or size changed unexpectedly
-           if (i >= gameData.enemies.size() || i >= gameData.enemyIntendedActions.size()) {
-               SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Index %d out of bounds during enemy planning loop (Enemy Size: %zu, Action Size: %zu). Skipping.", i, gameData.enemies.size(), gameData.enemyIntendedActions.size());
-               continue; // Skip this iteration
-           }
+              // Check visibility to handle instant invisible moves
+              float visibility = 0.0f;
+              if (isWithinBounds(currentEnemy.x, currentEnemy.y,
+                                 gameData.currentLevel.width,
+                                 gameData.currentLevel.height) &&
+                  currentEnemy.y < gameData.visibilityMap.size() &&
+                  currentEnemy.x <
+                      gameData.visibilityMap[currentEnemy.y].size()) {
+                visibility =
+                    gameData.visibilityMap[currentEnemy.y][currentEnemy.x];
+              }
+              bool isVisible = (visibility > 0.0f);
 
-          Enemy &currentEnemy = gameData.enemies[i];
+              // If move is planned AND enemy is invisible, snap visual/logical
+              // coords now
+              if (!isVisible) {
+                currentEnemy.visualX = plan.targetX * gameData.tileWidth +
+                                       gameData.tileWidth / 2.0f;
+                currentEnemy.visualY = plan.targetY * gameData.tileHeight +
+                                       gameData.tileHeight / 2.0f;
 
-          // *** START TIMING Single Enemy CPU Time ***
-          Uint32 singleEnemyStartTime = SDL_GetTicks();
-          // ***
+                // Update logical coords instantly too, clearing old spot on
+                // grid *if different*
+                if (isWithinBounds(currentEnemy.x, currentEnemy.y,
+                                   gameData.currentLevel.width,
+                                   gameData.currentLevel.height)) {
+                  if (currentEnemy.x != plan.targetX ||
+                      currentEnemy.y != plan.targetY) {
+                    gameData.occupationGrid[currentEnemy.y][currentEnemy.x] =
+                        false;
+                  }
+                }
+                currentEnemy.x = plan.targetX;
+                currentEnemy.y = plan.targetY;
+                // The target spot was already marked occupied above for the
+                // tentative logic SDL_Log("INFO: Enemy %d (invisible) instantly
+                // updated logic/visual to planned move [%d,%d]",
+                // currentEnemy.id, plan.targetX, plan.targetY); // Optional Log
+              }
+              // End of invisible enemy instant update logic
 
-          if (currentEnemy.health > 0 && !currentEnemy.isMoving) {
-              // Enemy is alive and not currently animating a move, plan its action
-              IntendedAction plan = currentEnemy.planAction(
-                  gameData.currentLevel, gameData.currentGamePlayer, gameData);
-              gameData.enemyIntendedActions[i] = plan; // Store the plan using loop index 'i'
-
-              // Handle tentative occupation and instant invisible moves logic immediately after planning
-              if (plan.type == ActionType::Move) {
-                   if (isWithinBounds(plan.targetX, plan.targetY, gameData.currentLevel.width, gameData.currentLevel.height)) {
-                       // Check if the target tile is *currently* free in the grid
-                       if (!gameData.occupationGrid[plan.targetY][plan.targetX]) {
-                           // Mark it as tentatively occupied for subsequent enemies in *this* planning pass
-                           gameData.occupationGrid[plan.targetY][plan.targetX] = true;
-                           // SDL_Log("INFO: Enemy %d tentatively occupies [%d,%d] for planning.", currentEnemy.id, plan.targetX, plan.targetY); // Optional Log
-
-                           // Check visibility to handle instant invisible moves
-                           float visibility = 0.0f;
-                           if (isWithinBounds(currentEnemy.x, currentEnemy.y, gameData.currentLevel.width, gameData.currentLevel.height) &&
-                               currentEnemy.y < gameData.visibilityMap.size() && currentEnemy.x < gameData.visibilityMap[currentEnemy.y].size()) {
-                               visibility = gameData.visibilityMap[currentEnemy.y][currentEnemy.x];
-                           }
-                           bool isVisible = (visibility > 0.0f);
-
-                           // If move is planned AND enemy is invisible, snap visual/logical coords now
-                           if (!isVisible) {
-                               currentEnemy.visualX = plan.targetX * gameData.tileWidth + gameData.tileWidth / 2.0f;
-                               currentEnemy.visualY = plan.targetY * gameData.tileHeight + gameData.tileHeight / 2.0f;
-
-                               // Update logical coords instantly too, clearing old spot on grid *if different*
-                               if (isWithinBounds(currentEnemy.x, currentEnemy.y, gameData.currentLevel.width, gameData.currentLevel.height)) {
-                                  if (currentEnemy.x != plan.targetX || currentEnemy.y != plan.targetY) {
-                                       gameData.occupationGrid[currentEnemy.y][currentEnemy.x] = false;
-                                  }
-                               }
-                               currentEnemy.x = plan.targetX;
-                               currentEnemy.y = plan.targetY;
-                               // The target spot was already marked occupied above for the tentative logic
-                               // SDL_Log("INFO: Enemy %d (invisible) instantly updated logic/visual to planned move [%d,%d]", currentEnemy.id, plan.targetX, plan.targetY); // Optional Log
-                           }
-                           // End of invisible enemy instant update logic
-
-                       } else { // Target tile was already occupied (by player or previously planned enemy)
-                           SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d planned move to [%d,%d] but it was occupied during planning phase. Forcing WAIT.", currentEnemy.id, plan.targetX, plan.targetY);
-                           gameData.enemyIntendedActions[i].type = ActionType::Wait; // Force Wait
-                       }
-                   } else { // Target tile is out of bounds
-                        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d planned move out of bounds to [%d,%d]. Forcing WAIT.", currentEnemy.id, plan.targetX, plan.targetY);
-                        gameData.enemyIntendedActions[i].type = ActionType::Wait; // Force Wait
-                   }
-              } // End if plan type is Move
-          } else { // Enemy is dead or already moving (shouldn't happen for moving if called correctly)
-              gameData.enemyIntendedActions[i].type = ActionType::None; // Ensure no action if dead/moving
-               if (currentEnemy.isMoving) {
-                   SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d was already moving during planning phase? Setting action to None.", currentEnemy.id);
-               }
+            } else { // Target tile was already occupied (by player or
+                     // previously planned enemy)
+              SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                          "Enemy %d planned move to [%d,%d] but it was "
+                          "occupied during planning phase. Forcing WAIT.",
+                          currentEnemy.id, plan.targetX, plan.targetY);
+              gameData.enemyIntendedActions[i].type =
+                  ActionType::Wait; // Force Wait
+            }
+          } else { // Target tile is out of bounds
+            SDL_LogWarn(
+                SDL_LOG_CATEGORY_APPLICATION,
+                "Enemy %d planned move out of bounds to [%d,%d]. Forcing WAIT.",
+                currentEnemy.id, plan.targetX, plan.targetY);
+            gameData.enemyIntendedActions[i].type =
+                ActionType::Wait; // Force Wait
           }
-
-          // *** END TIMING Single Enemy CPU Time & Accumulate ***
-          Uint32 singleEnemyEndTime = SDL_GetTicks();
-          totalEnemyPlanningCpuTime += (singleEnemyEndTime - singleEnemyStartTime);
-          // ***
-
-      } // --- End FOR loop processing all enemies ---
-
-      // --- Cleanup Tentative Enemy Occupation Marks (After ALL enemies have planned) ---
-      for (int i = 0; i < gameData.enemies.size(); ++i) {
-           if (i >= gameData.enemyIntendedActions.size()) continue; // Safety check
-
-           const IntendedAction &plan = gameData.enemyIntendedActions[i];
-
-           // Only need to revert tentative marks for VISIBLE enemies who planned a move.
-           // Invisible enemies already committed their grid changes.
-           if (plan.type == ActionType::Move) {
-                // Need the enemy object to check its visibility status *now*
-                const Enemy &enemy = gameData.enemies[i]; // Get corresponding enemy
-                float visibility = 0.0f;
-                if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width, gameData.currentLevel.height) &&
-                    enemy.y < gameData.visibilityMap.size() && enemy.x < gameData.visibilityMap[enemy.y].size()) {
-                    visibility = gameData.visibilityMap[enemy.y][enemy.x];
-                }
-                bool isVisible = (visibility > 0.0f);
-
-                if (isVisible && isWithinBounds(plan.targetX, plan.targetY, gameData.currentLevel.width, gameData.currentLevel.height)) {
-                    // Check if the grid is still marked as occupied by *this tentative plan*
-                    // We also need to ensure the player didn't end up logically on that tile due to their concurrent move finishing.
-                     if (gameData.occupationGrid[plan.targetY][plan.targetX] &&
-                         !(gameData.currentGamePlayer.targetTileX == plan.targetX && gameData.currentGamePlayer.targetTileY == plan.targetY))
-                     {
-                          // It was marked (likely by this enemy or another earlier in the loop) and player isn't there, so clear it.
-                          // This prepares the grid for the Resolution phase where moves are actually initiated.
-                          gameData.occupationGrid[plan.targetY][plan.targetX] = false;
-                          // SDL_Log("INFO: Clearing tentative *visible enemy* occupation mark at [%d,%d].", plan.targetX, plan.targetY); // Optional Log
-                     }
-                }
-           }
+        } // End if plan type is Move
+      } else { // Enemy is dead or already moving (shouldn't happen for moving
+               // if called correctly)
+        gameData.enemyIntendedActions[i].type =
+            ActionType::None; // Ensure no action if dead/moving
+        if (currentEnemy.isMoving) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "Enemy %d was already moving during planning phase? "
+                      "Setting action to None.",
+                      currentEnemy.id);
+        }
       }
-      // --- End Cleanup of Tentative Marks ---
 
-      // *** LOG FINAL TIMING DATA ***
-      if (planningWallClockStartTime > 0) { // Ensure wall clock timer was started
-          phaseEndTime = SDL_GetTicks();
-          elapsedMs = phaseEndTime - planningWallClockStartTime;
-          SDL_Log("INFO: --- Phase Planning_EnemyAI (Wall Clock) Took: %u ms ---", elapsedMs);
-          planningWallClockStartTime = 0; // Reset wall clock timer
-      }
-      SDL_Log("INFO: --- Total Enemy Planning CPU Time This Turn: %u ms ---", totalEnemyPlanningCpuTime);
+      // *** END TIMING Single Enemy CPU Time & Accumulate ***
+      Uint32 singleEnemyEndTime = SDL_GetTicks();
+      totalEnemyPlanningCpuTime += (singleEnemyEndTime - singleEnemyStartTime);
       // ***
 
-      // Transition phase AFTER processing all enemies and cleaning up marks
-      // SDL_Log("INFO: --- Enemy Planning Complete. Transitioning to Resolution Start ---"); // Optional Log
-      gameData.currentPhase = TurnPhase::Resolution_Start;
+    } // --- End FOR loop processing all enemies ---
+
+    // --- Cleanup Tentative Enemy Occupation Marks (After ALL enemies have
+    // planned) ---
+    for (int i = 0; i < gameData.enemies.size(); ++i) {
+      if (i >= gameData.enemyIntendedActions.size())
+        continue; // Safety check
+
+      const IntendedAction &plan = gameData.enemyIntendedActions[i];
+
+      // Only need to revert tentative marks for VISIBLE enemies who planned a
+      // move. Invisible enemies already committed their grid changes.
+      if (plan.type == ActionType::Move) {
+        // Need the enemy object to check its visibility status *now*
+        const Enemy &enemy = gameData.enemies[i]; // Get corresponding enemy
+        float visibility = 0.0f;
+        if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                           gameData.currentLevel.height) &&
+            enemy.y < gameData.visibilityMap.size() &&
+            enemy.x < gameData.visibilityMap[enemy.y].size()) {
+          visibility = gameData.visibilityMap[enemy.y][enemy.x];
+        }
+        bool isVisible = (visibility > 0.0f);
+
+        if (isVisible && isWithinBounds(plan.targetX, plan.targetY,
+                                        gameData.currentLevel.width,
+                                        gameData.currentLevel.height)) {
+          // Check if the grid is still marked as occupied by *this tentative
+          // plan* We also need to ensure the player didn't end up logically on
+          // that tile due to their concurrent move finishing.
+          if (gameData.occupationGrid[plan.targetY][plan.targetX] &&
+              !(gameData.currentGamePlayer.targetTileX == plan.targetX &&
+                gameData.currentGamePlayer.targetTileY == plan.targetY)) {
+            // It was marked (likely by this enemy or another earlier in the
+            // loop) and player isn't there, so clear it. This prepares the grid
+            // for the Resolution phase where moves are actually initiated.
+            gameData.occupationGrid[plan.targetY][plan.targetX] = false;
+            // SDL_Log("INFO: Clearing tentative *visible enemy* occupation mark
+            // at [%d,%d].", plan.targetX, plan.targetY); // Optional Log
+          }
+        }
+      }
+    }
+    // --- End Cleanup of Tentative Marks ---
+
+    // *** LOG FINAL TIMING DATA ***
+    if (planningWallClockStartTime > 0) { // Ensure wall clock timer was started
+      phaseEndTime = SDL_GetTicks();
+      elapsedMs = phaseEndTime - planningWallClockStartTime;
+      SDL_Log("INFO: --- Phase Planning_EnemyAI (Wall Clock) Took: %u ms ---",
+              elapsedMs);
+      planningWallClockStartTime = 0; // Reset wall clock timer
+    }
+    SDL_Log("INFO: --- Total Enemy Planning CPU Time This Turn: %u ms ---",
+            totalEnemyPlanningCpuTime);
+    // ***
+
+    // Transition phase AFTER processing all enemies and cleaning up marks
+    // SDL_Log("INFO: --- Enemy Planning Complete. Transitioning to Resolution
+    // Start ---"); // Optional Log
+    gameData.currentPhase = TurnPhase::Resolution_Start;
 
   } break; // End Planning_EnemyAI Case
 
@@ -1419,18 +1525,111 @@ void renderScene(GameData &gameData, AssetManager &assets) {
       }
     }
   }
-  SDL_Rect playerRect;
-  playerRect.w = gameData.tileWidth / 2;
-  playerRect.h = gameData.tileHeight / 2;
-  playerRect.x =
-      static_cast<int>(gameData.currentGamePlayer.x - playerRect.w / 2.0f) -
-      gameData.cameraX;
-  playerRect.y =
-      static_cast<int>(gameData.currentGamePlayer.y - playerRect.h / 2.0f) -
-      gameData.cameraY;
-  SDL_SetRenderDrawColor(gameData.renderer, 0, 255, 0, 255);
-  SDL_RenderFillRect(gameData.renderer,
-                     &playerRect); // Placeholder player render
+
+  // --- Render Player ---
+  SDL_Texture *playerTexture = nullptr;
+  std::string textureKeyToUse;
+
+  // --- MODIFIED: Select Animation Frame ---
+  if (gameData.currentGamePlayer.isMoving) {
+    // Use Walking Animation
+    if (!gameData.currentGamePlayer.walkFrameTextureNames.empty() &&
+        gameData.currentGamePlayer.currentWalkFrame <
+            gameData.currentGamePlayer.walkFrameTextureNames.size()) {
+      textureKeyToUse = gameData.currentGamePlayer.walkFrameTextureNames
+                            [gameData.currentGamePlayer.currentWalkFrame];
+    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
+      // Fallback to first idle frame if walk frames are missing/invalid
+      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
+      if (gameData.currentGamePlayer.walkFrameTextureNames.empty()) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Player is moving but has no walk frames defined!");
+      }
+    }
+  } else {
+    // Use Idle Animation (existing logic)
+    bool shouldAnimateIdle =
+        (currentAppState == AppState::Gameplay &&
+         gameData.currentPhase == TurnPhase::Planning_PlayerInput &&
+         !gameData.showTargetingReticle); // Check idle conditions
+    if (shouldAnimateIdle &&
+        !gameData.currentGamePlayer.idleFrameTextureNames.empty() &&
+        gameData.currentGamePlayer.currentIdleFrame <
+            gameData.currentGamePlayer.idleFrameTextureNames.size()) {
+      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames
+                            [gameData.currentGamePlayer.currentIdleFrame];
+    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
+      // Default to first idle frame if not animating idle or frames missing
+      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
+      if (gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Player is idle but has no idle frames defined!");
+      }
+    }
+  }
+
+  // Get the texture using the determined key
+  if (!textureKeyToUse.empty()) {
+    playerTexture = assets.getTexture(textureKeyToUse);
+  }
+  // --- END MODIFIED Frame Selection ---
+
+  // Render the texture if found, otherwise use fallback
+  if (playerTexture) {
+    SDL_Rect playerRect;
+    int texW, texH;
+    SDL_QueryTexture(playerTexture, NULL, NULL, &texW, &texH);
+    playerRect.w = 96; // Example fixed width
+    playerRect.h = 96; // Example fixed height
+    playerRect.x =
+        static_cast<int>(gameData.currentGamePlayer.x - playerRect.w / 2.0f) -
+        gameData.cameraX;
+    playerRect.y =
+        static_cast<int>(gameData.currentGamePlayer.y - playerRect.h / 2.0f) -
+        gameData.cameraY;
+
+    // <<< DETERMINE FLIP BASED ON FACING DIRECTION >>>
+    SDL_RendererFlip flip = SDL_FLIP_NONE; // Default: no flip (facing left)
+    if (gameData.currentGamePlayer.currentFacingDirection ==
+        PlayerCharacter::FacingDirection::Right) {
+      flip = SDL_FLIP_HORIZONTAL; // Flip horizontally if facing left
+    }
+
+    // <<< USE SDL_RenderCopyEx WITH FLIP >>>
+    SDL_RenderCopyEx(gameData.renderer, playerTexture,
+                     nullptr,     // Source rect (entire texture)
+                     &playerRect, // Destination rect
+                     0.0,         // Angle (no rotation)
+                     nullptr,     // Center of rotation (not needed)
+                     flip);       // Apply flip
+
+  } else {
+    // Fallback green rectangle
+    SDL_Rect playerRect;
+    playerRect.w = gameData.tileWidth / 2;
+    playerRect.h = gameData.tileHeight / 2;
+    playerRect.x =
+        static_cast<int>(gameData.currentGamePlayer.x - playerRect.w / 2.0f) -
+        gameData.cameraX;
+    playerRect.y =
+        static_cast<int>(gameData.currentGamePlayer.y - playerRect.h / 2.0f) -
+        gameData.cameraY;
+    SDL_SetRenderDrawColor(gameData.renderer, 0, 255, 0, 255);
+    SDL_RenderFillRect(gameData.renderer, &playerRect);
+    // Logging for missing textures...
+    if (!gameData.currentGamePlayer.idleFrameTextureNames.empty() &&
+        !textureKeyToUse.empty()) {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Player texture '%s' not found!", textureKeyToUse.c_str());
+    } else if (gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Player has no idle frame textures defined in character.cpp!");
+    }
+  }
+  // --- End Player Rendering ---
+
+  // --- Render Projectiles ---
   for (const auto &proj : gameData.activeProjectiles) {
     if (proj.isActive) {
       proj.render(gameData.renderer, gameData.cameraX, gameData.cameraY);
