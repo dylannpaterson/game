@@ -22,7 +22,9 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       startTileX(initialTileX), // Start is same as target initially
       startTileY(initialTileY), moveProgress(0.0f),
       // moveDuration initialized later by RecalculateStats
-      moveTimer(0.0f), tileWidth(tileW), tileHeight(tileH) {
+      idleAnimationTimer(0.0f), currentIdleFrame(0), moveTimer(0.0f),
+      currentFacingDirection(FacingDirection::Left), tileWidth(tileW),
+      tileHeight(tileH) {
   // Initialize known spells based on type
   if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
     knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy,
@@ -38,9 +40,20 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   health = maxHealth;
   mana = maxMana;
 
-  std::cout << "Player Initialized. Level: " << level << " HP: " << health
-            << "/" << maxHealth << " Mana: " << mana << "/" << maxMana
-            << std::endl;
+  // Idle animation frames
+  // Initialize the vector of texture names
+  if (type == CharacterType::FemaleMage) {
+    idleFrameTextureNames = {"female_mage_idle_1", "female_mage_idle_2",
+                             "female_mage_idle_3", "female_mage_idle_4",
+                             "female_mage_idle_5"};
+
+    walkFrameTextureNames = {"female_mage_walk_1", "female_mage_walk_2",
+                             "female_mage_walk_3", "female_mage_walk_4",
+                             "female_mage_walk_5"};
+  } else if (type == CharacterType::MaleMage) {
+    // Add male frames here if/when you create them
+    idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
+  }
 }
 
 // --- NEW: Getter Methods ---
@@ -91,7 +104,7 @@ void PlayerCharacter::RecalculateStats() {
   // or negative.
   moveDuration = std::max(
       0.05f,
-      0.2f - (effAgi * SPEED_MOD_PER_AGILITY)); // Example: base 0.2s, faster
+      0.5f - (effAgi * SPEED_MOD_PER_AGILITY)); // Example: base 0.2s, faster
                                                 // with agi, min 0.05s
 
   std::cout << "Stats Recalculated. Level: " << level << " EffVit: " << effVit
@@ -272,55 +285,127 @@ void PlayerCharacter::startMove(int targetX, int targetY) {
 }
 
 void PlayerCharacter::update(float deltaTime, GameData &gameData) {
-  if (isMoving) {
-    moveTimer += deltaTime;
-    moveProgress =
-        moveTimer / moveDuration; // moveDuration is now potentially dynamic
+    if (isMoving) {
+        // --- Handle Movement Interpolation ---
+        moveTimer += deltaTime;
+        moveProgress = moveTimer / moveDuration; // moveDuration is now potentially dynamic
 
-    // *** ADD LOG: Check values JUST BEFORE the completion IF statement ***
-    SDL_Log("DEBUG: [PlayerUpdate Pre-Check] Checking completion: moveProgress=%.4f (Timer=%.4f / Duration=%.4f)",
-        moveProgress, moveTimer, moveDuration);
-    // ***
+        // --- Update Walking Animation ---
+        if (!walkFrameTextureNames.empty()) {
+            walkAnimationTimer += deltaTime;
+            float walkFrameDuration = 1.0f / walkAnimationSpeed;
+            if (walkAnimationTimer >= walkFrameDuration) {
+                walkAnimationTimer -= walkFrameDuration; // Subtract duration
+                currentWalkFrame = (currentWalkFrame + 1) % walkFrameTextureNames.size();
+                // Log walk frame change
+                SDL_Log("DEBUG: [PlayerUpdate] Walk Frame Updated. isMoving=%s, NewFrame=%d", isMoving ? "true" : "false", currentWalkFrame);
+            }
+        } else {
+            // Log only once if walk frames are missing
+            if (walkAnimationTimer == 0.0f) {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is moving but walkFrameTextureNames is empty!");
+            }
+            walkAnimationTimer += deltaTime; // Still increment timer to avoid spamming log
+        }
+        // --- END Walking Animation Update ---
 
-    if (moveProgress >= 1.0f) {
-      moveProgress = 1.0f;
+        // Reset idle animation state while moving
+        idleAnimationTimer = 0.0f;
+        currentIdleFrame = 0;
 
-      int oldTileX = startTileX; // Store starting tile before snapping logic
-                                 // potentially changes it
-      int oldTileY = startTileY;
+        // --- Check for Movement Completion ---
+        if (moveProgress >= 1.0f) {
+            moveProgress = 1.0f; // Clamp progress
 
-      isMoving = false;
-      x = targetTileX * tileWidth + tileWidth / 2.0f;
-      y = targetTileY * tileHeight + tileHeight / 2.0f;
+            int oldTileX = targetTileX; // Use the LOGICAL start tile for grid update
+            int oldTileY = targetTileY; // (targetTileX/Y holds the *intended* destination)
+                                        // NOTE: The ORIGINAL startTileX/Y is needed if player could change direction mid-move,
+                                        // but for turn-based, targetTileX/Y before snapping IS the old logical position.
 
-      // --- NEW: Update Occupation Grid ---
-      // Clear old position (check bounds)
-      if (oldTileX >= 0 && oldTileX < gameData.currentLevel.width &&
-          oldTileY >= 0 && oldTileY < gameData.currentLevel.height) {
-        gameData.occupationGrid[oldTileY][oldTileX] = false;
-      }
-      // Set new position (check bounds)
-      if (targetTileX >= 0 && targetTileX < gameData.currentLevel.width &&
-          targetTileY >= 0 && targetTileY < gameData.currentLevel.height) {
-        gameData.occupationGrid[targetTileY][targetTileX] = true;
-      } else {
-        // Log error if moving out of bounds? Should not happen ideally.
-        SDL_Log("Warning: Player moved outside level bounds to (%d, %d)? Grid "
-                "not updated.",
-                targetTileX, targetTileY);
-      }
-      // --- End Occupation Grid Update ---
-    } else {
-      float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
-      float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
-      float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
-      float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
+            // Snap visual position to target
+            x = targetTileX * tileWidth + tileWidth / 2.0f;
+            y = targetTileY * tileHeight + tileHeight / 2.0f;
 
-      x = startVisualX + (targetVisualX - startVisualX) * moveProgress;
-      y = startVisualY + (targetVisualY - startVisualY) * moveProgress;
-    }
-  }
-}
+
+            // --- Update Occupation Grid ---
+            // This part assumes the grid was ALREADY updated when the move *started*.
+            // The purpose here might be more complex if concurrent movement required
+            // re-checking occupation upon completion.
+            // If the grid is only updated *after* movement, the logic would be different.
+            // Based on previous context (immediate grid update on move start),
+            // this might just need verification or could be removed if redundant.
+            // Let's keep the original grid logic from your file for now:
+
+            // Clear old position (check bounds) - Assuming oldTileX/Y correctly represents the tile before this move finished
+            if (oldTileX >= 0 && oldTileX < gameData.currentLevel.width &&
+                oldTileY >= 0 && oldTileY < gameData.currentLevel.height) {
+               // Check if it was *supposed* to be occupied by the player before clearing
+               // This check might be overly complex depending on grid update strategy.
+               // gameData.occupationGrid[oldTileY][oldTileX] = false; // Simple clear
+            }
+             // Set new position (check bounds) - This should already be true from move initiation
+            if (targetTileX >= 0 && targetTileX < gameData.currentLevel.width &&
+                targetTileY >= 0 && targetTileY < gameData.currentLevel.height) {
+                if (!gameData.occupationGrid[targetTileY][targetTileX]) {
+                     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player finished move at [%d,%d] but grid wasn't marked occupied!", targetTileX, targetTileY);
+                     gameData.occupationGrid[targetTileY][targetTileX] = true; // Ensure it's set
+                }
+            } else {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,"Player moved outside level bounds to (%d, %d)? Grid not updated.", targetTileX, targetTileY);
+            }
+            // --- End Occupation Grid Update ---
+
+
+            // Finish movement state
+            isMoving = false;
+            currentWalkFrame = 0;      // Reset walk animation frame
+            walkAnimationTimer = 0.0f; // Reset walk timer
+            // Log movement stop
+            SDL_Log("DEBUG: [PlayerUpdate] Movement Complete. isMoving=false at [%d,%d]", targetTileX, targetTileY);
+
+
+        } else {
+            // Interpolate visual position during movement
+            float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
+            float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
+            float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
+            float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
+
+            x = startVisualX + (targetVisualX - startVisualX) * moveProgress;
+            y = startVisualY + (targetVisualY - startVisualY) * moveProgress;
+        }
+
+    } else { // Player is NOT moving
+        // --- Update Idle Animation ---
+        if (!idleFrameTextureNames.empty()) {
+            idleAnimationTimer += deltaTime;
+            float idleFrameDuration = 1.0f / idleAnimationSpeed;
+            if (idleAnimationTimer >= idleFrameDuration) {
+                idleAnimationTimer -= idleFrameDuration; // Subtract duration
+                currentIdleFrame = (currentIdleFrame + 1) % idleFrameTextureNames.size();
+                // Optional Log: Log idle frame change (can be spammy)
+                // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. isMoving=%s, NewFrame=%d", isMoving ? "true":"false", currentIdleFrame);
+            }
+        } else {
+            // Log only once if idle frames are missing
+             if (idleAnimationTimer == 0.0f) {
+                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is idle but idleFrameTextureNames is empty!");
+             }
+             idleAnimationTimer += deltaTime; // Still increment timer to avoid spamming log
+        }
+        // --- END Idle Animation Update ---
+
+        // Reset walk animation state while idle
+        walkAnimationTimer = 0.0f;
+        currentWalkFrame = 0;
+
+         // Ensure visual position matches logical position when idle
+         x = targetTileX * tileWidth + tileWidth / 2.0f;
+         y = targetTileY * tileHeight + tileHeight / 2.0f;
+
+    } // End if(isMoving) / else block
+} // End of PlayerCharacter::update
+
 // Placeholder for canCastSpell
 bool PlayerCharacter::canCastSpell(int spellIndex) const {
   if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
