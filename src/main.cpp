@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO); // Show info, warnings,
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);    // Show warnings,
-     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
   // To hide *all* standard logs (including errors), set priority higher than
   // critical: SDL_LogSetAllPriority(SDL_NUM_LOG_PRIORITIES); // Effectively
   // disable standard logging
@@ -145,22 +145,28 @@ int main(int argc, char *argv[]) {
     // --- END Load Walking Animation Frames ---
 
     // --- ADDED: Load Targeting Animation Frames ---
-loadSuccess &= assetManager.loadTexture(
-  "female_mage_target_1", "../assets/sprites/animations/female_mage/targetting/" // Ensure path is correct
-                          "female_mage_targetting_0001.png"); // Example filename
-loadSuccess &= assetManager.loadTexture(
-  "female_mage_target_2", "../assets/sprites/animations/female_mage/targetting/"
-                          "female_mage_targetting_0002.png");
-loadSuccess &= assetManager.loadTexture(
-  "female_mage_target_3", "../assets/sprites/animations/female_mage/targetting/"
-                          "female_mage_targetting_0003.png");
-loadSuccess &= assetManager.loadTexture(
-  "female_mage_target_4", "../assets/sprites/animations/female_mage/targetting/"
-                          "female_mage_targetting_0004.png");
-loadSuccess &= assetManager.loadTexture(
-  "female_mage_target_5", "../assets/sprites/animations/female_mage/targetting/"
-                          "female_mage_targetting_0005.png");
-// --- END Load Targeting Animation Frames ---
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_target_1",
+        "../assets/sprites/animations/female_mage/targetting/" // Ensure path is
+                                                               // correct
+        "female_mage_targetting_0001.png"); // Example filename
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_target_2",
+        "../assets/sprites/animations/female_mage/targetting/"
+        "female_mage_targetting_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_target_3",
+        "../assets/sprites/animations/female_mage/targetting/"
+        "female_mage_targetting_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_target_4",
+        "../assets/sprites/animations/female_mage/targetting/"
+        "female_mage_targetting_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_target_5",
+        "../assets/sprites/animations/female_mage/targetting/"
+        "female_mage_targetting_0005.png");
+    // --- END Load Targeting Animation Frames ---
 
     if (!loadSuccess) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -536,86 +542,75 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                       "Menu). Key: %s",
                       SDL_GetKeyName(event.key.keysym.sym));
               bool actionPlanned = false;
+              SDL_Keycode keycode = event.key.keysym.sym;
+
+              // --- Targeting Input ---
               if (gameData.showTargetingReticle) {
-                // --- Targeting Input ---
-                switch (event.key.keysym.sym) {
-                case SDLK_UP:
-                case SDLK_KP_8:
-                  gameData.targetIndicatorY--;
-                  break;
-                case SDLK_DOWN:
-                case SDLK_KP_2:
-                  gameData.targetIndicatorY++;
-                  break;
-                case SDLK_LEFT:
-                case SDLK_KP_4:
-                  gameData.targetIndicatorX--;
-                  break;
-                case SDLK_RIGHT:
-                case SDLK_KP_6:
-                  gameData.targetIndicatorX++;
-                  break;
-                case SDLK_KP_7:
-                  gameData.targetIndicatorX--;
-                  gameData.targetIndicatorY--;
-                  break;
-                case SDLK_KP_9:
-                  gameData.targetIndicatorX++;
-                  gameData.targetIndicatorY--;
-                  break;
-                case SDLK_KP_1:
-                  gameData.targetIndicatorX--;
-                  gameData.targetIndicatorY++;
-                  break;
-                case SDLK_KP_3:
-                  gameData.targetIndicatorX++;
-                  gameData.targetIndicatorY++;
-                  break;
-                case SDLK_RETURN: {
-                  if (gameData.currentSpellIndex != -1) {
-                    const Spell &spell = gameData.currentGamePlayer.getSpell(
-                        gameData.currentSpellIndex);
-                    int distance =
-                        std::abs(gameData.currentGamePlayer.targetTileX -
-                                 gameData.targetIndicatorX) +
-                        std::abs(gameData.currentGamePlayer.targetTileY -
-                                 gameData.targetIndicatorY);
-                    if (distance <= spell.range) {
-                      gameData.playerIntendedAction.type =
-                          ActionType::CastSpell;
-                      gameData.playerIntendedAction.spellIndex =
-                          gameData.currentSpellIndex;
-                      gameData.playerIntendedAction.targetX =
-                          gameData.targetIndicatorX;
-                      gameData.playerIntendedAction.targetY =
-                          gameData.targetIndicatorY;
-                      actionPlanned = true;
-                      SDL_Log("Player plans TARGETED CAST spell %d at [%d,%d].",
-                              gameData.currentSpellIndex,
-                              gameData.targetIndicatorX,
-                              gameData.targetIndicatorY);
-                    } else {
-                      SDL_Log("Target out of range.");
-                    }
-                  } else {
-                    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                                 "Target confirmed with no spell selected!");
-                  }
-                  gameData.showTargetingReticle = false;
-                  gameData.currentSpellIndex = -1;
-                } break;
-                case SDLK_ESCAPE:
-                  gameData.showTargetingReticle = false;
-                  gameData.currentSpellIndex = -1;
-                  SDL_Log("Targeting cancelled.");
-                  break;
-                }
-                gameData.targetIndicatorX =
-                    std::max(0, std::min(gameData.currentLevel.width - 1,
-                                         gameData.targetIndicatorX));
-                gameData.targetIndicatorY =
-                    std::max(0, std::min(gameData.currentLevel.height - 1,
-                                         gameData.targetIndicatorY));
+                   int targetMoveX = 0; int targetMoveY = 0;
+                   bool confirmTarget = false; bool cancelTarget = false;
+                   int confirmingSpellIndex = -1; // Check if pressed key matches current spell hotkey
+
+                   // Map pressed key to potential spell index for confirmation
+                   if (keycode == SDLK_q) confirmingSpellIndex = 0;
+                   else if (keycode == SDLK_w) confirmingSpellIndex = 1;
+                   else if (keycode == SDLK_e) confirmingSpellIndex = 2;
+                   else if (keycode == SDLK_r) confirmingSpellIndex = 3;
+                   else if (keycode == SDLK_t) confirmingSpellIndex = 4;
+
+                   // Check for Confirmation via Hotkey
+                   if (confirmingSpellIndex != -1 && confirmingSpellIndex == gameData.currentSpellIndex) {
+                       confirmTarget = true;
+                       SDL_Log("DEBUG: Confirming target via Hotkey %s.", SDL_GetKeyName(keycode));
+                   }
+                   // Check for Cancellation
+                   else if (keycode == SDLK_ESCAPE) {
+                       cancelTarget = true;
+                   }
+                   // Check for Reticle Movement (if not confirming or cancelling)
+                   else if (confirmingSpellIndex == -1) { // Only move if it wasn't a confirmation/cancel key
+                       switch (keycode) {
+                           case SDLK_UP: case SDLK_KP_8: targetMoveY = -1; break;
+                           case SDLK_DOWN: case SDLK_KP_2: targetMoveY = 1; break;
+                           case SDLK_LEFT: case SDLK_KP_4: targetMoveX = -1; break;
+                           case SDLK_RIGHT: case SDLK_KP_6: targetMoveX = 1; break;
+                           case SDLK_KP_7: targetMoveX = -1; targetMoveY = -1; break;
+                           case SDLK_KP_9: targetMoveX = 1; targetMoveY = -1; break;
+                           case SDLK_KP_1: targetMoveX = -1; targetMoveY = 1; break;
+                           case SDLK_KP_3: targetMoveX = 1; targetMoveY = 1; break;
+                           // Removed SDLK_RETURN confirmation here
+                       }
+                   }
+
+                   // Apply Reticle Movement
+                   if(targetMoveX != 0 || targetMoveY != 0) {
+                        gameData.targetIndicatorX += targetMoveX;
+                        gameData.targetIndicatorY += targetMoveY;
+                        // Clamp indicator within bounds
+                        gameData.targetIndicatorX = std::max(0, std::min(gameData.currentLevel.width - 1, gameData.targetIndicatorX));
+                        gameData.targetIndicatorY = std::max(0, std::min(gameData.currentLevel.height - 1, gameData.targetIndicatorY));
+                        SDL_Log("DEBUG: Reticle moved to [%d, %d]", gameData.targetIndicatorX, gameData.targetIndicatorY);
+                   }
+                   // Apply Confirmation (Now triggered by matching hotkey)
+                   if (confirmTarget) {
+                        if (gameData.currentSpellIndex != -1) {
+                             const Spell &spell = gameData.currentGamePlayer.getSpell(gameData.currentSpellIndex);
+                             int distance = std::abs(gameData.currentGamePlayer.targetTileX - gameData.targetIndicatorX) + std::abs(gameData.currentGamePlayer.targetTileY - gameData.targetIndicatorY);
+                             if (distance <= spell.range) {
+                                   gameData.playerIntendedAction.type = ActionType::CastSpell;
+                                   gameData.playerIntendedAction.spellIndex = gameData.currentSpellIndex;
+                                   gameData.playerIntendedAction.targetX = gameData.targetIndicatorX;
+                                   gameData.playerIntendedAction.targetY = gameData.targetIndicatorY;
+                                   actionPlanned = true; // Mark action planned
+                                   SDL_Log("Player plans TARGETED CAST spell %d at [%d,%d] (Confirmed via Hotkey).", gameData.currentSpellIndex, gameData.targetIndicatorX, gameData.targetIndicatorY);
+                             } else { SDL_Log("Target out of range."); }
+                        } else { SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,"Target confirmed with no spell selected!"); }
+                        gameData.showTargetingReticle = false; gameData.currentSpellIndex = -1; // Reset state
+                   }
+                   // Apply Cancellation
+                   if (cancelTarget) {
+                       SDL_Log("Targeting cancelled.");
+                       gameData.showTargetingReticle = false; gameData.currentSpellIndex = -1; // Reset state
+                   }
               } else {
                 int moveX = 0;
                 int moveY = 0;
@@ -736,15 +731,32 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                                 spellIndex);
                       } else { // Enter Targeting Mode
                         SDL_Log("DEBUG: Hotkey spell %d needs targeting. "
-                                "Enabling reticle.",
+                                "Finding nearest...",
                                 spellIndex);
-                        gameData.currentSpellIndex = spellIndex;
-                        gameData.targetIndicatorX =
-                            gameData.currentGamePlayer.targetTileX;
-                        gameData.targetIndicatorY =
-                            gameData.currentGamePlayer.targetTileY;
+                        gameData.currentSpellIndex =
+                            spellIndex; // Store the spell index
+                        SDL_Point nearestTargetPos = {-1, -1};
+                        bool targetFound = findNearestValidTarget(
+                            gameData, spellIndex, nearestTargetPos);
+
+                        if (targetFound) {
+                          SDL_Log("DEBUG: Nearest target found at [%d, %d]. "
+                                  "Setting reticle.",
+                                  nearestTargetPos.x, nearestTargetPos.y);
+                          gameData.targetIndicatorX = nearestTargetPos.x;
+                          gameData.targetIndicatorY = nearestTargetPos.y;
+                        } else {
+                          SDL_Log("DEBUG: No nearest target found. Reticle "
+                                  "starts at player [%d, %d].",
+                                  gameData.currentGamePlayer.targetTileX,
+                                  gameData.currentGamePlayer.targetTileY);
+                          gameData.targetIndicatorX =
+                              gameData.currentGamePlayer.targetTileX;
+                          gameData.targetIndicatorY =
+                              gameData.currentGamePlayer.targetTileY;
+                        }
                         gameData.showTargetingReticle =
-                            true; // << Enable targeting input
+                            true; // Enter targeting mode
                         SDL_Log(
                             "Player enters TARGETING via hotkey for spell %d.",
                             spellIndex);
@@ -904,9 +916,9 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
 // --- Rewritten updateLogic Function ---
 void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
-  //update player
+  // update player
   gameData.currentGamePlayer.update(deltaTime, gameData);
-  
+
   // --- Update Camera ---
   if (gameData.currentLevel.width > 0 && gameData.currentLevel.height > 0 &&
       gameData.tileWidth > 0 && gameData.tileHeight > 0) {
@@ -1548,19 +1560,27 @@ void renderScene(GameData &gameData, AssetManager &assets) {
   // --- MODIFIED: Select Animation Frame ---
   if (isTargeting) {
     // --- Use Targeting Animation ---
-    SDL_Log("DEBUG: [RenderPlayer] Player IS targeting. TargetFrames=%zu, CurrentTargetFrame=%d",
+    SDL_Log("DEBUG: [RenderPlayer] Player IS targeting. TargetFrames=%zu, "
+            "CurrentTargetFrame=%d",
             gameData.currentGamePlayer.targetingFrameTextureNames.size(),
             gameData.currentGamePlayer.currentTargetingFrame);
     if (!gameData.currentGamePlayer.targetingFrameTextureNames.empty() &&
-        gameData.currentGamePlayer.currentTargetingFrame < gameData.currentGamePlayer.targetingFrameTextureNames.size()) {
-        textureKeyToUse = gameData.currentGamePlayer.targetingFrameTextureNames[gameData.currentGamePlayer.currentTargetingFrame];
-        SDL_Log("DEBUG: [RenderPlayer] Using TARGETING key: %s", textureKeyToUse.c_str());
-    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) { // Fallback to idle if targeting frames missing
-        textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
-         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "[RenderPlayer] Targeting frame invalid/missing, fallback to IDLE key: %s", textureKeyToUse.c_str());
+        gameData.currentGamePlayer.currentTargetingFrame <
+            gameData.currentGamePlayer.targetingFrameTextureNames.size()) {
+      textureKeyToUse = gameData.currentGamePlayer.targetingFrameTextureNames
+                            [gameData.currentGamePlayer.currentTargetingFrame];
+      SDL_Log("DEBUG: [RenderPlayer] Using TARGETING key: %s",
+              textureKeyToUse.c_str());
+    } else if (!gameData.currentGamePlayer.idleFrameTextureNames
+                    .empty()) { // Fallback to idle if targeting frames missing
+      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "[RenderPlayer] Targeting frame invalid/missing, fallback to "
+                  "IDLE key: %s",
+                  textureKeyToUse.c_str());
     }
 
-} else if (isPlayerMoving) {
+  } else if (isPlayerMoving) {
     // Use Walking Animation
     if (!gameData.currentGamePlayer.walkFrameTextureNames.empty() &&
         gameData.currentGamePlayer.currentWalkFrame <
