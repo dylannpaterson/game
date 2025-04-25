@@ -60,155 +60,157 @@ int main(int argc, char *argv[]) {
 
   // *** Set SDL logging level ***
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
-  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);    // Show info, warnings,
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO); // Show info, warnings,
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);    // Show warnings,
-     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
+   SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
   // To hide *all* standard logs (including errors), set priority higher than
   // critical: SDL_LogSetAllPriority(SDL_NUM_LOG_PRIORITIES); // Effectively
   // disable standard logging
 
   gameData.renderer = sdlContext.renderer;
-  AssetManager assetManager(gameData.renderer); // Create AssetManager instance
+  {
+    AssetManager assetManager(
+        gameData.renderer); // Create AssetManager instance
 
-  // --- Player Initialization ---
-  // Player initialized in GameData constructor
+    // --- Player Initialization ---
+    // Player initialized in GameData constructor
 
-  // --- Load Assets ---
-  bool loadSuccess = true;
-  loadSuccess &=
-      assetManager.loadTexture("splash", "../assets/splash/splash.png");
-  loadSuccess &= assetManager.loadTexture("start_tile",
-                                          "../assets/sprites/start_tile.png");
-  loadSuccess &=
-      assetManager.loadTexture("exit_tile", "../assets/sprites/exit_tile.png");
-  loadSuccess &= assetManager.loadTexture(
-      "reticle", "../assets/sprites/target_reticle.png");
-  loadSuccess &=
-      assetManager.loadTexture("fireball", "../assets/sprites/fireball.PNG");
-  loadSuccess &= assetManager.loadTexture(
-      "fireball_icon", "../assets/sprites/fireball_icon.PNG");
-  loadSuccess &= assetManager.loadTexture(
-      "minor_heal_icon", "../assets/sprites/minor_heal_icon.PNG");
-  loadSuccess &=
-      assetManager.loadTexture("wall_texture", "../assets/sprites/wall_1.PNG");
-  loadSuccess &=
-      assetManager.loadTexture("floor_1", "../assets/sprites/floor_1.PNG");
-  loadSuccess &=
-      assetManager.loadTexture("floor_2", "../assets/sprites/floor_2.PNG");
-  loadSuccess &=
-      assetManager.loadFont("main_font", "../assets/fonts/LUMOS.TTF", 36);
-  loadSuccess &=
-      assetManager.loadFont("spellbar_font", "../assets/fonts/LUMOS.TTF", 18);
-  loadSuccess &= assetManager.loadTexture(
-      "female_mage_portrait", "../assets/sprites/female_mage_portrait.PNG");
-  loadSuccess &= assetManager.loadTexture(
-      "male_mage_portrait", "../assets/sprites/male_mage_portrait.PNG");
-  loadSuccess &=
-      assetManager.loadTexture("slime_texture", "../assets/sprites/slime.PNG");
-  if (!loadSuccess) {
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                 "Asset loading failed!"); /* Handle error */
-  }
-  SDL_Texture *reticleTex = assetManager.getTexture("reticle");
-  if (reticleTex)
-    SDL_SetTextureBlendMode(reticleTex, SDL_BLENDMODE_BLEND);
-  SDL_Texture *splashTex = assetManager.getTexture("splash");
-  if (splashTex)
-    SDL_SetTextureBlendMode(splashTex, SDL_BLENDMODE_BLEND);
-
-  bool running = true;
-  Uint32 lastFrameTime = SDL_GetTicks();
-
-  // --- FPS Counter Variables ---
-  Uint32 fpsTimer = SDL_GetTicks(); // Initialize timer for FPS calculation
-  Uint32 frameCount = 0;
-  // ---
-
-  // --- Main Application Loop ---
-  while (currentAppState != AppState::Quitting) {
-    Uint32 currentFrameTime = SDL_GetTicks();
-    float deltaTime =
-        static_cast<float>(currentFrameTime - lastFrameTime) / 1000.0f;
-    if (deltaTime > 0.1f) // Cap delta time
-      deltaTime = 0.1f;
-    lastFrameTime = currentFrameTime;
-
-    // --- FPS Calculation ---
-    frameCount++;
-    if (currentFrameTime - fpsTimer >= 1000) { // If 1 second has passed
-      // Use SDL_Log instead of printf for consistency
-      SDL_Log("INFO: FPS: %u", frameCount);
-      frameCount = 0;              // Reset counter
-      fpsTimer = currentFrameTime; // Reset timer
+    // --- Load Assets ---
+    bool loadSuccess = true;
+    loadSuccess &=
+        assetManager.loadTexture("splash", "../assets/splash/splash.png");
+    loadSuccess &= assetManager.loadTexture("start_tile",
+                                            "../assets/sprites/start_tile.png");
+    loadSuccess &= assetManager.loadTexture("exit_tile",
+                                            "../assets/sprites/exit_tile.png");
+    loadSuccess &= assetManager.loadTexture(
+        "reticle", "../assets/sprites/target_reticle.png");
+    loadSuccess &=
+        assetManager.loadTexture("fireball", "../assets/sprites/fireball.PNG");
+    loadSuccess &= assetManager.loadTexture(
+        "fireball_icon", "../assets/sprites/fireball_icon.PNG");
+    loadSuccess &= assetManager.loadTexture(
+        "minor_heal_icon", "../assets/sprites/minor_heal_icon.PNG");
+    loadSuccess &= assetManager.loadTexture("wall_texture",
+                                            "../assets/sprites/wall_1.PNG");
+    loadSuccess &=
+        assetManager.loadTexture("floor_1", "../assets/sprites/floor_1.PNG");
+    loadSuccess &=
+        assetManager.loadTexture("floor_2", "../assets/sprites/floor_2.PNG");
+    loadSuccess &=
+        assetManager.loadFont("main_font", "../assets/fonts/LUMOS.TTF", 36);
+    loadSuccess &=
+        assetManager.loadFont("spellbar_font", "../assets/fonts/LUMOS.TTF", 18);
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_portrait", "../assets/sprites/female_mage_portrait.PNG");
+    loadSuccess &= assetManager.loadTexture(
+        "male_mage_portrait", "../assets/sprites/male_mage_portrait.PNG");
+    loadSuccess &= assetManager.loadTexture("slime_texture",
+                                            "../assets/sprites/slime.PNG");
+    if (!loadSuccess) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "Asset loading failed!"); /* Handle error */
     }
+    SDL_Texture *reticleTex = assetManager.getTexture("reticle");
+    if (reticleTex)
+      SDL_SetTextureBlendMode(reticleTex, SDL_BLENDMODE_BLEND);
+    SDL_Texture *splashTex = assetManager.getTexture("splash");
+    if (splashTex)
+      SDL_SetTextureBlendMode(splashTex, SDL_BLENDMODE_BLEND);
+
+    bool running = true;
+    Uint32 lastFrameTime = SDL_GetTicks();
+
+    // --- FPS Counter Variables ---
+    Uint32 fpsTimer = SDL_GetTicks(); // Initialize timer for FPS calculation
+    Uint32 frameCount = 0;
     // ---
 
-    handleEvents(gameData, assetManager, running, sdlContext);
-    if (!running) {
-      currentAppState = AppState::Quitting;
-    }
+    // --- Main Application Loop ---
+    while (currentAppState != AppState::Quitting) {
+      Uint32 currentFrameTime = SDL_GetTicks();
+      float deltaTime =
+          static_cast<float>(currentFrameTime - lastFrameTime) / 1000.0f;
+      if (deltaTime > 0.1f) // Cap delta time
+        deltaTime = 0.1f;
+      lastFrameTime = currentFrameTime;
 
-    switch (currentAppState) {
-    case AppState::MainMenu:
-      if (gameData.isPanning) { /* ... menu panning ... */
-        gameData.panCounter += 10;
-        gameData.splashPanOffset -= 10;
-        if (gameData.splashPanOffset <= 0) {
-          gameData.splashPanOffset = 0;
-          gameData.isPanning = false;
-          currentAppState = AppState::CharacterSelect;
-          gameData.isCharacterSelectFadingIn = true;
-          gameData.characterSelectAlpha = 0;
-          gameData.hasCharacterSelectStartedFading = true;
-          SDL_Log("Panning finished, entering Character Select AppState.");
-        }
+      // --- FPS Calculation ---
+      frameCount++;
+      if (currentFrameTime - fpsTimer >= 1000) { // If 1 second has passed
+        // Use SDL_Log instead of printf for consistency
+        SDL_Log("INFO: FPS: %u", frameCount);
+        frameCount = 0;              // Reset counter
+        fpsTimer = currentFrameTime; // Reset timer
       }
-      break;
-    case AppState::CharacterSelect:
-      if (gameData.isCharacterSelectFadingIn) { /* ... fade-in ... */
-        int newAlpha = static_cast<int>(gameData.characterSelectAlpha) + 10;
-        if (newAlpha >= 255) {
-          gameData.characterSelectAlpha = 255;
-          gameData.isCharacterSelectFadingIn = false;
-          SDL_Log("Character Select fade-in complete.");
-        } else {
-          gameData.characterSelectAlpha = static_cast<Uint8>(newAlpha);
-        }
+      // ---
+
+      handleEvents(gameData, assetManager, running, sdlContext);
+      if (!running) {
+        currentAppState = AppState::Quitting;
       }
-      break;
-    case AppState::Gameplay:
-      updateLogic(gameData, assetManager, deltaTime);
-      break;
-    case AppState::Quitting:
-      break;
-    }
 
-    SDL_SetRenderDrawColor(gameData.renderer, 0, 0, 0, 255);
-    SDL_RenderClear(gameData.renderer);
-    switch (currentAppState) {
-    case AppState::MainMenu:
-      displayMenu(gameData.renderer, assetManager.getFont("main_font"),
-                  assetManager.getTexture("splash"), gameData.menuItems,
-                  gameData.selectedIndex, gameData.isPanning,
-                  gameData.splashPanOffset, 456, gameData.windowWidth,
-                  gameData.windowHeight);
-      break;
-    case AppState::CharacterSelect:
-      displayCharacterSelect(
-          gameData.renderer, assetManager.getFont("main_font"),
-          gameData.selectedCharacterIndex, gameData.windowWidth,
-          gameData.windowHeight, gameData.characterSelectAlpha);
-      break;
-    case AppState::Gameplay:
-      renderScene(gameData, assetManager);
-      break; // Calls the full renderScene below
-    case AppState::Quitting:
-      break;
-    }
-    SDL_RenderPresent(gameData.renderer);
-    SDL_Delay(1);
-  } // End Main Application Loop
+      switch (currentAppState) {
+      case AppState::MainMenu:
+        if (gameData.isPanning) { /* ... menu panning ... */
+          gameData.panCounter += 10;
+          gameData.splashPanOffset -= 10;
+          if (gameData.splashPanOffset <= 0) {
+            gameData.splashPanOffset = 0;
+            gameData.isPanning = false;
+            currentAppState = AppState::CharacterSelect;
+            gameData.isCharacterSelectFadingIn = true;
+            gameData.characterSelectAlpha = 0;
+            gameData.hasCharacterSelectStartedFading = true;
+            SDL_Log("Panning finished, entering Character Select AppState.");
+          }
+        }
+        break;
+      case AppState::CharacterSelect:
+        if (gameData.isCharacterSelectFadingIn) { /* ... fade-in ... */
+          int newAlpha = static_cast<int>(gameData.characterSelectAlpha) + 10;
+          if (newAlpha >= 255) {
+            gameData.characterSelectAlpha = 255;
+            gameData.isCharacterSelectFadingIn = false;
+            SDL_Log("Character Select fade-in complete.");
+          } else {
+            gameData.characterSelectAlpha = static_cast<Uint8>(newAlpha);
+          }
+        }
+        break;
+      case AppState::Gameplay:
+        updateLogic(gameData, assetManager, deltaTime);
+        break;
+      case AppState::Quitting:
+        break;
+      }
 
+      SDL_SetRenderDrawColor(gameData.renderer, 0, 0, 0, 255);
+      SDL_RenderClear(gameData.renderer);
+      switch (currentAppState) {
+      case AppState::MainMenu:
+        displayMenu(gameData.renderer, assetManager.getFont("main_font"),
+                    assetManager.getTexture("splash"), gameData.menuItems,
+                    gameData.selectedIndex, gameData.isPanning,
+                    gameData.splashPanOffset, 456, gameData.windowWidth,
+                    gameData.windowHeight);
+        break;
+      case AppState::CharacterSelect:
+        displayCharacterSelect(
+            gameData.renderer, assetManager.getFont("main_font"),
+            gameData.selectedCharacterIndex, gameData.windowWidth,
+            gameData.windowHeight, gameData.characterSelectAlpha);
+        break;
+      case AppState::Gameplay:
+        renderScene(gameData, assetManager);
+        break; // Calls the full renderScene below
+      case AppState::Quitting:
+        break;
+      }
+      SDL_RenderPresent(gameData.renderer);
+      SDL_Delay(1);
+    } // End Main Application Loop
+  }
   cleanupSDL(sdlContext);
   SDL_Log("Exiting gracefully. Farewell, Mortal.");
   return 0;
@@ -739,10 +741,10 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                       // living enemy (Could be a planned move collision, or
                       // stale data - treat as blocked for now)
                       if (!enemyOccupiesTarget) {
-                        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        /*SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                                     "Player move to [%d,%d] blocked by "
                                     "non-enemy occupation.",
-                                    newPlayerTargetX, newPlayerTargetY);
+                                    newPlayerTargetX, newPlayerTargetY);*/
                         // Decide how to handle this - for now, block the move.
                         // Alternatively, could allow move if it's e.g. a dead
                         // enemy spot not cleared yet
@@ -887,160 +889,153 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     totalEnemyPlanningCpuTime = 0;
     break; // Waiting for input
 
-  case TurnPhase::Planning_EnemyAI: { // Scope
-    // *** START TIMING Planning_EnemyAI (Wall Clock) ***
-    if (previousPhase ==
-        TurnPhase::Planning_PlayerInput) { // Only log start time on first entry
-      planningWallClockStartTime = SDL_GetTicks();
-    }
-    // ***
-
-    if (gameData.currentEnemyPlanningIndex < gameData.enemies.size()) {
-      if (gameData.currentEnemyPlanningIndex >= gameData.enemies.size()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Enemy planning index %d out of bounds (size %zu).",
-                     gameData.currentEnemyPlanningIndex,
-                     gameData.enemies.size());
-        gameData.currentEnemyPlanningIndex++;
-        break;
+    case TurnPhase::Planning_EnemyAI: { // Scope for variables
+      // *** START TIMING Planning_EnemyAI (Wall Clock) ***
+      if (previousPhase == TurnPhase::Planning_PlayerInput) { // Only start timer on first frame entering this phase
+          planningWallClockStartTime = SDL_GetTicks();
+          totalEnemyPlanningCpuTime = 0; // Ensure accumulator is reset at start of phase
       }
-      Enemy &currentEnemy =
-          gameData.enemies[gameData.currentEnemyPlanningIndex];
-      if (gameData.currentEnemyPlanningIndex >=
-          gameData.enemyIntendedActions.size()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Enemy planning index %d out of bounds for intended "
-                     "actions (size %zu). Resizing.",
-                     gameData.currentEnemyPlanningIndex,
-                     gameData.enemyIntendedActions.size());
-        gameData.enemyIntendedActions.resize(gameData.enemies.size());
-        if (gameData.currentEnemyPlanningIndex >=
-            gameData.enemyIntendedActions.size()) {
-          SDL_LogError(
-              SDL_LOG_CATEGORY_APPLICATION,
-              "Resize failed or index still out of bounds after resize.");
-          gameData.currentEnemyPlanningIndex++;
-          break;
-        }
-      }
-      // *** START TIMING Single Enemy CPU Time ***
-      Uint32 singleEnemyStartTime = SDL_GetTicks();
       // ***
-      if (currentEnemy.health > 0 && !currentEnemy.isMoving) {
-        IntendedAction plan = currentEnemy.planAction(
-            gameData.currentLevel, gameData.currentGamePlayer, gameData);
-        gameData.enemyIntendedActions[gameData.currentEnemyPlanningIndex] =
-            plan;
-        if (plan.type == ActionType::Move) { // Tentative Occupation
-          if (isWithinBounds(plan.targetX, plan.targetY,
-                             gameData.currentLevel.width,
-                             gameData.currentLevel.height)) {
-            // *** Update: Also update visual coords instantly for planned
-            // invisible moves ***
-            float visibility = 0.0f;
-            if (isWithinBounds(currentEnemy.x, currentEnemy.y,
-                               gameData.currentLevel.width,
-                               gameData.currentLevel.height) &&
-                currentEnemy.y < gameData.visibilityMap.size() &&
-                currentEnemy.x <
-                    gameData.visibilityMap[currentEnemy.y].size()) {
-              visibility =
-                  gameData.visibilityMap[currentEnemy.y][currentEnemy.x];
-            }
-            bool isVisible = (visibility > 0.0f);
 
-            if (!gameData.occupationGrid[plan.targetY][plan.targetX]) {
-              gameData.occupationGrid[plan.targetY][plan.targetX] = true;
-              SDL_Log("Enemy %d tentatively occupies [%d,%d] for planning.",
-                      currentEnemy.id, plan.targetX, plan.targetY);
-              // *** If move is planned AND enemy is invisible, snap visual
-              // coords now ***
-              if (!isVisible) {
-                currentEnemy.visualX = plan.targetX * gameData.tileWidth +
-                                       gameData.tileWidth / 2.0f;
-                currentEnemy.visualY = plan.targetY * gameData.tileHeight +
-                                       gameData.tileHeight / 2.0f;
-                // Also update logical coords instantly for invisible moves
-                // during planning
-                if (isWithinBounds(currentEnemy.x, currentEnemy.y,
-                                   gameData.currentLevel.width,
-                                   gameData.currentLevel.height))
-                  gameData.occupationGrid[currentEnemy.y][currentEnemy.x] =
-                      false; // Clear old logical spot
-                currentEnemy.x = plan.targetX;
-                currentEnemy.y = plan.targetY;
-                // The target spot was already marked occupied above
-                SDL_Log("Enemy %d (invisible) instantly updated logic/visual "
-                        "to planned move [%d,%d]",
-                        currentEnemy.id, plan.targetX, plan.targetY);
-              }
-            } else {
-              SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                          "Enemy %d planned move to [%d,%d] but it became "
-                          "occupied during planning phase. Forcing WAIT.",
-                          currentEnemy.id, plan.targetX, plan.targetY);
-              gameData.enemyIntendedActions[gameData.currentEnemyPlanningIndex]
-                  .type = ActionType::Wait;
-            }
-          } else {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Enemy %d planned move out of bounds to [%d,%d]. "
-                        "Forcing WAIT.",
-                        currentEnemy.id, plan.targetX, plan.targetY);
-            gameData.enemyIntendedActions[gameData.currentEnemyPlanningIndex]
-                .type = ActionType::Wait;
-          }
-        }
-      } else {
-        gameData.enemyIntendedActions[gameData.currentEnemyPlanningIndex].type =
-            ActionType::None;
+      // Update player animation during this phase (if they started moving)
+      if (gameData.currentGamePlayer.isMoving) {
+          gameData.currentGamePlayer.update(deltaTime, gameData);
       }
-      // *** END TIMING Single Enemy CPU Time & Accumulate ***
-      Uint32 singleEnemyEndTime = SDL_GetTicks();
-      totalEnemyPlanningCpuTime += (singleEnemyEndTime - singleEnemyStartTime);
-      // Optional: Log time per enemy (can be very spammy)
-      // SDL_Log("DEBUG: Enemy %d planning CPU time: %u ms", currentEnemy.id,
-      // singleEnemyEndTime - singleEnemyStartTime);
-      // ***
-      gameData.currentEnemyPlanningIndex++;
-    } else { // All enemies planned
-      // Reset Tentative Occupation
+
+      // --- Process ALL Enemies in a single loop ---
+      // Ensure intended actions vector is sized correctly first
+      if (gameData.enemyIntendedActions.size() != gameData.enemies.size()) {
+           SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Resizing enemyIntendedActions from %zu to %zu during planning.", gameData.enemyIntendedActions.size(), gameData.enemies.size());
+          gameData.enemyIntendedActions.resize(gameData.enemies.size());
+      }
+
+      // --- Main Planning Loop for All Enemies ---
       for (int i = 0; i < gameData.enemies.size(); ++i) {
-        if (i >= gameData.enemyIntendedActions.size())
-          continue;
-        const IntendedAction &plan = gameData.enemyIntendedActions[i];
-        if (plan.type == ActionType::Move) {
-          if (isWithinBounds(plan.targetX, plan.targetY,
-                             gameData.currentLevel.width,
-                             gameData.currentLevel.height)) {
-            if (gameData.occupationGrid[plan.targetY][plan.targetX]) {
-              gameData.occupationGrid[plan.targetY][plan.targetX] = false;
-              SDL_Log("Clearing tentative occupation mark at [%d,%d].",
-                      plan.targetX, plan.targetY);
-            }
+          // Safety check for vector index just in case resize failed or size changed unexpectedly
+           if (i >= gameData.enemies.size() || i >= gameData.enemyIntendedActions.size()) {
+               SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Index %d out of bounds during enemy planning loop (Enemy Size: %zu, Action Size: %zu). Skipping.", i, gameData.enemies.size(), gameData.enemyIntendedActions.size());
+               continue; // Skip this iteration
+           }
+
+          Enemy &currentEnemy = gameData.enemies[i];
+
+          // *** START TIMING Single Enemy CPU Time ***
+          Uint32 singleEnemyStartTime = SDL_GetTicks();
+          // ***
+
+          if (currentEnemy.health > 0 && !currentEnemy.isMoving) {
+              // Enemy is alive and not currently animating a move, plan its action
+              IntendedAction plan = currentEnemy.planAction(
+                  gameData.currentLevel, gameData.currentGamePlayer, gameData);
+              gameData.enemyIntendedActions[i] = plan; // Store the plan using loop index 'i'
+
+              // Handle tentative occupation and instant invisible moves logic immediately after planning
+              if (plan.type == ActionType::Move) {
+                   if (isWithinBounds(plan.targetX, plan.targetY, gameData.currentLevel.width, gameData.currentLevel.height)) {
+                       // Check if the target tile is *currently* free in the grid
+                       if (!gameData.occupationGrid[plan.targetY][plan.targetX]) {
+                           // Mark it as tentatively occupied for subsequent enemies in *this* planning pass
+                           gameData.occupationGrid[plan.targetY][plan.targetX] = true;
+                           // SDL_Log("INFO: Enemy %d tentatively occupies [%d,%d] for planning.", currentEnemy.id, plan.targetX, plan.targetY); // Optional Log
+
+                           // Check visibility to handle instant invisible moves
+                           float visibility = 0.0f;
+                           if (isWithinBounds(currentEnemy.x, currentEnemy.y, gameData.currentLevel.width, gameData.currentLevel.height) &&
+                               currentEnemy.y < gameData.visibilityMap.size() && currentEnemy.x < gameData.visibilityMap[currentEnemy.y].size()) {
+                               visibility = gameData.visibilityMap[currentEnemy.y][currentEnemy.x];
+                           }
+                           bool isVisible = (visibility > 0.0f);
+
+                           // If move is planned AND enemy is invisible, snap visual/logical coords now
+                           if (!isVisible) {
+                               currentEnemy.visualX = plan.targetX * gameData.tileWidth + gameData.tileWidth / 2.0f;
+                               currentEnemy.visualY = plan.targetY * gameData.tileHeight + gameData.tileHeight / 2.0f;
+
+                               // Update logical coords instantly too, clearing old spot on grid *if different*
+                               if (isWithinBounds(currentEnemy.x, currentEnemy.y, gameData.currentLevel.width, gameData.currentLevel.height)) {
+                                  if (currentEnemy.x != plan.targetX || currentEnemy.y != plan.targetY) {
+                                       gameData.occupationGrid[currentEnemy.y][currentEnemy.x] = false;
+                                  }
+                               }
+                               currentEnemy.x = plan.targetX;
+                               currentEnemy.y = plan.targetY;
+                               // The target spot was already marked occupied above for the tentative logic
+                               // SDL_Log("INFO: Enemy %d (invisible) instantly updated logic/visual to planned move [%d,%d]", currentEnemy.id, plan.targetX, plan.targetY); // Optional Log
+                           }
+                           // End of invisible enemy instant update logic
+
+                       } else { // Target tile was already occupied (by player or previously planned enemy)
+                           SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d planned move to [%d,%d] but it was occupied during planning phase. Forcing WAIT.", currentEnemy.id, plan.targetX, plan.targetY);
+                           gameData.enemyIntendedActions[i].type = ActionType::Wait; // Force Wait
+                       }
+                   } else { // Target tile is out of bounds
+                        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d planned move out of bounds to [%d,%d]. Forcing WAIT.", currentEnemy.id, plan.targetX, plan.targetY);
+                        gameData.enemyIntendedActions[i].type = ActionType::Wait; // Force Wait
+                   }
+              } // End if plan type is Move
+          } else { // Enemy is dead or already moving (shouldn't happen for moving if called correctly)
+              gameData.enemyIntendedActions[i].type = ActionType::None; // Ensure no action if dead/moving
+               if (currentEnemy.isMoving) {
+                   SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d was already moving during planning phase? Setting action to None.", currentEnemy.id);
+               }
           }
-        }
+
+          // *** END TIMING Single Enemy CPU Time & Accumulate ***
+          Uint32 singleEnemyEndTime = SDL_GetTicks();
+          totalEnemyPlanningCpuTime += (singleEnemyEndTime - singleEnemyStartTime);
+          // ***
+
+      } // --- End FOR loop processing all enemies ---
+
+      // --- Cleanup Tentative Enemy Occupation Marks (After ALL enemies have planned) ---
+      for (int i = 0; i < gameData.enemies.size(); ++i) {
+           if (i >= gameData.enemyIntendedActions.size()) continue; // Safety check
+
+           const IntendedAction &plan = gameData.enemyIntendedActions[i];
+
+           // Only need to revert tentative marks for VISIBLE enemies who planned a move.
+           // Invisible enemies already committed their grid changes.
+           if (plan.type == ActionType::Move) {
+                // Need the enemy object to check its visibility status *now*
+                const Enemy &enemy = gameData.enemies[i]; // Get corresponding enemy
+                float visibility = 0.0f;
+                if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width, gameData.currentLevel.height) &&
+                    enemy.y < gameData.visibilityMap.size() && enemy.x < gameData.visibilityMap[enemy.y].size()) {
+                    visibility = gameData.visibilityMap[enemy.y][enemy.x];
+                }
+                bool isVisible = (visibility > 0.0f);
+
+                if (isVisible && isWithinBounds(plan.targetX, plan.targetY, gameData.currentLevel.width, gameData.currentLevel.height)) {
+                    // Check if the grid is still marked as occupied by *this tentative plan*
+                    // We also need to ensure the player didn't end up logically on that tile due to their concurrent move finishing.
+                     if (gameData.occupationGrid[plan.targetY][plan.targetX] &&
+                         !(gameData.currentGamePlayer.targetTileX == plan.targetX && gameData.currentGamePlayer.targetTileY == plan.targetY))
+                     {
+                          // It was marked (likely by this enemy or another earlier in the loop) and player isn't there, so clear it.
+                          // This prepares the grid for the Resolution phase where moves are actually initiated.
+                          gameData.occupationGrid[plan.targetY][plan.targetX] = false;
+                          // SDL_Log("INFO: Clearing tentative *visible enemy* occupation mark at [%d,%d].", plan.targetX, plan.targetY); // Optional Log
+                     }
+                }
+           }
       }
+      // --- End Cleanup of Tentative Marks ---
 
       // *** LOG FINAL TIMING DATA ***
-      if (planningWallClockStartTime >
-          0) { // Ensure wall clock timer was started
-        phaseEndTime = SDL_GetTicks();
-        elapsedMs = phaseEndTime - planningWallClockStartTime;
-        SDL_Log("INFO: --- Phase Planning_EnemyAI (Wall Clock) Took: %u ms ---",
-                elapsedMs);
-        planningWallClockStartTime = 0; // Reset wall clock timer
+      if (planningWallClockStartTime > 0) { // Ensure wall clock timer was started
+          phaseEndTime = SDL_GetTicks();
+          elapsedMs = phaseEndTime - planningWallClockStartTime;
+          SDL_Log("INFO: --- Phase Planning_EnemyAI (Wall Clock) Took: %u ms ---", elapsedMs);
+          planningWallClockStartTime = 0; // Reset wall clock timer
       }
-      // Log the accumulated CPU time for all enemies this turn
-      SDL_Log("INFO: --- Total Enemy Planning CPU Time This Turn: %u ms ---",
-              totalEnemyPlanningCpuTime);
+      SDL_Log("INFO: --- Total Enemy Planning CPU Time This Turn: %u ms ---", totalEnemyPlanningCpuTime);
       // ***
 
-      SDL_Log("--- Enemy Planning Complete. Transitioning to Resolution "
-              "Start ---");
+      // Transition phase AFTER processing all enemies and cleaning up marks
+      // SDL_Log("INFO: --- Enemy Planning Complete. Transitioning to Resolution Start ---"); // Optional Log
       gameData.currentPhase = TurnPhase::Resolution_Start;
-    }
-  } break;
+
+  } break; // End Planning_EnemyAI Case
 
   case TurnPhase::Resolution_Start: { // Scope
     SDL_Log("--- Phase: Resolution Start ---");
@@ -1199,7 +1194,7 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
                        [](const Projectile &p) { return !p.isActive; }),
         gameData.activeProjectiles.end());
 
-        SDL_Log("DEBUG: Entered Resolution_Update Check");
+    SDL_Log("DEBUG: Entered Resolution_Update Check");
 
     if (isResolutionComplete(gameData)) {
 

@@ -277,6 +277,11 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
     moveProgress =
         moveTimer / moveDuration; // moveDuration is now potentially dynamic
 
+    // *** ADD LOG: Check values JUST BEFORE the completion IF statement ***
+    SDL_Log("DEBUG: [PlayerUpdate Pre-Check] Checking completion: moveProgress=%.4f (Timer=%.4f / Duration=%.4f)",
+        moveProgress, moveTimer, moveDuration);
+    // ***
+
     if (moveProgress >= 1.0f) {
       moveProgress = 1.0f;
 
