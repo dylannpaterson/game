@@ -59,10 +59,10 @@ int main(int argc, char *argv[]) {
   }
 
   // *** Set SDL logging level ***
-  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
+  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE); // Show all messages
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO); // Show info, warnings,
   // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_WARN);    // Show warnings,
-  // SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
+     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_ERROR); // Show only errors
   // To hide *all* standard logs (including errors), set priority higher than
   // critical: SDL_LogSetAllPriority(SDL_NUM_LOG_PRIORITIES); // Effectively
   // disable standard logging
@@ -1371,11 +1371,6 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     gameData.playerIntendedAction = {};
     gameData.enemyIntendedActions.clear();
     gameData.currentGamePlayer.RegenerateMana(1.0f);
-    updateVisibility(gameData.currentLevel, gameData.levelRooms,
-                     gameData.currentGamePlayer.targetTileX,
-                     gameData.currentGamePlayer.targetTileY,
-                     gameData.hallwayVisibilityDistance,
-                     gameData.visibilityMap);
     SDL_Log("--- Turn End. Transitioning to Player Input for Next Turn ---");
     gameData.currentPhase = TurnPhase::Planning_PlayerInput;
     break;
