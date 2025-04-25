@@ -144,6 +144,24 @@ int main(int argc, char *argv[]) {
                               "female_mage_walk_0005.png");
     // --- END Load Walking Animation Frames ---
 
+    // --- ADDED: Load Targeting Animation Frames ---
+loadSuccess &= assetManager.loadTexture(
+  "female_mage_target_1", "../assets/sprites/animations/female_mage/targetting/" // Ensure path is correct
+                          "female_mage_targetting_0001.png"); // Example filename
+loadSuccess &= assetManager.loadTexture(
+  "female_mage_target_2", "../assets/sprites/animations/female_mage/targetting/"
+                          "female_mage_targetting_0002.png");
+loadSuccess &= assetManager.loadTexture(
+  "female_mage_target_3", "../assets/sprites/animations/female_mage/targetting/"
+                          "female_mage_targetting_0003.png");
+loadSuccess &= assetManager.loadTexture(
+  "female_mage_target_4", "../assets/sprites/animations/female_mage/targetting/"
+                          "female_mage_targetting_0004.png");
+loadSuccess &= assetManager.loadTexture(
+  "female_mage_target_5", "../assets/sprites/animations/female_mage/targetting/"
+                          "female_mage_targetting_0005.png");
+// --- END Load Targeting Animation Frames ---
+
     if (!loadSuccess) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                    "Asset loading failed!"); /* Handle error */
@@ -1524,9 +1542,25 @@ void renderScene(GameData &gameData, AssetManager &assets) {
   // --- Render Player ---
   SDL_Texture *playerTexture = nullptr;
   std::string textureKeyToUse;
+  bool isTargeting = gameData.showTargetingReticle; // Cache flags
+  bool isPlayerMoving = gameData.currentGamePlayer.isMoving;
 
   // --- MODIFIED: Select Animation Frame ---
-  if (gameData.currentGamePlayer.isMoving) {
+  if (isTargeting) {
+    // --- Use Targeting Animation ---
+    SDL_Log("DEBUG: [RenderPlayer] Player IS targeting. TargetFrames=%zu, CurrentTargetFrame=%d",
+            gameData.currentGamePlayer.targetingFrameTextureNames.size(),
+            gameData.currentGamePlayer.currentTargetingFrame);
+    if (!gameData.currentGamePlayer.targetingFrameTextureNames.empty() &&
+        gameData.currentGamePlayer.currentTargetingFrame < gameData.currentGamePlayer.targetingFrameTextureNames.size()) {
+        textureKeyToUse = gameData.currentGamePlayer.targetingFrameTextureNames[gameData.currentGamePlayer.currentTargetingFrame];
+        SDL_Log("DEBUG: [RenderPlayer] Using TARGETING key: %s", textureKeyToUse.c_str());
+    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) { // Fallback to idle if targeting frames missing
+        textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
+         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "[RenderPlayer] Targeting frame invalid/missing, fallback to IDLE key: %s", textureKeyToUse.c_str());
+    }
+
+} else if (isPlayerMoving) {
     // Use Walking Animation
     if (!gameData.currentGamePlayer.walkFrameTextureNames.empty() &&
         gameData.currentGamePlayer.currentWalkFrame <

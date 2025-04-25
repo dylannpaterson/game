@@ -3,9 +3,9 @@
 #include "asset_manager.h"
 #include "enemy.h"
 #include "game_data.h"
+#include "projectile.h"
 #include "utils.h"
 #include "visibility.h"
-#include "projectile.h"
 #include <algorithm> // For std::max/min
 #include <cmath>
 #include <iostream> // For debugging output
@@ -52,6 +52,9 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
     walkFrameTextureNames = {"female_mage_walk_1", "female_mage_walk_2",
                              "female_mage_walk_3", "female_mage_walk_4",
                              "female_mage_walk_5"};
+    targetingFrameTextureNames = {
+        "female_mage_target_1", "female_mage_target_2", "female_mage_target_3",
+        "female_mage_target_4", "female_mage_target_5"};
   } else if (type == CharacterType::MaleMage) {
     // Add male frames here if/when you create them
     idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
@@ -439,32 +442,53 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
     }
 
   } else { // Player is NOT moving
-    // --- Update Idle Animation ---
-    if (!idleFrameTextureNames.empty()) {
-      idleAnimationTimer += deltaTime;
-      float idleFrameDuration = 1.0f / idleAnimationSpeed;
-      if (idleAnimationTimer >= idleFrameDuration) {
-        idleAnimationTimer -= idleFrameDuration; // Subtract duration
-        currentIdleFrame =
-            (currentIdleFrame + 1) % idleFrameTextureNames.size();
-        // Optional Log: Log idle frame change (can be spammy)
-        // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. isMoving=%s,
-        // NewFrame=%d", isMoving ? "true":"false", currentIdleFrame);
-      }
-    } else {
-      // Log only once if idle frames are missing
-      if (idleAnimationTimer == 0.0f) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Player is idle but idleFrameTextureNames is empty!");
-      }
-      idleAnimationTimer +=
-          deltaTime; // Still increment timer to avoid spamming log
-    }
-    // --- END Idle Animation Update ---
-
-    // Reset walk animation state while idle
     walkAnimationTimer = 0.0f;
     currentWalkFrame = 0;
+
+    // --- Determine Idle vs. Targeting State ---
+    if (gameData.showTargetingReticle) { // Check if player is targeting
+        // --- Update Targeting Animation ---
+        if (!targetingFrameTextureNames.empty()) {
+            targetingAnimationTimer += deltaTime;
+            float targetingFrameDuration = 1.0f / targetingAnimationSpeed;
+            if (targetingAnimationTimer >= targetingFrameDuration) {
+                targetingAnimationTimer -= targetingFrameDuration;
+                currentTargetingFrame = (currentTargetingFrame + 1) % targetingFrameTextureNames.size();
+                // Optional Log: Log targeting frame change
+                // SDL_Log("DEBUG: [PlayerUpdate] Targeting Frame Updated. Frame=%d", currentTargetingFrame);
+            }
+        } else {
+             if (targetingAnimationTimer == 0.0f) {
+                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is targeting but targetingFrameTextureNames is empty!");
+             }
+             targetingAnimationTimer += deltaTime;
+        }
+        // Reset idle animation state while targeting
+        idleAnimationTimer = 0.0f;
+        currentIdleFrame = 0;
+
+    } else { // Player is idle (not moving, not targeting)
+        // --- Update Idle Animation ---
+        if (!idleFrameTextureNames.empty()) {
+            idleAnimationTimer += deltaTime;
+            float idleFrameDuration = 1.0f / idleAnimationSpeed;
+            if (idleAnimationTimer >= idleFrameDuration) {
+                idleAnimationTimer -= idleFrameDuration;
+                currentIdleFrame = (currentIdleFrame + 1) % idleFrameTextureNames.size();
+                // Optional Log: Log idle frame change
+                // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. Frame=%d", currentIdleFrame);
+            }
+        } else {
+             if (idleAnimationTimer == 0.0f) {
+                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is idle but idleFrameTextureNames is empty!");
+             }
+             idleAnimationTimer += deltaTime;
+        }
+        // Reset targeting animation state while idle
+        targetingAnimationTimer = 0.0f;
+        currentTargetingFrame = 0;
+    }
+    // --- End Idle vs. Targeting ---
 
     // Ensure visual position matches logical position when idle
     x = targetTileX * tileWidth + tileWidth / 2.0f;

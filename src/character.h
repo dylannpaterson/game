@@ -75,7 +75,7 @@ struct PlayerCharacter {
   float idleAnimationTimer = 0.0f;
   int currentIdleFrame = 0;
   float idleAnimationSpeed =
-      5.0f; // Frames per second (adjust as needed), made non-const
+      4.0f; // Frames per second (adjust as needed), made non-const
   std::vector<std::string>
       idleFrameTextureNames; // Holds the keys for all idle frames
 
@@ -86,6 +86,14 @@ struct PlayerCharacter {
   int currentWalkFrame = 0;
   float walkAnimationSpeed =
       8.0f; // Frames per second for walking (adjust speed as needed)
+
+  // ADDED: Targeting Animation Data
+  std::vector<std::string>
+      targetingFrameTextureNames; // Holds keys for targeting frames
+  float targetingAnimationTimer = 0.0f;
+  int currentTargetingFrame = 0;
+  float targetingAnimationSpeed =
+      4.0f; // Frames per second for targeting (adjust as needed)
 
   // ADDED: Enum for facing direction INSIDE the struct
   enum class FacingDirection { Right, Left };
