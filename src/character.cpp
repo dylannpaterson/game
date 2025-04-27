@@ -51,7 +51,9 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
 
     walkFrameTextureNames = {"female_mage_walk_1", "female_mage_walk_2",
                              "female_mage_walk_3", "female_mage_walk_4",
-                             "female_mage_walk_5"};
+                             "female_mage_walk_5","female_mage_walk_6", "female_mage_walk_7",
+                             "female_mage_walk_8", "female_mage_walk_9",
+                             "female_mage_walk_10", "female_mage_walk_11"};
     targetingFrameTextureNames = {
         "female_mage_target_1", "female_mage_target_2", "female_mage_target_3",
         "female_mage_target_4", "female_mage_target_5"};

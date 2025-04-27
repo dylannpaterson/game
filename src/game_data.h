@@ -33,6 +33,7 @@ struct IntendedAction {
     int targetY = -1;       // Target tile Y coordinate (used for Move, Tile-Targeted Spells)
     int targetEntityID = -1;// Placeholder for targeting specific entities (Requires unique IDs on Player/Enemy)
     int spellIndex = -1;    // Index of the spell intended to be cast (from the caster's knownSpells)
+    int enemyId = -1; 
     // Consider adding caster information if needed later (e.g., casterID or pointer)
 };
 
@@ -129,8 +130,8 @@ struct GameData {
     int levelMaxRoomSize = 15;
     int hallwayVisibilityDistance = 5;
     int currentLevelIndex = 1;
-    int maxEnemyCount = 12;
-    int spawnChancePercent = 5;
+    int maxEnemyCount = 100;
+    int spawnChancePercent = 15;
 
 
     // --- OBSOLETE STATE (Marked for removal/ignore in new system) ---

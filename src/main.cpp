@@ -142,6 +142,25 @@ int main(int argc, char *argv[]) {
     loadSuccess &= assetManager.loadTexture(
         "female_mage_walk_5", "../assets/sprites/animations/female_mage/walk/"
                               "female_mage_walk_0005.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_6", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0006.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_7", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0007.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_8", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0008.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_9", "../assets/sprites/animations/female_mage/walk/"
+                              "female_mage_walk_0009.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_10", "../assets/sprites/animations/female_mage/walk/"
+                               "female_mage_walk_0010.png");
+    loadSuccess &= assetManager.loadTexture(
+        "female_mage_walk_11", "../assets/sprites/animations/female_mage/walk/"
+                               "female_mage_walk_0011.png");
+
     // --- END Load Walking Animation Frames ---
 
     // --- ADDED: Load Targeting Animation Frames ---
@@ -167,6 +186,93 @@ int main(int argc, char *argv[]) {
         "../assets/sprites/animations/female_mage/targetting/"
         "female_mage_targetting_0005.png");
     // --- END Load Targeting Animation Frames ---
+
+    // Load slime idle animation assests
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_1", "../assets/sprites/animations/enemies/slime/idle/"
+                        "slime_idle_0001.png"); // Example path/name
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_2",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_3",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_4",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_5",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0005.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_6",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0006.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_7",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0007.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_8",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0008.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_idle_9",
+        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0009.png");
+
+    // Load slime walk animation assets
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_1", "../assets/sprites/animations/enemies/slime/walk/"
+                        "slime_walk_0001.png"); // Example path/name
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_2",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_3",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_4",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_5",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0005.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_6",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0006.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_7",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0007.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_8",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0008.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_walk_9",
+        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0009.png");
+
+    // Load slime attack animation assets
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_1", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0001.png"); // Example path/name
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_2", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0002.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_3", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0003.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_4", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0004.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_5", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0005.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_6", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0006.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_7", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0007.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_8", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0008.png");
+    loadSuccess &= assetManager.loadTexture(
+        "slime_attack_9", "../assets/sprites/animations/enemies/slime/attack/"
+                          "slime_attack_0009.png");
 
     if (!loadSuccess) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -546,71 +652,132 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
 
               // --- Targeting Input ---
               if (gameData.showTargetingReticle) {
-                   int targetMoveX = 0; int targetMoveY = 0;
-                   bool confirmTarget = false; bool cancelTarget = false;
-                   int confirmingSpellIndex = -1; // Check if pressed key matches current spell hotkey
+                int targetMoveX = 0;
+                int targetMoveY = 0;
+                bool confirmTarget = false;
+                bool cancelTarget = false;
+                int confirmingSpellIndex =
+                    -1; // Check if pressed key matches current spell hotkey
 
-                   // Map pressed key to potential spell index for confirmation
-                   if (keycode == SDLK_q) confirmingSpellIndex = 0;
-                   else if (keycode == SDLK_w) confirmingSpellIndex = 1;
-                   else if (keycode == SDLK_e) confirmingSpellIndex = 2;
-                   else if (keycode == SDLK_r) confirmingSpellIndex = 3;
-                   else if (keycode == SDLK_t) confirmingSpellIndex = 4;
+                // Map pressed key to potential spell index for confirmation
+                if (keycode == SDLK_q)
+                  confirmingSpellIndex = 0;
+                else if (keycode == SDLK_w)
+                  confirmingSpellIndex = 1;
+                else if (keycode == SDLK_e)
+                  confirmingSpellIndex = 2;
+                else if (keycode == SDLK_r)
+                  confirmingSpellIndex = 3;
+                else if (keycode == SDLK_t)
+                  confirmingSpellIndex = 4;
 
-                   // Check for Confirmation via Hotkey
-                   if (confirmingSpellIndex != -1 && confirmingSpellIndex == gameData.currentSpellIndex) {
-                       confirmTarget = true;
-                       SDL_Log("DEBUG: Confirming target via Hotkey %s.", SDL_GetKeyName(keycode));
-                   }
-                   // Check for Cancellation
-                   else if (keycode == SDLK_ESCAPE) {
-                       cancelTarget = true;
-                   }
-                   // Check for Reticle Movement (if not confirming or cancelling)
-                   else if (confirmingSpellIndex == -1) { // Only move if it wasn't a confirmation/cancel key
-                       switch (keycode) {
-                           case SDLK_UP: case SDLK_KP_8: targetMoveY = -1; break;
-                           case SDLK_DOWN: case SDLK_KP_2: targetMoveY = 1; break;
-                           case SDLK_LEFT: case SDLK_KP_4: targetMoveX = -1; break;
-                           case SDLK_RIGHT: case SDLK_KP_6: targetMoveX = 1; break;
-                           case SDLK_KP_7: targetMoveX = -1; targetMoveY = -1; break;
-                           case SDLK_KP_9: targetMoveX = 1; targetMoveY = -1; break;
-                           case SDLK_KP_1: targetMoveX = -1; targetMoveY = 1; break;
-                           case SDLK_KP_3: targetMoveX = 1; targetMoveY = 1; break;
-                           // Removed SDLK_RETURN confirmation here
-                       }
-                   }
+                // Check for Confirmation via Hotkey
+                if (confirmingSpellIndex != -1 &&
+                    confirmingSpellIndex == gameData.currentSpellIndex) {
+                  confirmTarget = true;
+                  SDL_Log("DEBUG: Confirming target via Hotkey %s.",
+                          SDL_GetKeyName(keycode));
+                }
+                // Check for Cancellation
+                else if (keycode == SDLK_ESCAPE) {
+                  cancelTarget = true;
+                }
+                // Check for Reticle Movement (if not confirming or cancelling)
+                else if (confirmingSpellIndex ==
+                         -1) { // Only move if it wasn't a confirmation/cancel
+                               // key
+                  switch (keycode) {
+                  case SDLK_UP:
+                  case SDLK_KP_8:
+                    targetMoveY = -1;
+                    break;
+                  case SDLK_DOWN:
+                  case SDLK_KP_2:
+                    targetMoveY = 1;
+                    break;
+                  case SDLK_LEFT:
+                  case SDLK_KP_4:
+                    targetMoveX = -1;
+                    break;
+                  case SDLK_RIGHT:
+                  case SDLK_KP_6:
+                    targetMoveX = 1;
+                    break;
+                  case SDLK_KP_7:
+                    targetMoveX = -1;
+                    targetMoveY = -1;
+                    break;
+                  case SDLK_KP_9:
+                    targetMoveX = 1;
+                    targetMoveY = -1;
+                    break;
+                  case SDLK_KP_1:
+                    targetMoveX = -1;
+                    targetMoveY = 1;
+                    break;
+                  case SDLK_KP_3:
+                    targetMoveX = 1;
+                    targetMoveY = 1;
+                    break;
+                    // Removed SDLK_RETURN confirmation here
+                  }
+                }
 
-                   // Apply Reticle Movement
-                   if(targetMoveX != 0 || targetMoveY != 0) {
-                        gameData.targetIndicatorX += targetMoveX;
-                        gameData.targetIndicatorY += targetMoveY;
-                        // Clamp indicator within bounds
-                        gameData.targetIndicatorX = std::max(0, std::min(gameData.currentLevel.width - 1, gameData.targetIndicatorX));
-                        gameData.targetIndicatorY = std::max(0, std::min(gameData.currentLevel.height - 1, gameData.targetIndicatorY));
-                        SDL_Log("DEBUG: Reticle moved to [%d, %d]", gameData.targetIndicatorX, gameData.targetIndicatorY);
-                   }
-                   // Apply Confirmation (Now triggered by matching hotkey)
-                   if (confirmTarget) {
-                        if (gameData.currentSpellIndex != -1) {
-                             const Spell &spell = gameData.currentGamePlayer.getSpell(gameData.currentSpellIndex);
-                             int distance = std::abs(gameData.currentGamePlayer.targetTileX - gameData.targetIndicatorX) + std::abs(gameData.currentGamePlayer.targetTileY - gameData.targetIndicatorY);
-                             if (distance <= spell.range) {
-                                   gameData.playerIntendedAction.type = ActionType::CastSpell;
-                                   gameData.playerIntendedAction.spellIndex = gameData.currentSpellIndex;
-                                   gameData.playerIntendedAction.targetX = gameData.targetIndicatorX;
-                                   gameData.playerIntendedAction.targetY = gameData.targetIndicatorY;
-                                   actionPlanned = true; // Mark action planned
-                                   SDL_Log("Player plans TARGETED CAST spell %d at [%d,%d] (Confirmed via Hotkey).", gameData.currentSpellIndex, gameData.targetIndicatorX, gameData.targetIndicatorY);
-                             } else { SDL_Log("Target out of range."); }
-                        } else { SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,"Target confirmed with no spell selected!"); }
-                        gameData.showTargetingReticle = false; gameData.currentSpellIndex = -1; // Reset state
-                   }
-                   // Apply Cancellation
-                   if (cancelTarget) {
-                       SDL_Log("Targeting cancelled.");
-                       gameData.showTargetingReticle = false; gameData.currentSpellIndex = -1; // Reset state
-                   }
+                // Apply Reticle Movement
+                if (targetMoveX != 0 || targetMoveY != 0) {
+                  gameData.targetIndicatorX += targetMoveX;
+                  gameData.targetIndicatorY += targetMoveY;
+                  // Clamp indicator within bounds
+                  gameData.targetIndicatorX =
+                      std::max(0, std::min(gameData.currentLevel.width - 1,
+                                           gameData.targetIndicatorX));
+                  gameData.targetIndicatorY =
+                      std::max(0, std::min(gameData.currentLevel.height - 1,
+                                           gameData.targetIndicatorY));
+                  SDL_Log("DEBUG: Reticle moved to [%d, %d]",
+                          gameData.targetIndicatorX, gameData.targetIndicatorY);
+                }
+                // Apply Confirmation (Now triggered by matching hotkey)
+                if (confirmTarget) {
+                  if (gameData.currentSpellIndex != -1) {
+                    const Spell &spell = gameData.currentGamePlayer.getSpell(
+                        gameData.currentSpellIndex);
+                    int distance =
+                        std::abs(gameData.currentGamePlayer.targetTileX -
+                                 gameData.targetIndicatorX) +
+                        std::abs(gameData.currentGamePlayer.targetTileY -
+                                 gameData.targetIndicatorY);
+                    if (distance <= spell.range) {
+                      gameData.playerIntendedAction.type =
+                          ActionType::CastSpell;
+                      gameData.playerIntendedAction.spellIndex =
+                          gameData.currentSpellIndex;
+                      gameData.playerIntendedAction.targetX =
+                          gameData.targetIndicatorX;
+                      gameData.playerIntendedAction.targetY =
+                          gameData.targetIndicatorY;
+                      actionPlanned = true; // Mark action planned
+                      SDL_Log("Player plans TARGETED CAST spell %d at [%d,%d] "
+                              "(Confirmed via Hotkey).",
+                              gameData.currentSpellIndex,
+                              gameData.targetIndicatorX,
+                              gameData.targetIndicatorY);
+                    } else {
+                      SDL_Log("Target out of range.");
+                    }
+                  } else {
+                    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                                 "Target confirmed with no spell selected!");
+                  }
+                  gameData.showTargetingReticle = false;
+                  gameData.currentSpellIndex = -1; // Reset state
+                }
+                // Apply Cancellation
+                if (cancelTarget) {
+                  SDL_Log("Targeting cancelled.");
+                  gameData.showTargetingReticle = false;
+                  gameData.currentSpellIndex = -1; // Reset state
+                }
               } else {
                 int moveX = 0;
                 int moveY = 0;
@@ -890,15 +1057,23 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
               SDL_Log("DEBUG: Checking actionPlanned flag: %s",
                       actionPlanned ? "true" : "false");
               if (actionPlanned) {
-                SDL_Log("DEBUG: Advancing Phase from Player Input.");
+                SDL_Log(
+                    "DEBUG: [HandleEvents] Action planned. Advancing Phase.");
                 gameData.currentPhase = TurnPhase::Planning_EnemyAI;
                 gameData.currentEnemyPlanningIndex = 0;
                 gameData.enemyIntendedActions.clear();
-                gameData.enemyIntendedActions.resize(gameData.enemies.size());
+                if (!gameData.enemies.empty()) {
+                  gameData.enemyIntendedActions.resize(gameData.enemies.size());
+                }
                 SDL_Log("--- Player Planning Complete. Transitioning to Enemy "
                         "Planning ---");
+                // Reset targeting state just in case
                 gameData.showTargetingReticle = false;
                 gameData.currentSpellIndex = -1;
+                // Break out of the inner keydown processing? Not strictly
+                // necessary but prevents processing other keys in the same
+                // frame after action decided. return; // Optionally exit
+                // handleEvents immediately after planning action
               }
             } // End keydown check
           } // End No Menu Active block
@@ -916,8 +1091,17 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
 // --- Rewritten updateLogic Function ---
 void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
+  // SDL_Log("DEBUG: [UpdateLogic Start] Current Phase: %d",
+  //         (int)gameData.currentPhase);
+
   // update player
   gameData.currentGamePlayer.update(deltaTime, gameData);
+
+  for (auto &enemy : gameData.enemies) {
+    if (enemy.health > 0) { // Only update living enemies
+      enemy.update(deltaTime, gameData);
+    }
+  }
 
   // --- Update Camera ---
   if (gameData.currentLevel.width > 0 && gameData.currentLevel.height > 0 &&
@@ -954,11 +1138,15 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
   // --- Turn Phase State Machine ---
 
+  // SDL_Log("DEBUG: [UpdateLogic] Entering phase switch. Current Phase: %d",
+  //         (int)gameData.currentPhase);
   TurnPhase previousPhase =
       gameData.currentPhase; // Track phase changes for logging
 
   switch (gameData.currentPhase) {
   case TurnPhase::Planning_PlayerInput:
+    // SDL_Log("DEBUG: [UpdateLogic] In Planning_PlayerInput phase."); //
+    // Usually not needed
     planningWallClockStartTime = 0; // Reset timers when in player input phase
     resolutionStartTime = 0;
     totalEnemyPlanningCpuTime = 0;
@@ -967,6 +1155,9 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
   case TurnPhase::Planning_EnemyAI: { // Scope for variables
     // *** START TIMING Planning_EnemyAI (Wall Clock) ***
+    SDL_Log(
+        "DEBUG: [UpdateLogic] Entering Planning_EnemyAI phase."); // Log phase
+                                                                  // entry
     if (previousPhase ==
         TurnPhase::Planning_PlayerInput) { // Only start timer on first frame
                                            // entering this phase
@@ -992,6 +1183,9 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     }
 
     // --- Main Planning Loop for All Enemies ---
+    SDL_Log(
+        "DEBUG: [UpdateLogic] Starting enemy planning loop (%zu enemies)...",
+        gameData.enemies.size());
     for (int i = 0; i < gameData.enemies.size(); ++i) {
       // Safety check for vector index just in case resize failed or size
       // changed unexpectedly
@@ -1017,6 +1211,9 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
             gameData.currentLevel, gameData.currentGamePlayer, gameData);
         gameData.enemyIntendedActions[i] =
             plan; // Store the plan using loop index 'i'
+
+        SDL_Log("DEBUG: [UpdateLogic] Enemy %d planned action type: %d",
+                currentEnemy.id, (int)plan.type);
 
         // Handle tentative occupation and instant invisible moves logic
         // immediately after planning
@@ -1093,7 +1290,11 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
           }
         } // End if plan type is Move
       } else { // Enemy is dead or already moving (shouldn't happen for moving
-               // if called correctly)
+        // if called correctly)
+        SDL_Log("DEBUG: [UpdateLogic] Enemy %d skipped planning (Dead or "
+                "Moving). Health: %d, Moving: %s",
+                currentEnemy.id, currentEnemy.health,
+                currentEnemy.isMoving ? "true" : "false");
         gameData.enemyIntendedActions[i].type =
             ActionType::None; // Ensure no action if dead/moving
         if (currentEnemy.isMoving) {
@@ -1107,6 +1308,7 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       // *** END TIMING Single Enemy CPU Time & Accumulate ***
       Uint32 singleEnemyEndTime = SDL_GetTicks();
       totalEnemyPlanningCpuTime += (singleEnemyEndTime - singleEnemyStartTime);
+      SDL_Log("DEBUG: [UpdateLogic] Finished planning for enemy index %d.", i);
       // ***
 
     } // --- End FOR loop processing all enemies ---
@@ -1170,11 +1372,15 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     // SDL_Log("INFO: --- Enemy Planning Complete. Transitioning to Resolution
     // Start ---"); // Optional Log
     gameData.currentPhase = TurnPhase::Resolution_Start;
+    SDL_Log("DEBUG: [UpdateLogic] Finished enemy planning loop.");
 
   } break; // End Planning_EnemyAI Case
 
   case TurnPhase::Resolution_Start: { // Scope
     SDL_Log("--- Phase: Resolution Start ---");
+    SDL_Log(
+        "DEBUG: [UpdateLogic] Entering Resolution_Start phase."); // Log phase
+                                                                  // entry
     // Initiate Player Action
     IntendedAction pAction = gameData.playerIntendedAction;
     PlayerCharacter &player = gameData.currentGamePlayer;
@@ -1204,42 +1410,114 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       SDL_Log("Player resolves WAIT.");
     }
 
+    SDL_Log("DEBUG: [UpdateLogic] Starting enemy action resolution loop (%zu "
+            "enemies)...",
+            gameData.enemies.size());
     // Initiate Enemy Actions
-    for (int i = 0; i < gameData.enemies.size(); ++i) {
-      if (i >= gameData.enemyIntendedActions.size() ||
-          i >= gameData.enemies.size())
+    for (const auto &eAction : gameData.enemyIntendedActions) {
+      // Skip actions with no assigned enemy ID (shouldn't happen if planning is
+      // correct)
+      if (eAction.enemyId == -1)
         continue;
-      IntendedAction eAction = gameData.enemyIntendedActions[i];
-      Enemy &enemy = gameData.enemies[i];
-      if (enemy.health <= 0)
-        continue;
-      if (eAction.type == ActionType::Move) {
-        if (isWithinBounds(eAction.targetX, eAction.targetY,
-                           gameData.currentLevel.width,
-                           gameData.currentLevel.height) &&
-            !gameData.occupationGrid[eAction.targetY][eAction.targetX]) {
-          if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
-                             gameData.currentLevel.height))
-            gameData.occupationGrid[enemy.y][enemy.x] = false;
-          gameData.occupationGrid[eAction.targetY][eAction.targetX] = true;
-          enemy.startMove(eAction.targetX, eAction.targetY);
-        } else {
-          SDL_Log("Enemy %d planned move to [%d,%d] blocked at resolution.",
-                  enemy.id, eAction.targetX, eAction.targetY);
+
+      // Find the enemy associated with this action by ID
+      Enemy *enemyPtr = nullptr;
+      for (auto &potentialEnemy : gameData.enemies) {
+        if (potentialEnemy.id == eAction.enemyId) {
+          enemyPtr = &potentialEnemy;
+          break;
         }
-      } else if (eAction.type == ActionType::Attack) {
-        SDL_Log("Enemy %d resolves ATTACK on player.", enemy.id);
-        int damage = enemy.GetAttackDamage();
-        player.takeDamage(damage);
-      } // Enemy still attacks
-      else if (eAction.type == ActionType::CastSpell) {
-        SDL_Log("Enemy %d resolves CAST SPELL %d.", enemy.id,
-                eAction.spellIndex); /* enemy.castSpell(...) */
-      } else if (eAction.type == ActionType::Wait) {
-        SDL_Log("Enemy %d resolves WAIT.", enemy.id);
+      }
+
+      // Check if enemy was found AND is alive
+      if (enemyPtr != nullptr && enemyPtr->health > 0) {
+        Enemy &enemy = *enemyPtr; // Dereference the pointer for easier access
+
+        SDL_Log(
+            "DEBUG: [UpdateLogic] Resolving action for Enemy ID %d (Type: %d)",
+            enemy.id, (int)eAction.type);
+
+        // Now resolve the action for this specific, living enemy
+        switch (eAction.type) {
+        case ActionType::Move: {
+          // Check if target tile is valid and unoccupied
+          if (isWithinBounds(eAction.targetX, eAction.targetY,
+                             gameData.currentLevel.width,
+                             gameData.currentLevel.height) &&
+              !gameData.occupationGrid[eAction.targetY][eAction.targetX]) {
+            // Update occupation grid: Clear old, set new
+            if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                               gameData.currentLevel.height)) {
+              gameData.occupationGrid[enemy.y][enemy.x] = false;
+              SDL_Log("DEBUG: Enemy %d cleared occupation at [%d,%d]", enemy.id,
+                      enemy.x, enemy.y);
+            }
+            gameData.occupationGrid[eAction.targetY][eAction.targetX] = true;
+            SDL_Log("DEBUG: Enemy %d set occupation at [%d,%d]", enemy.id,
+                    eAction.targetX, eAction.targetY);
+
+            // Start the move animation
+            enemy.startMove(eAction.targetX, eAction.targetY);
+            SDL_Log("INFO: Enemy %d initiated MOVE to [%d,%d]", enemy.id,
+                    eAction.targetX, eAction.targetY);
+          } else {
+            SDL_Log(
+                "WARN: Enemy %d planned move to [%d,%d] blocked at resolution.",
+                enemy.id, eAction.targetX, eAction.targetY);
+            // Enemy does nothing this turn if move is blocked at resolution
+          }
+          break;
+        }
+        case ActionType::Attack: {
+          SDL_Log("INFO: Enemy %d resolves ATTACK on player at [%d,%d].",
+                  enemy.id, eAction.targetX, eAction.targetY);
+          // Check if player is still at the target location (optional, but good
+          // practice)
+          if (player.targetTileX == eAction.targetX &&
+              player.targetTileY == eAction.targetY) {
+            int damage = enemy.GetAttackDamage();
+            enemy.startAttackAnimation(gameData); // Start animation
+            player.takeDamage(damage);            // Apply damage
+          } else {
+            SDL_Log(
+                "INFO: Enemy %d attack whiffed! Player not at target [%d,%d].",
+                enemy.id, eAction.targetX, eAction.targetY);
+            // Optionally start a whiff animation or just wait
+          }
+          break;
+        }
+        case ActionType::CastSpell: {
+          SDL_Log("INFO: Enemy %d resolves CAST SPELL %d.", enemy.id,
+                  eAction.spellIndex);
+          // Implement enemy spell casting logic here if needed
+          break;
+        }
+        case ActionType::Wait: {
+          SDL_Log("INFO: Enemy %d resolves WAIT.", enemy.id);
+          // No action needed
+          break;
+        }
+        case ActionType::None:
+        default:
+          // No action planned or unknown action
+          break;
+        } // End switch eAction.type
+
+      } else if (enemyPtr == nullptr) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Resolution_Start: Could not find enemy with ID %d for "
+                    "planned action.",
+                    eAction.enemyId);
+      } else { // enemyPtr != nullptr && enemyPtr->health <= 0
+        SDL_Log("DEBUG: [UpdateLogic] Skipping action resolution for dead "
+                "Enemy ID %d.",
+                enemyPtr->id);
       }
     }
+
+    SDL_Log("DEBUG: [UpdateLogic] Finished enemy action resolution loop.");
     gameData.currentPhase = TurnPhase::Resolution_Update;
+
     SDL_Log("--- Transitioning to Resolution Update ---");
   } break;
 
@@ -1249,13 +1527,18 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     if (previousPhase ==
         TurnPhase::Resolution_Start) { // Only log start time on first entry
       resolutionStartTime = SDL_GetTicks();
-      // SDL_Log("INFO: --- Entering Phase: Resolution Update ---"); // Less
-      // verbose
+      // SDL_Log("INFO: --- Entering Phase: Resolution Update ---");
     }
     // ***
 
+    bool playerFinishedMovingThisFrame = false;
+
     if (gameData.currentGamePlayer.isMoving) {
+      bool wasMoving = true;
       gameData.currentGamePlayer.update(deltaTime, gameData);
+      if (wasMoving && !gameData.currentGamePlayer.isMoving) {
+        playerFinishedMovingThisFrame = true; // Player's move completed
+      }
     }
     for (auto &enemy : gameData.enemies) {
       if (enemy.health > 0 && enemy.isMoving) {
@@ -1332,7 +1615,96 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
     SDL_Log("DEBUG: Entered Resolution_Update Check");
 
+    // *** Check for Level Transition AFTER player movement finishes ***
+    if (playerFinishedMovingThisFrame) {
+      PlayerCharacter &player = gameData.currentGamePlayer; // Alias for clarity
+      // Check if player landed on the exit tile
+      if (player.targetTileX == gameData.currentLevel.endCol &&
+          player.targetTileY == gameData.currentLevel.endRow) {
+        SDL_Log("Player reached exit tile! Advancing to next level.");
+        gameData.currentLevelIndex++;
+        gameData.enemies.clear();           // Clear enemies
+        gameData.activeProjectiles.clear(); // Clear projectiles
+        gameData.playerIntendedAction = {}; // Clear intent
+        gameData.enemyIntendedActions.clear();
+
+        // Generate New Level
+        Enemy::resetIdCounter(); // Reset IDs for new level
+        gameData.currentLevel = generateLevel(
+            gameData.levelWidth, gameData.levelHeight, gameData.levelMaxRooms,
+            gameData.levelMinRoomSize, gameData.levelMaxRoomSize,
+            gameData.enemies, gameData.tileWidth, gameData.tileHeight);
+        gameData.levelRooms = gameData.currentLevel.rooms;
+
+        // Re-Initialize Occupation Grid
+        gameData.occupationGrid.assign(
+            gameData.currentLevel.height,
+            std::vector<bool>(gameData.currentLevel.width, false));
+        for (int y = 0; y < gameData.currentLevel.height; ++y)
+          for (int x = 0; x < gameData.currentLevel.width; ++x)
+            if (gameData.currentLevel.tiles[y][x] == '#')
+              gameData.occupationGrid[y][x] = true;
+
+        // Reset Player Position to New Start
+        player.targetTileX = gameData.currentLevel.startCol;
+        player.targetTileY = gameData.currentLevel.startRow;
+        player.x =
+            player.targetTileX * gameData.tileWidth + gameData.tileWidth / 2.0f;
+        player.y = player.targetTileY * gameData.tileHeight +
+                   gameData.tileHeight / 2.0f;
+        player.startTileX = player.targetTileX;
+        player.startTileY = player.targetTileY;
+        player.isMoving = false; // Ensure player is not moving
+        // Mark new player position on grid
+        if (isWithinBounds(player.targetTileX, player.targetTileY,
+                           gameData.currentLevel.width,
+                           gameData.currentLevel.height)) {
+          gameData.occupationGrid[player.targetTileY][player.targetTileX] =
+              true;
+        }
+
+        // Mark initial enemy positions on grid for new level
+        for (const auto &enemy : gameData.enemies) {
+          if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                             gameData.currentLevel.height)) {
+            if (!gameData.occupationGrid[enemy.y][enemy.x]) {
+              gameData.occupationGrid[enemy.y][enemy.x] = true;
+            } else {
+              SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                          "New level enemy %d spawn location [%d,%d] was "
+                          "already occupied.",
+                          enemy.id, enemy.x, enemy.y);
+            }
+          }
+        }
+
+        // Reset Visibility
+        gameData.visibilityMap.assign(
+            gameData.currentLevel.height,
+            std::vector<float>(gameData.currentLevel.width, 0.0f));
+        updateVisibility(gameData.currentLevel, gameData.levelRooms,
+                         player.targetTileX, player.targetTileY,
+                         gameData.hallwayVisibilityDistance,
+                         gameData.visibilityMap);
+
+        // Transition directly to the start of the next turn's planning
+        SDL_Log("New level %d generated. Transitioning to Player Input.",
+                gameData.currentLevelIndex);
+        gameData.currentPhase = TurnPhase::Planning_PlayerInput;
+        // Reset relevant state for the new turn
+        gameData.currentEnemyPlanningIndex = 0;
+        gameData.enemyIntendedActions.resize(
+            gameData.enemies.size()); // Resize for potentially new enemy count
+        gameData.showTargetingReticle = false;
+        gameData.currentSpellIndex = -1;
+        // Skip the rest of the current frame's update logic for this turn
+        return; // <<<< EXIT updateLogic early after level transition
+      }
+    }
+
     if (isResolutionComplete(gameData)) {
+      SDL_Log("DEBUG: [UpdateLogic] Movement Resolution Complete. "
+              "Transitioning to TurnEnd_ApplyEffects.");
 
       SDL_Log("DEBUG: Resolution IS Complete");
 
@@ -1353,12 +1725,15 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
   case TurnPhase::TurnEnd_ApplyEffects:
     SDL_Log("--- Phase: Turn End Apply Effects ---");
+    SDL_Log("DEBUG: [UpdateLogic] Transitioning from TurnEnd_ApplyEffects to "
+            "TurnEnd_Cleanup.");
     gameData.currentPhase = TurnPhase::TurnEnd_Cleanup;
     SDL_Log("--- Transitioning to Turn End Cleanup ---");
     break;
 
   case TurnPhase::TurnEnd_Cleanup:
     SDL_Log("--- Phase: Turn End Cleanup ---");
+    SDL_Log("DEBUG: [UpdateLogic] Entering TurnEnd_Cleanup phase.");
     bool playerDied = gameData.currentGamePlayer.health <= 0;
     int arcanaGained = 0;
     gameData.enemies.erase(
@@ -1397,15 +1772,83 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       currentAppState = AppState::MainMenu;
       break;
     } // Go back to menu on death
-    // ... (Spawn reinforcements?) ...
+    // *** INSERT REINFORCEMENT LOGIC HERE ***
+    if (gameData.enemies.size() < gameData.maxEnemyCount &&
+        gameData.spawnChancePercent > 0 && !gameData.levelRooms.empty()) {
+      if ((rand() % 100) < gameData.spawnChancePercent) {
+        SDL_Log("Attempting to spawn reinforcement...");
+        std::pair<int, int> spawnPos = {-1, -1};
+        int maxSpawnAttempts =
+            gameData.levelRooms.size() * 3; // Increase attempts slightly
+
+        for (int attempt = 0; attempt < maxSpawnAttempts; ++attempt) {
+          int roomIndex = rand() % gameData.levelRooms.size();
+          const SDL_Rect &room = gameData.levelRooms[roomIndex];
+          if (room.w <= 2 || room.h <= 2)
+            continue;
+
+          int potentialX = room.x + 1 + (rand() % std::max(1, room.w - 2));
+          int potentialY = room.y + 1 + (rand() % std::max(1, room.h - 2));
+
+          // Check bounds, occupation, player pos, and visibility
+          if (isWithinBounds(potentialX, potentialY,
+                             gameData.currentLevel.width,
+                             gameData.currentLevel.height)) {
+            bool occupied = gameData.occupationGrid[potentialY][potentialX];
+            bool isPlayerPos =
+                (potentialX == gameData.currentGamePlayer.targetTileX &&
+                 potentialY == gameData.currentGamePlayer.targetTileY);
+            float visibility =
+                (potentialY < gameData.visibilityMap.size() &&
+                 potentialX < gameData.visibilityMap[potentialY].size())
+                    ? gameData.visibilityMap[potentialY][potentialX]
+                    : 0.0f;
+            bool isVisible = (visibility > 0.0f);
+
+            if (!occupied && !isPlayerPos &&
+                !isVisible) { // Spawn only if unoccupied, not player pos, and
+                              // not visible
+              spawnPos = {potentialX, potentialY};
+              break; // Found a valid spot
+            }
+          }
+        } // End spawn attempt loop
+
+        if (spawnPos.first != -1) { // Valid spot found
+          int spawnX = spawnPos.first;
+          int spawnY = spawnPos.second;
+          int newId = Enemy::getNextId(); // Get unique ID
+          // Add new enemy (e.g., always Slime for now)
+          gameData.enemies.emplace_back(newId, EnemyType::SLIME, spawnX, spawnY,
+                                        gameData.tileWidth,
+                                        gameData.tileHeight);
+          // Mark occupation grid immediately
+          gameData.occupationGrid[spawnY][spawnX] = true;
+          SDL_Log("Reinforcement (Enemy %d) spawned at [%d, %d]. Total "
+                  "enemies: %zu",
+                  newId, spawnX, spawnY, gameData.enemies.size());
+          // Resize intended actions vector for the new enemy next turn
+          gameData.enemyIntendedActions.resize(gameData.enemies.size());
+        } else {
+          SDL_Log("No valid spawn location found for reinforcement after %d "
+                  "attempts.",
+                  maxSpawnAttempts);
+        }
+      } // End spawn chance check
+    } // End reinforcement condition check
+    // *****************************************
     gameData.playerIntendedAction = {};
     gameData.enemyIntendedActions.clear();
     gameData.currentGamePlayer.RegenerateMana(1.0f);
     SDL_Log("--- Turn End. Transitioning to Player Input for Next Turn ---");
+    SDL_Log("DEBUG: [UpdateLogic] Transitioning from TurnEnd_Cleanup to "
+            "Planning_PlayerInput.");
     gameData.currentPhase = TurnPhase::Planning_PlayerInput;
     break;
 
   } // End TurnPhase switch
+  // SDL_Log("DEBUG: [UpdateLogic End] Exiting phase switch. Current Phase: %d",
+  //         (int)gameData.currentPhase);
 }
 
 // --- Helper function to check if the Resolution phase is complete ---
