@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+
+#include "game_data.h"
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h> // Include SDL_image here as well
@@ -16,5 +18,6 @@ struct SDL_Context {
 
 SDL_Context initializeSDL(int width, int height);
 void cleanupSDL(SDL_Context& context); // Function to handle SDL cleanup
+bool findNearestValidTarget(const GameData& gameData, int spellIndex, SDL_Point& outTargetPos);
 
 #endif // UTILS_H

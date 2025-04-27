@@ -21,7 +21,8 @@ int manhattanDistance(const SDL_Rect& room1, const SDL_Rect& room2) {
 }
 
 
-Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH) {
+Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH,
+    std::optional<SDL_Point>& outPedestalPos) {
     Level level;
     level.width = width;
     level.height = height;
@@ -237,6 +238,56 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
         if(isWithinBounds(level.endCol, level.endRow, width, height)) level.tiles[level.endRow][level.endCol] = '.';
     }
 
+        // --- *** NEW: Place Rune Pedestal *** ---
+        if (!rooms.empty()) {
+            int pedestalRoomIndex = rand() % rooms.size(); // Pick a random room
+            SDL_Point pedestalPos = {-1, -1};
+            int pedestalAttempts = 0;
+            const int MAX_PEDESTAL_ATTEMPTS = 100; // Prevent infinite loop
+    
+            do {
+                pedestalAttempts++;
+                // Try placing in the center first, then randomly if center fails
+                if (pedestalAttempts == 1) {
+                    pedestalPos.x = rooms[pedestalRoomIndex].x + rooms[pedestalRoomIndex].w / 2;
+                    pedestalPos.y = rooms[pedestalRoomIndex].y + rooms[pedestalRoomIndex].h / 2;
+                } else {
+                     // Random position within the room's floor area
+                    pedestalPos.x = rooms[pedestalRoomIndex].x + 1 + (rand() % std::max(1, rooms[pedestalRoomIndex].w - 2));
+                    pedestalPos.y = rooms[pedestalRoomIndex].y + 1 + (rand() % std::max(1, rooms[pedestalRoomIndex].h - 2));
+                }
+    
+                // Check if the chosen spot is valid:
+                // 1. Within bounds
+                // 2. Is a floor tile '.'
+                // 3. Not the player start tile
+                // 4. Not the level end tile
+                if (isWithinBounds(pedestalPos.x, pedestalPos.y, width, height) &&
+                    level.tiles[pedestalPos.y][pedestalPos.x] == '.' &&
+                    !(pedestalPos.y == level.startRow && pedestalPos.x == level.startCol) &&
+                    !(pedestalPos.y == level.endRow && pedestalPos.x == level.endCol))
+                {
+                    // Valid spot found!
+                    outPedestalPos = pedestalPos; // Assign to the output parameter
+                    SDL_Log("INFO: Placed Rune Pedestal at [%d, %d].", pedestalPos.x, pedestalPos.y);
+                    // Optional: Mark the tile differently? Or handle via GameData.currentPedestal presence.
+                    // level.tiles[pedestalPos.y][pedestalPos.x] = 'P'; // Example marker
+                    break; // Exit the placement loop
+                } else {
+                    pedestalPos = {-1,-1}; // Reset if invalid
+                }
+    
+            } while (pedestalAttempts < MAX_PEDESTAL_ATTEMPTS);
+    
+            if (!outPedestalPos.has_value()) {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to place Rune Pedestal after %d attempts!", MAX_PEDESTAL_ATTEMPTS);
+                // Handle failure case - maybe try another room or skip placement for this level?
+            }
+        } else {
+             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Cannot place pedestal - level has no rooms!");
+        }
+        // --- *** END Place Rune Pedestal *** ---
+
 
     // 5. Spawn enemies
     int numEnemiesToSpawn = 3 + level.rooms.size() / 2; // Example: Scale with number of rooms
@@ -267,11 +318,10 @@ Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int ma
             }
 
             if (!occupied) {
-                // *** MODIFIED: Use new Enemy constructor with EnemyType ***
-                // For now, always spawn SLIME. Later, you can add logic here
-                // to choose different types based on level index, randomness, etc.
-                enemies.emplace_back(EnemyType::SLIME, spawnX, spawnY, tileW, tileH);
-                // ---------------------------------------------------------
+                // *** MODIFIED: Assign unique ID using static member ***
+                int newId = Enemy::getNextId(); // Get next ID using the public static method
+                enemies.emplace_back(newId, EnemyType::SLIME, spawnX, spawnY, tileW, tileH);
+                // *****************************************************
                 spawnedCount++;
             }
         }

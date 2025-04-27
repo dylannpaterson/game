@@ -2,123 +2,138 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
-#include <vector>   // For std::vector
-#include <string>   // For spell names eventually, if not already included by spell.h
-#include "spell.h"  // Include your spell definitions
 #include "projectile.h" // Include projectile definition for casting spells
+#include "spell.h"      // Include your spell definitions
+#include <SDL.h> // For SDL_Texture* forward declaration if needed, or include fully
+#include <string> // For spell names eventually, if not already included by spell.h
+#include <vector> // For std::vector
 
-
-// Forward declaration if Enemy methods are used only in .cpp
-
-#include "enemy.h" // Assuming Enemy definition is needed for castSpell signature
-
-struct GameData;
+// Forward declaration to avoid circular dependency if AssetManager is only used
+// for pointer/ref in header
+class AssetManager;
+class Enemy;     // Forward declare Enemy
+struct GameData; // Forward declare GameData
 
 // --- Constants for Leveling (Example Placeholder Values) ---
-// Consider moving these to game_data.h later if preferred, but defining
-// them here keeps character-specific progression self-contained initially.
 const int ARCANA_PER_LEVEL = 100;
-const int VITALITY_PER_LEVEL = 1;   // e.g., +1 Vitality per level
-const int INTELLIGENCE_PER_LEVEL = 2; // e.g., +2 Intelligence per level
-const int SPIRIT_PER_LEVEL = 1;     // e.g., +1 Spirit per level
-const int AGILITY_PER_LEVEL = 1;      // e.g., +1 Agility per level
+const int VITALITY_PER_LEVEL = 1;
+const int INTELLIGENCE_PER_LEVEL = 2;
+const int SPIRIT_PER_LEVEL = 1;
+const int AGILITY_PER_LEVEL = 1;
 
 // Derived stat constants (Example Placeholders)
-const int HP_PER_VITALITY = 10;     // e.g., +10 Max HP per point of Vitality
-const int MANA_PER_INTELLIGENCE = 5; // e.g., +5 Max Mana per point of Intelligence
-const float MANA_REGEN_PER_SPIRIT = 0.1f; // e.g., +0.1 Mana per turn per point of Spirit
-const float SPEED_MOD_PER_AGILITY = 0.005f; // e.g., Reduces moveDuration per point of Agility
+const int HP_PER_VITALITY = 10;
+const int MANA_PER_INTELLIGENCE = 5;
+const float MANA_REGEN_PER_SPIRIT = 0.1f;
+const float SPEED_MOD_PER_AGILITY = 0.005f;
 
-
-
-enum class CharacterType {
-    FemaleMage,
-    MaleMage
-    // Add other types as needed
-};
+enum class CharacterType { FemaleMage, MaleMage };
 
 struct PlayerCharacter {
-    // --- Basic Info ---
-    CharacterType type;
-    // int level; // Already exists
+  // --- Basic Info ---
+  CharacterType type;
 
-    // --- Resources ---
-    int health;    // Current health
-    int maxHealth; // Current maximum health (calculated)
-    int mana;      // Current mana
-    int maxMana;   // Current maximum mana (calculated)
+  // --- Resources ---
+  int health;
+  int maxHealth;
+  int mana;
+  int maxMana;
 
-    // --- NEW: Arcana & Leveling ---
-    int level = 1;             // Start at level 1
-    int currentArcana = 0;   // Start with 0 Arcana
+  // --- Arcana & Leveling ---
+  int level = 1;
+  int currentArcana = 0;
 
-    // --- NEW: Core Base Stats (Starting values at level 1) ---
-    int baseVitality = 5;
-    int baseIntelligence = 10;
-    int baseSpirit = 7;
-    int baseAgility = 8;
+  // --- Core Base Stats ---
+  int baseVitality = 5;
+  int baseIntelligence = 10;
+  int baseSpirit = 7;
+  int baseAgility = 8;
 
-    // --- Calculated Effective Stats (No need to store if calculated on the fly) ---
-    // We will use GetEffective...() methods instead.
+  // --- Calculated Derived Stats ---
+  float fractionalMana = 0.0f;
+  float manaRegenRate = 0.0f;
+  float spellDamageModifier = 1.0f;
 
-    // --- Calculated Derived Stats ---
-    float fractionalMana = 0.0f;
-    float manaRegenRate = 0.0f; // Mana regenerated per turn/second (calculated)
-    float spellDamageModifier = 1.0f; // Multiplier or flat bonus? Let's use multiplier for now (calculated)
-    // float moveDuration; // Already exists, will be calculated
+  // --- Position & Movement ---
+  int tileWidth;
+  int tileHeight;
+  float x;
+  float y;
+  int targetTileX;
+  int targetTileY;
+  bool isMoving;
+  int startTileX;
+  int startTileY;
+  float moveProgress;
+  float moveDuration = 0.1f; // Default, calculated later
+  float moveTimer;
 
+  // --- Spellcasting ---
+  std::vector<Spell> knownSpells;
 
-    // --- Position & Movement ---
-    int tileWidth; // Already exists
-    int tileHeight; // Already exists
-    float x;        // Current visual x position
-    float y;        // Current visual y position
-    int targetTileX; // Logical grid X
-    int targetTileY; // Logical grid Y
-    bool isMoving;   // Already exists
-    int startTileX;  // Already exists
-    int startTileY;  // Already exists
-    float moveProgress; // Already exists
-    float moveDuration = 0.1f; // Default, will be modified by Agility
-    float moveTimer;    // Already exists
+  // --- Animation & Orientation ---
+  float idleAnimationTimer = 0.0f;
+  int currentIdleFrame = 0;
+  float idleAnimationSpeed =
+      4.0f; // Frames per second (adjust as needed), made non-const
+  std::vector<std::string>
+      idleFrameTextureNames; // Holds the keys for all idle frames
 
-    // --- Spellcasting ---
-    std::vector<Spell> knownSpells; // Already exists
+  // ADDED: Walking Animation Data
+  std::vector<std::string>
+      walkFrameTextureNames; // Holds keys for walking frames
+  float walkAnimationTimer = 0.0f;
+  int currentWalkFrame = 0;
+  float walkAnimationSpeed =
+      8.0f; // Frames per second for walking (adjust speed as needed)
 
-    // --- Constructor ---
-    // Updated constructor to reflect new system (remove level, hp, mp etc. if calculated)
-    PlayerCharacter(CharacterType t, int initialTileX, int initialTileY, int tileW, int tileH);
+  // ADDED: Targeting Animation Data
+  std::vector<std::string>
+      targetingFrameTextureNames; // Holds keys for targeting frames
+  float targetingAnimationTimer = 0.0f;
+  int currentTargetingFrame = 0;
+  float targetingAnimationSpeed =
+      4.0f; // Frames per second for targeting (adjust as needed)
 
-    // --- Methods ---
-    void startMove(int targetX, int targetY); // Existing
-    void update(float deltaTime, GameData& gameData); // Existing
+  // ADDED: Enum for facing direction INSIDE the struct
+  enum class FacingDirection { Right, Left };
+  // ADDED: Member variable to store current direction
+  FacingDirection currentFacingDirection =
+      FacingDirection::Left; // Default direction
 
-    // --- NEW: Leveling & Stat Methods ---
-    void GainArcana(int amount);
-    bool CanAffordArcana(int cost) const; // Added const
-    bool SpendArcana(int amount); // Returns true if successful
-    void RecalculateStats();      // Central function to update everything based on level
+  // --- Constructor ---
+  PlayerCharacter(CharacterType t, int initialTileX, int initialTileY,
+                  int tileW, int tileH);
 
-    // --- NEW: Getter Methods for Effective Stats ---
-    // These calculate the stat based on base + level bonuses
-    int GetEffectiveVitality() const;
-    int GetEffectiveIntelligence() const;
-    int GetEffectiveSpirit() const;
-    int GetEffectiveAgility() const;
+  // --- Methods ---
+  void startMove(int targetX, int targetY);
+  void update(float deltaTime,
+              GameData &gameData); // Pass GameData for occupation grid updates
 
-    // --- Spellcasting Methods ---
-    bool canCastSpell(int spellIndex) const; // Existing - might check calculated maxMana now
-    // Pass enemies by reference to allow modification (damage)
-    bool castSpell(int spellIndex, int targetX, int targetY,
-                   std::vector<Enemy>& enemies, std::vector<Projectile>& projectiles,
-                   SDL_Texture* projectileTexture); // Existing - will need modification for damage calc
-    const Spell& getSpell(int spellIndex) const; // Existing
+  // --- Leveling & Stat Methods ---
+  void GainArcana(int amount);
+  bool CanAffordArcana(int cost) const;
+  bool SpendArcana(int amount);
+  void RecalculateStats();
 
-    // --- Other Methods ---
-    void takeDamage(int amount); // Existing - checks against calculated maxHealth
+  // --- Getter Methods for Effective Stats ---
+  int GetEffectiveVitality() const;
+  int GetEffectiveIntelligence() const;
+  int GetEffectiveSpirit() const;
+  int GetEffectiveAgility() const;
 
-    // --- NEW: Mana Regeneration ---
-    void RegenerateMana(float timeStep); // Called each turn/frame
+  // --- Spellcasting Methods ---
+  bool canCastSpell(int spellIndex) const;
+  // Pass AssetManager by pointer or reference if needed for textures
+  bool castSpell(int spellIndex, int targetX, int targetY,
+                 std::vector<Enemy> &enemies,
+                 std::vector<Projectile> &projectiles,
+                 AssetManager *assets); // Pass AssetManager
+  const Spell &getSpell(int spellIndex) const;
+
+  // --- Other Methods ---
+  void takeDamage(int amount);
+  void RegenerateMana(float timeStep);
 
 }; // End of PlayerCharacter struct declaration
 

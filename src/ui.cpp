@@ -38,61 +38,129 @@ void renderTextAtPos(SDL_Renderer* renderer, TTF_Font* font, const std::string& 
 
 // Definition for renderUI (Uses the original renderText from utils.h/cpp)
 void renderUI(GameData &gameData, AssetManager &assets) {
-  SDL_Color textColor = {255, 255, 255, 255}; // White color
-  TTF_Font* font = assets.getFont("main_font"); // Get the font once
+    SDL_Renderer *renderer = gameData.renderer;
+    PlayerCharacter &player = gameData.currentGamePlayer;
+    TTF_Font* font = assets.getFont("main_font"); // Font for labels/numbers if kept
+    TTF_Font* numberFont = assets.getFont("spellbar_font");
 
-  if (!font) {
-      SDL_Log("UI Error: Font 'main_font' not loaded!");
-      return; // Cannot proceed without font
-  }
+    if (!renderer) return; // Safety check
 
-  // --- Health Display ---
-  SDL_Rect healthRect = {10, 10, 0, 0}; // Position at top-left
-  std::string healthText =
-      "Health: " + std::to_string(gameData.currentGamePlayer.health) + "/" +
-      std::to_string(gameData.currentGamePlayer.maxHealth);
-  // **Use the original renderText from utils.h/cpp**
-  SDL_Texture *healthTexture = renderText(
-      gameData.renderer, font, healthText, textColor);
-  if (healthTexture != nullptr) {
-      SDL_QueryTexture(healthTexture, nullptr, nullptr, &healthRect.w, &healthRect.h);
-      SDL_RenderCopy(gameData.renderer, healthTexture, nullptr, &healthRect);
-      SDL_DestroyTexture(healthTexture);
-  } else {
-       SDL_Log("Failed to render health text.");
-  }
+    // --- Bar Appearance ---
+       // --- Bar Appearance ---
+    // Define base dimensions for Mana bar
+    int manaBarWidth = 400;
+    int manaBarHeight = 30;
+
+    // Calculate relative dimensions
+    int healthBarWidth = static_cast<int>(std::round(manaBarWidth * 1.2));
+    int healthBarHeight = static_cast<int>(std::round(manaBarHeight * 1.2));
+    int arcanaBarWidth = static_cast<int>(std::round(manaBarWidth * 0.8));
+    int arcanaBarHeight = static_cast<int>(std::round(manaBarHeight * 0.8));
+
+    int barPadding = 10; // Vertical space between bars
+    int barX = 15;       // X position for the bars
+    int currentY = 15;   // Starting Y position
+
+    // Colors (remain the same)
+    SDL_Color healthBgColor = {50, 0, 0, 255};
+    SDL_Color healthFgColor = {200, 0, 0, 255};
+    SDL_Color manaBgColor = {0, 0, 50, 255};
+    SDL_Color manaFgColor = {0, 100, 200, 255};
+    SDL_Color arcanaBgColor = {50, 0, 50, 255};
+    SDL_Color arcanaFgColor = {200, 0, 200, 255};
+    SDL_Color textColor = {220, 220, 220, 255};
+
+    // --- Health Bar (Largest) ---
+    // Label Removed:
+    // if (font) { renderTextAtPos(renderer, font, "Health", textColor, barX, currentY); currentY += TTF_FontHeight(font) + 2; }
+
+    SDL_Rect healthBgRect = {barX, currentY, healthBarWidth, healthBarHeight};
+    SDL_SetRenderDrawColor(renderer, healthBgColor.r, healthBgColor.g, healthBgColor.b, healthBgColor.a);
+    SDL_RenderFillRect(renderer, &healthBgRect);
+
+    float healthRatio = (player.maxHealth > 0) ? static_cast<float>(player.health) / player.maxHealth : 0.0f;
+    healthRatio = std::max(0.0f, std::min(healthRatio, 1.0f));
+
+    SDL_Rect healthFgRect = {barX, currentY, static_cast<int>(healthBarWidth * healthRatio), healthBarHeight};
+    SDL_SetRenderDrawColor(renderer, healthFgColor.r, healthFgColor.g, healthFgColor.b, healthFgColor.a);
+    SDL_RenderFillRect(renderer, &healthFgRect);
+
+    // Render Numerical Text
+    std::string healthText = std::to_string(player.health) + " / " + std::to_string(player.maxHealth);
+    int textW, textH;
+    TTF_SizeText(numberFont, healthText.c_str(), &textW, &textH);
+    renderTextAtPos(renderer, numberFont, healthText, textColor,
+                    barX + (healthBarWidth - textW) / 2, // Center horizontally
+                    currentY + (healthBarHeight - textH) / 2); // Center vertically
+
+    currentY += healthBarHeight + barPadding; // Move down for the next bar
+
+    // --- Mana Bar (Base Size) ---
+    // Label Removed:
+    // if (font) { renderTextAtPos(renderer, font, "Mana", textColor, barX, currentY); currentY += TTF_FontHeight(font) + 2; }
+
+    SDL_Rect manaBgRect = {barX, currentY, manaBarWidth, manaBarHeight};
+    SDL_SetRenderDrawColor(renderer, manaBgColor.r, manaBgColor.g, manaBgColor.b, manaBgColor.a);
+    SDL_RenderFillRect(renderer, &manaBgRect);
+
+    float manaRatio = (player.maxMana > 0) ? static_cast<float>(player.mana) / player.maxMana : 0.0f;
+    manaRatio = std::max(0.0f, std::min(manaRatio, 1.0f));
+
+    SDL_Rect manaFgRect = {barX, currentY, static_cast<int>(manaBarWidth * manaRatio), manaBarHeight};
+    SDL_SetRenderDrawColor(renderer, manaFgColor.r, manaFgColor.g, manaFgColor.b, manaFgColor.a);
+    SDL_RenderFillRect(renderer, &manaFgRect);
+
+    // Render Numerical Text
+    std::string manaText = std::to_string(player.mana) + " / " + std::to_string(player.maxMana);
+    TTF_SizeText(numberFont, manaText.c_str(), &textW, &textH);
+    renderTextAtPos(renderer, numberFont, manaText, textColor,
+                    barX + (manaBarWidth - textW) / 2,
+                    currentY + (manaBarHeight - textH) / 2);
+
+    currentY += manaBarHeight + barPadding;
+
+    // --- Arcana Bar (Smallest) ---
+    // Label Removed:
+    // if (font) { renderTextAtPos(renderer, font, "Arcana", textColor, barX, currentY); currentY += TTF_FontHeight(font) + 2; }
+
+    SDL_Rect arcanaBgRect = {barX, currentY, arcanaBarWidth, arcanaBarHeight};
+    SDL_SetRenderDrawColor(renderer, arcanaBgColor.r, arcanaBgColor.g, arcanaBgColor.b, arcanaBgColor.a);
+    SDL_RenderFillRect(renderer, &arcanaBgRect);
+
+    // --- MODIFIED CALCULATION ---
+    float arcanaRatio = 0.0f;
+    // Calculate the base arcana for the current 100-block (e.g., 121 -> 100, 250 -> 200)
+    int baseArcanaForCurrentBlock = (player.currentArcana / 100) * 100;
+    // Determine the next multiple of 100 (e.g., 121 -> 200, 250 -> 300)
+    int nextMultipleOf100 = baseArcanaForCurrentBlock + 100;
+    // Calculate the arcana gained *within* the current 100-block (e.g., 121 -> 21, 250 -> 50)
+    int arcanaProgressInBlock = player.currentArcana - baseArcanaForCurrentBlock;
+    // The amount needed to reach the next multiple is always 100 (unless max level?)
+    int arcanaNeededForNextBlock = 100;
+
+    if (arcanaNeededForNextBlock > 0) {
+         // The ratio is the progress within the current block divided by the size of the block (100)
+         arcanaRatio = static_cast<float>(arcanaProgressInBlock) / arcanaNeededForNextBlock;
+    }
+    arcanaRatio = std::max(0.0f, std::min(arcanaRatio, 1.0f));
+    // --- END MODIFIED CALCULATION ---
 
 
-  // --- Mana Display ---
-  SDL_Rect manaRect = {10, healthRect.y + healthRect.h + 5, 0, 0};
-  std::string manaText =
-      "Mana: " + std::to_string(gameData.currentGamePlayer.mana) + "/" +
-      std::to_string(gameData.currentGamePlayer.maxMana);
-  // **Use the original renderText from utils.h/cpp**
-  SDL_Texture *manaTexture = renderText(
-      gameData.renderer, font, manaText, textColor);
-  if (manaTexture != nullptr) {
-      SDL_QueryTexture(manaTexture, nullptr, nullptr, &manaRect.w, &manaRect.h);
-      SDL_RenderCopy(gameData.renderer, manaTexture, nullptr, &manaRect);
-      SDL_DestroyTexture(manaTexture);
-  } else {
-       SDL_Log("Failed to render mana text.");
-  }
+    SDL_Rect arcanaFgRect = {barX, currentY, static_cast<int>(arcanaBarWidth * arcanaRatio), arcanaBarHeight};
+    SDL_SetRenderDrawColor(renderer, arcanaFgColor.r, arcanaFgColor.g, arcanaFgColor.b, arcanaFgColor.a);
+    SDL_RenderFillRect(renderer, &arcanaFgRect);
 
+    // --- MODIFIED TEXT DISPLAY ---
+    // Render Numerical Text (Current Arcana / Next Multiple of 100)
+    std::string arcanaText = std::to_string(player.currentArcana) + " / " + std::to_string(nextMultipleOf100);
+    // --- END MODIFIED TEXT DISPLAY ---
 
-  // --- Arcana Display ---
-  SDL_Rect arcanaRect = {10, manaRect.y + manaRect.h + 5, 0, 0};
-  std::string arcanaText = "Arcana: " + std::to_string(gameData.currentGamePlayer.currentArcana);
-   // **Use the original renderText from utils.h/cpp**
-  SDL_Texture *arcanaTexture = renderText(
-      gameData.renderer, font, arcanaText, textColor);
-  if (arcanaTexture != nullptr) {
-       SDL_QueryTexture(arcanaTexture, nullptr, nullptr, &arcanaRect.w, &arcanaRect.h);
-       SDL_RenderCopy(gameData.renderer, arcanaTexture, nullptr, &arcanaRect);
-       SDL_DestroyTexture(arcanaTexture);
-   } else {
-       SDL_Log("Failed to render Arcana text.");
-   }
+    TTF_SizeText(numberFont, arcanaText.c_str(), &textW, &textH);
+    renderTextAtPos(renderer, numberFont, arcanaText, textColor,
+                    barX + (arcanaBarWidth - textW) / 2,
+                    currentY + (arcanaBarHeight - textH) / 2);
+
+    // currentY += arcanaBarHeight + barPadding; // Update if more elements follow below
 
 
   // --- Level Display ---

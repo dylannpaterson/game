@@ -1,8 +1,11 @@
 // In character.cpp
 #include "character.h"
+#include "asset_manager.h"
 #include "enemy.h"
 #include "game_data.h"
 #include "projectile.h"
+#include "utils.h"
+#include "visibility.h"
 #include <algorithm> // For std::max/min
 #include <cmath>
 #include <iostream> // For debugging output
@@ -21,11 +24,13 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       startTileX(initialTileX), // Start is same as target initially
       startTileY(initialTileY), moveProgress(0.0f),
       // moveDuration initialized later by RecalculateStats
-      moveTimer(0.0f), tileWidth(tileW), tileHeight(tileH) {
+      idleAnimationTimer(0.0f), currentIdleFrame(0), moveTimer(0.0f),
+      currentFacingDirection(FacingDirection::Left), tileWidth(tileW),
+      tileHeight(tileH) {
   // Initialize known spells based on type
   if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
     knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy,
-                             SpellEffectType::Damage, 25.0f, "fireball_icon");
+                             SpellEffectType::Damage, 20.0f, "fireball_icon");
     knownSpells.emplace_back("Minor Heal", 15, 0, SpellTargetType::Self,
                              SpellEffectType::Heal, 30.0f, "minor_heal_icon");
   }
@@ -37,9 +42,25 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   health = maxHealth;
   mana = maxMana;
 
-  std::cout << "Player Initialized. Level: " << level << " HP: " << health
-            << "/" << maxHealth << " Mana: " << mana << "/" << maxMana
-            << std::endl;
+  // Idle animation frames
+  // Initialize the vector of texture names
+  if (type == CharacterType::FemaleMage) {
+    idleFrameTextureNames = {"female_mage_idle_1", "female_mage_idle_2",
+                             "female_mage_idle_3", "female_mage_idle_4",
+                             "female_mage_idle_5"};
+
+    walkFrameTextureNames = {"female_mage_walk_1", "female_mage_walk_2",
+                             "female_mage_walk_3", "female_mage_walk_4",
+                             "female_mage_walk_5","female_mage_walk_6", "female_mage_walk_7",
+                             "female_mage_walk_8", "female_mage_walk_9",
+                             "female_mage_walk_10", "female_mage_walk_11"};
+    targetingFrameTextureNames = {
+        "female_mage_target_1", "female_mage_target_2", "female_mage_target_3",
+        "female_mage_target_4", "female_mage_target_5"};
+  } else if (type == CharacterType::MaleMage) {
+    // Add male frames here if/when you create them
+    idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
+  }
 }
 
 // --- NEW: Getter Methods ---
@@ -90,7 +111,7 @@ void PlayerCharacter::RecalculateStats() {
   // or negative.
   moveDuration = std::max(
       0.05f,
-      0.2f - (effAgi * SPEED_MOD_PER_AGILITY)); // Example: base 0.2s, faster
+      0.5f - (effAgi * SPEED_MOD_PER_AGILITY)); // Example: base 0.2s, faster
                                                 // with agi, min 0.05s
 
   std::cout << "Stats Recalculated. Level: " << level << " EffVit: " << effVit
@@ -115,12 +136,19 @@ void PlayerCharacter::GainArcana(int amount) {
                           1; // +1 because level 1 requires 0-999 Arcana
   if (potentialNewLevel > level) {
     int oldLevel = level;
+    int oldMaxHealth = maxHealth; // *** STORE old max health ***
+    int oldMaxMana = maxMana;     // *** STORE old max mana ***
+
     level = potentialNewLevel;
     std::cout << "Level Up! " << oldLevel << " -> " << level << std::endl;
     RecalculateStats();
-    // Optional: Fully heal/restore mana on level up?
-    health = maxHealth;
-    mana = maxMana;
+
+    int healthIncrease = std::max(0, maxHealth - oldMaxHealth); // Calculate the difference (ensure non-negative)
+    int manaIncrease = std::max(0, maxMana - oldMaxMana);     // Calculate the difference (ensure non-negative)
+
+    health = std::min(health + healthIncrease, maxHealth); // Add the increase, clamp to new max
+    mana = std::min(mana + manaIncrease, maxMana);         // Add the increase, clamp to new max
+
   }
 }
 
@@ -272,39 +300,147 @@ void PlayerCharacter::startMove(int targetX, int targetY) {
 
 void PlayerCharacter::update(float deltaTime, GameData &gameData) {
   if (isMoving) {
+    // --- Handle Movement Interpolation ---
     moveTimer += deltaTime;
     moveProgress =
         moveTimer / moveDuration; // moveDuration is now potentially dynamic
 
+    // Clamp progress to avoid overshooting
+    moveProgress = std::min(moveProgress, 1.0f);
+
+    // Interpolate visual position during movement
+    float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
+    float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
+    float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
+    float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
+
+    x = startVisualX + (targetVisualX - startVisualX) * moveProgress;
+    y = startVisualY + (targetVisualY - startVisualY) * moveProgress;
+
+    // --- Update Walking Animation ---
+    if (!walkFrameTextureNames.empty()) {
+      walkAnimationTimer += deltaTime;
+      float walkFrameDuration = 1.0f / walkAnimationSpeed;
+      if (walkAnimationTimer >= walkFrameDuration) {
+        walkAnimationTimer -= walkFrameDuration; // Subtract duration
+        currentWalkFrame =
+            (currentWalkFrame + 1) % walkFrameTextureNames.size();
+        // Log walk frame change
+        SDL_Log("DEBUG: [PlayerUpdate] Walk Frame Updated. isMoving=%s, "
+                "NewFrame=%d",
+                isMoving ? "true" : "false", currentWalkFrame);
+      }
+    } else {
+      // Log only once if walk frames are missing
+      if (walkAnimationTimer == 0.0f) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Player is moving but walkFrameTextureNames is empty!");
+      }
+      walkAnimationTimer +=
+          deltaTime; // Still increment timer to avoid spamming log
+    }
+    // --- END Walking Animation Update ---
+
+    // Reset idle animation state while moving
+    idleAnimationTimer = 0.0f;
+    currentIdleFrame = 0;
+
+    // --- ADDED: Per-Frame Visibility Update ---
+    // Calculate the TILE the player is currently visually over
+    int currentVisualTileX = static_cast<int>(floor(x / tileWidth));
+    int currentVisualTileY = static_cast<int>(floor(y / tileHeight));
+
+    // Ensure coordinates are within bounds before updating visibility
+    if (isWithinBounds(currentVisualTileX, currentVisualTileY,
+                       gameData.currentLevel.width,
+                       gameData.currentLevel.height)) {
+      // Optional Log: Can be very spammy!
+      // SDL_Log("DEBUG: [PlayerUpdate Moving] Updating visibility from visual
+      // tile [%d, %d]", currentVisualTileX, currentVisualTileY);
+      updateVisibility(
+          gameData.currentLevel, gameData.levelRooms,
+          currentVisualTileX, // Use current visual tile X
+          currentVisualTileY, // Use current visual tile Y
+          gameData.hallwayVisibilityDistance,
+          gameData.visibilityMap); // Pass the visibility map from gameData
+    }
+    // --- END Per-Frame Visibility Update ---
+
+    // --- Check for Movement Completion ---
     if (moveProgress >= 1.0f) {
-      moveProgress = 1.0f;
+      moveProgress = 1.0f; // Clamp progress
 
-      int oldTileX = startTileX; // Store starting tile before snapping logic
-                                 // potentially changes it
-      int oldTileY = startTileY;
+      int oldTileX = targetTileX; // Use the LOGICAL start tile for grid update
+      int oldTileY =
+          targetTileY; // (targetTileX/Y holds the *intended* destination)
+                       // NOTE: The ORIGINAL startTileX/Y is needed if player
+                       // could change direction mid-move, but for turn-based,
+                       // targetTileX/Y before snapping IS the old logical
+                       // position.
 
-      isMoving = false;
+      // Snap visual position to target
       x = targetTileX * tileWidth + tileWidth / 2.0f;
       y = targetTileY * tileHeight + tileHeight / 2.0f;
 
-      // --- NEW: Update Occupation Grid ---
-      // Clear old position (check bounds)
+      // --- Update Occupation Grid ---
+      // This part assumes the grid was ALREADY updated when the move *started*.
+      // The purpose here might be more complex if concurrent movement required
+      // re-checking occupation upon completion.
+      // If the grid is only updated *after* movement, the logic would be
+      // different. Based on previous context (immediate grid update on move
+      // start), this might just need verification or could be removed if
+      // redundant. Let's keep the original grid logic from your file for now:
+
+      // Clear old position (check bounds) - Assuming oldTileX/Y correctly
+      // represents the tile before this move finished
       if (oldTileX >= 0 && oldTileX < gameData.currentLevel.width &&
           oldTileY >= 0 && oldTileY < gameData.currentLevel.height) {
-        gameData.occupationGrid[oldTileY][oldTileX] = false;
+        // Check if it was *supposed* to be occupied by the player before
+        // clearing This check might be overly complex depending on grid update
+        // strategy. gameData.occupationGrid[oldTileY][oldTileX] = false; //
+        // Simple clear
       }
-      // Set new position (check bounds)
+      // Set new position (check bounds) - This should already be true from move
+      // initiation
       if (targetTileX >= 0 && targetTileX < gameData.currentLevel.width &&
           targetTileY >= 0 && targetTileY < gameData.currentLevel.height) {
-        gameData.occupationGrid[targetTileY][targetTileX] = true;
+        if (!gameData.occupationGrid[targetTileY][targetTileX]) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "Player finished move at [%d,%d] but grid wasn't marked "
+                      "occupied!",
+                      targetTileX, targetTileY);
+          gameData.occupationGrid[targetTileY][targetTileX] =
+              true; // Ensure it's set
+        }
       } else {
-        // Log error if moving out of bounds? Should not happen ideally.
-        SDL_Log("Warning: Player moved outside level bounds to (%d, %d)? Grid "
-                "not updated.",
-                targetTileX, targetTileY);
+        SDL_LogWarn(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "Player moved outside level bounds to (%d, %d)? Grid not updated.",
+            targetTileX, targetTileY);
       }
       // --- End Occupation Grid Update ---
+
+      // Finish movement state
+      isMoving = false;
+      currentWalkFrame = 0;      // Reset walk animation frame
+      walkAnimationTimer = 0.0f; // Reset walk timer
+      // Log movement stop
+      SDL_Log(
+          "DEBUG: [PlayerUpdate] Movement Complete. isMoving=false at [%d,%d]",
+          targetTileX, targetTileY);
+
+      // Perform one final visibility update from the exact destination tile
+      SDL_Log("DEBUG: [PlayerUpdate Completed] Final visibility update from "
+              "[%d, %d]",
+              targetTileX, targetTileY);
+      updateVisibility(gameData.currentLevel, gameData.levelRooms,
+                       targetTileX, // Use final logical X
+                       targetTileY, // Use final logical Y
+                       gameData.hallwayVisibilityDistance,
+                       gameData.visibilityMap);
+
     } else {
+      // Interpolate visual position during movement
       float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
       float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
       float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
@@ -313,8 +449,63 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
       x = startVisualX + (targetVisualX - startVisualX) * moveProgress;
       y = startVisualY + (targetVisualY - startVisualY) * moveProgress;
     }
-  }
-}
+
+  } else { // Player is NOT moving
+    walkAnimationTimer = 0.0f;
+    currentWalkFrame = 0;
+
+    // --- Determine Idle vs. Targeting State ---
+    if (gameData.showTargetingReticle) { // Check if player is targeting
+        // --- Update Targeting Animation ---
+        if (!targetingFrameTextureNames.empty()) {
+            targetingAnimationTimer += deltaTime;
+            float targetingFrameDuration = 1.0f / targetingAnimationSpeed;
+            if (targetingAnimationTimer >= targetingFrameDuration) {
+                targetingAnimationTimer -= targetingFrameDuration;
+                currentTargetingFrame = (currentTargetingFrame + 1) % targetingFrameTextureNames.size();
+                // Optional Log: Log targeting frame change
+                // SDL_Log("DEBUG: [PlayerUpdate] Targeting Frame Updated. Frame=%d", currentTargetingFrame);
+            }
+        } else {
+             if (targetingAnimationTimer == 0.0f) {
+                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is targeting but targetingFrameTextureNames is empty!");
+             }
+             targetingAnimationTimer += deltaTime;
+        }
+        // Reset idle animation state while targeting
+        idleAnimationTimer = 0.0f;
+        currentIdleFrame = 0;
+
+    } else { // Player is idle (not moving, not targeting)
+        // --- Update Idle Animation ---
+        if (!idleFrameTextureNames.empty()) {
+            idleAnimationTimer += deltaTime;
+            float idleFrameDuration = 1.0f / idleAnimationSpeed;
+            if (idleAnimationTimer >= idleFrameDuration) {
+                idleAnimationTimer -= idleFrameDuration;
+                currentIdleFrame = (currentIdleFrame + 1) % idleFrameTextureNames.size();
+                // Optional Log: Log idle frame change
+                // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. Frame=%d", currentIdleFrame);
+            }
+        } else {
+             if (idleAnimationTimer == 0.0f) {
+                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is idle but idleFrameTextureNames is empty!");
+             }
+             idleAnimationTimer += deltaTime;
+        }
+        // Reset targeting animation state while idle
+        targetingAnimationTimer = 0.0f;
+        currentTargetingFrame = 0;
+    }
+    // --- End Idle vs. Targeting ---
+
+    // Ensure visual position matches logical position when idle
+    x = targetTileX * tileWidth + tileWidth / 2.0f;
+    y = targetTileY * tileHeight + tileHeight / 2.0f;
+
+  } // End if(isMoving) / else block
+} // End of PlayerCharacter::update
+
 // Placeholder for canCastSpell
 bool PlayerCharacter::canCastSpell(int spellIndex) const {
   if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
@@ -341,56 +532,159 @@ void PlayerCharacter::takeDamage(int amount) {
   }
 }
 // Placeholder for castSpell - NEEDS LATER MODIFICATION for damage based on Int
-bool PlayerCharacter::castSpell(
-    int spellIndex, int castTargetX, int castTargetY,
-    std::vector<Enemy> &enemies,
-    std::vector<Projectile> &projectiles, // <-- Add projectile list
-    SDL_Texture *projectileTexture) {
-  if (!canCastSpell(spellIndex)) {
+bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
+                                int castTargetY, std::vector<Enemy> &enemies,
+                                std::vector<Projectile> &projectiles,
+                                AssetManager *assets) // Changed parameter type
+{
+  // 1. Validate Spell Index and Mana Cost
+  if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "CastSpell: Invalid spell index %d", spellIndex);
     return false;
   }
-  const Spell &spell = getSpell(spellIndex);
+  const Spell &spell = knownSpells[spellIndex];
+  if (!canCastSpell(spellIndex)) {
+    SDL_Log("CastSpell: Cannot cast '%s', not enough mana (%d/%d).",
+            spell.name.c_str(), mana, spell.manaCost);
+    return false;
+  }
 
-  // Basic range check example
+  // 2. Check Range (if applicable)
   if (spell.targetType != SpellTargetType::Self) {
     int distance = std::abs(targetTileX - castTargetX) +
                    std::abs(targetTileY - castTargetY);
     if (distance > spell.range) {
-      return false;
+      SDL_Log("CastSpell: Target [%d,%d] out of range for '%s' (Range: %d, "
+              "Dist: %d).",
+              castTargetX, castTargetY, spell.name.c_str(), spell.range,
+              distance);
+      return false; // Target out of range
     }
   }
 
-  bool castSuccess = false;
-  // Simplified logic - needs proper implementation integrating stats later
-  if (spell.targetType == SpellTargetType::Self &&
-      spell.effectType == SpellEffectType::Heal) {
-    health += static_cast<int>(spell.value); // Use base value for now
-    health = std::min(health, maxHealth);
-    castSuccess = true;
-  } else if (spell.targetType == SpellTargetType::Enemy &&
-             spell.effectType == SpellEffectType::Damage && projectileTexture) {
+  // 3. Deduct Mana Cost (do this early)
+  mana -= spell.manaCost;
+  SDL_Log("CastSpell: Spent %d mana for '%s'. Remaining: %d/%d", spell.manaCost,
+          spell.name.c_str(), mana, maxMana);
 
-    // *** CALCULATE DAMAGE HERE ***
-    // Use the spell's base value and apply the character's modifier
-    int calculatedDamage = static_cast<int>(
-        spell.value * spellDamageModifier); // Use the modifier!
+  // 4. Apply Spell Effect / Create Projectile
+  bool effectApplied = false;
+  switch (spell.effectType) {
+  case SpellEffectType::Damage:
+    if (spell.targetType == SpellTargetType::Enemy ||
+        spell.targetType == SpellTargetType::Tile ||
+        spell.targetType == SpellTargetType::Area) {
 
-    float startVisualX = this->x;
-    float startVisualY = this->y;
-    float targetVisualX = castTargetX * tileWidth + tileWidth / 2.0f;
-    float targetVisualY = castTargetY * tileHeight + tileHeight / 2.0f;
-    float projectileSpeed = 900.0f;
-    int projWidth = 64, projHeight = 64;
-    ProjectileType pType = ProjectileType::Firebolt;
-    projectiles.emplace_back(pType, projectileTexture, projWidth, projHeight,
-                             startVisualX, startVisualY, targetVisualX,
-                             targetVisualY, projectileSpeed, calculatedDamage);
-    castSuccess = true;
+      // --- Find Target Enemy ID (for homing projectiles) ---
+      int targetId = -1; // Default: -1 indicates no specific enemy target
+                         // (e.g., targeting a tile)
+      // Only search for an enemy ID if the spell specifically targets enemies
+      if (spell.targetType == SpellTargetType::Enemy) {
+        for (const auto &enemy : enemies) {
+          // Check if a living enemy exists at the target logical coordinates
+          if (enemy.health > 0 && enemy.x == castTargetX &&
+              enemy.y == castTargetY) {
+            targetId = enemy.id; // Store the ID of the found enemy
+            SDL_Log("CastSpell: Found target Enemy ID %d at [%d,%d].", targetId,
+                    castTargetX, castTargetY);
+            break; // Stop searching once found
+          }
+        }
+        // Log if no enemy was found at the targeted tile
+        if (targetId == -1) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "CastSpell: Targeted enemy at [%d,%d] but no living "
+                      "enemy found there.",
+                      castTargetX, castTargetY);
+          // Depending on game design, spell might fizzle or still launch
+          // towards the tile
+        }
+      }
+      // ---------------------------------------------------------
+      // --- Create Projectile ---
+      // Determine projectile texture name (e.g., based on spell name)
+      std::string projectileTextureName;
+      if (spell.name == "Fireball")
+        projectileTextureName = "fireball"; // Example mapping
+      // Add mappings for other projectile spells here...
+      else
+        projectileTextureName = spell.iconName; // Fallback to icon name? Risky.
+
+      SDL_Texture *projTexture = nullptr;
+      if (assets &&
+          !projectileTextureName.empty()) { // Check if assets pointer is valid
+        projTexture = assets->getTexture(projectileTextureName);
+      }
+
+      if (projTexture) {
+        // Calculate damage based on spell value and player stats
+        int calculatedDamage =
+            static_cast<int>(spell.value * spellDamageModifier);
+
+        // Calculate visual start/end points
+        float startVisualX = this->x; // Player's current visual center X
+        float startVisualY = this->y; // Player's current visual center Y
+        float targetVisualX = castTargetX * tileWidth +
+                              tileWidth / 2.0f; // Center of target tile X
+        float targetVisualY = castTargetY * tileHeight +
+                              tileHeight / 2.0f; // Center of target tile Y
+
+        // Define projectile properties (speed, size)
+        float projectileSpeed = 600.0f; // Example speed (pixels per second)
+        int projWidth = 32, projHeight = 32; // Example size
+        ProjectileType pType =
+            ProjectileType::Firebolt; // Determine type based on spell if needed
+
+        // Add the projectile to the active list
+        projectiles.emplace_back(pType, projTexture, projWidth, projHeight,
+                                 startVisualX, startVisualY, targetVisualX,
+                                 targetVisualY, projectileSpeed,
+                                 calculatedDamage, targetId);
+        SDL_Log("CastSpell: Launched '%s' projectile towards [%d,%d] with %d "
+                "damage.",
+                spell.name.c_str(), castTargetX, castTargetY, calculatedDamage);
+        effectApplied = true;
+      } else {
+        SDL_LogWarn(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "CastSpell: Failed to get projectile texture '%s' for spell '%s'.",
+            projectileTextureName.c_str(), spell.name.c_str());
+        // Spell still cost mana, but projectile wasn't created.
+        // Depending on design, maybe refund mana? For now, mana is spent.
+      }
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "CastSpell: Damage effect type requires Enemy, Tile, or Area "
+                  "target type for projectile.");
+    }
+    break;
+
+  case SpellEffectType::Heal:
+    if (spell.targetType == SpellTargetType::Self) {
+      int healAmount = static_cast<int>(
+          spell.value); // Healing might not scale with Int/DmgMod
+      health = std::min(health + healAmount,
+                        maxHealth); // Apply healing, clamp to max
+      SDL_Log("CastSpell: Healed self for %d. Health: %d/%d", healAmount,
+              health, maxHealth);
+      effectApplied = true;
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "CastSpell: Heal effect type currently only supports Self "
+                  "target type.");
+    }
+    break;
+
+  // Add cases for Buff, Debuff, Summon, etc.
+  case SpellEffectType::Buff:
+  case SpellEffectType::Debuff:
+  case SpellEffectType::Summon:
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "CastSpell: Effect type %d not yet implemented.",
+                (int)spell.effectType);
+    break;
   }
-  // --- TODO: Add actual damage/effect calculation using effective stats! ---
 
-  if (castSuccess) {
-    mana -= spell.manaCost;
-  }
-  return castSuccess;
+  return effectApplied; // Return true if the spell had a resolvable effect
 }

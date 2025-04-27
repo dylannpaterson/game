@@ -3,12 +3,11 @@
 #define PROJECTILE_H
 
 #include <SDL.h>
-#include <string> // For potential future use (e.g., effect names)
+#include <string>
 
-// Forward declare if needed, or include headers for dependencies
-// (None strictly needed for this basic version)
+// Forward declare GameData if needed for update signature (it is needed)
+struct GameData;
 
-// Optional: Enum to differentiate projectile types if visuals/behavior vary significantly
 enum class ProjectileType {
     Firebolt,
     IceShard,
@@ -19,11 +18,14 @@ class Projectile {
 public:
     // --- Identification & State ---
     ProjectileType type;
-    bool isActive; // Flag to mark for removal when projectile finishes
+    bool isActive;
+
+    // --- NEW: Target Tracking ---
+    int targetEnemyId = -1; // ID of the enemy being targeted (-1 if none/tile target)
 
     // --- Position & Movement ---
     float startX, startY;   // Visual world coordinates where it originated
-    float targetX, targetY; // Visual world coordinates of the center of the target tile
+    float targetX, targetY; // Initial visual world coordinates of the target center (still useful for non-homing or if target dies)
     float currentX, currentY; // Current visual world coordinates
     float speed;          // Pixels per second
     float dx, dy;           // Normalized direction vector components (-1.0 to 1.0)
@@ -33,18 +35,20 @@ public:
     SDL_Texture* texture; // Pointer to the texture to render (MUST NOT be null)
     int width, height;    // Dimensions for rendering
 
-    // --- Constructor ---
+    // --- Constructor (Updated) ---
     Projectile(ProjectileType type, SDL_Texture* tex, int w, int h,
-               float startX, float startY, float targetX, float targetY, float speed, int damage);
+               float startX, float startY, float targetX, float targetY, float speed, int damage,
+               int targetId = -1); // Added optional targetId parameter
 
-    // --- Methods ---
-    // Updates position, returns true if target reached this frame, false otherwise
-    bool update(float deltaTime);
+    // --- Methods (Updated) ---
+    // Updates position, returns true if target reached/hit this frame, false otherwise
+    // Now requires GameData to find the target enemy by ID
+    bool update(float deltaTime, const GameData& gameData);
     void render(SDL_Renderer* renderer, int cameraX, int cameraY) const;
 
 private:
-    // Calculate the normalized direction vector
-    void calculateDirection();
+    // Calculate the normalized direction vector towards a specific point
+    void calculateDirection(float toX, float toY);
 };
 
 #endif // PROJECTILE_H
