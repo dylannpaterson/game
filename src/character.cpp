@@ -30,7 +30,7 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   // Initialize known spells based on type
   if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
     knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy,
-                             SpellEffectType::Damage, 25.0f, "fireball_icon");
+                             SpellEffectType::Damage, 20.0f, "fireball_icon");
     knownSpells.emplace_back("Minor Heal", 15, 0, SpellTargetType::Self,
                              SpellEffectType::Heal, 30.0f, "minor_heal_icon");
   }
@@ -136,12 +136,19 @@ void PlayerCharacter::GainArcana(int amount) {
                           1; // +1 because level 1 requires 0-999 Arcana
   if (potentialNewLevel > level) {
     int oldLevel = level;
+    int oldMaxHealth = maxHealth; // *** STORE old max health ***
+    int oldMaxMana = maxMana;     // *** STORE old max mana ***
+
     level = potentialNewLevel;
     std::cout << "Level Up! " << oldLevel << " -> " << level << std::endl;
     RecalculateStats();
-    // Optional: Fully heal/restore mana on level up?
-    health = maxHealth;
-    mana = maxMana;
+
+    int healthIncrease = std::max(0, maxHealth - oldMaxHealth); // Calculate the difference (ensure non-negative)
+    int manaIncrease = std::max(0, maxMana - oldMaxMana);     // Calculate the difference (ensure non-negative)
+
+    health = std::min(health + healthIncrease, maxHealth); // Add the increase, clamp to new max
+    mana = std::min(mana + manaIncrease, maxMana);         // Add the increase, clamp to new max
+
   }
 }
 

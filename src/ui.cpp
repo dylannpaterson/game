@@ -127,21 +127,34 @@ void renderUI(GameData &gameData, AssetManager &assets) {
     SDL_SetRenderDrawColor(renderer, arcanaBgColor.r, arcanaBgColor.g, arcanaBgColor.b, arcanaBgColor.a);
     SDL_RenderFillRect(renderer, &arcanaBgRect);
 
+    // --- MODIFIED CALCULATION ---
     float arcanaRatio = 0.0f;
-    int arcanaNeededForLevelUp = ARCANA_PER_LEVEL; // Total needed for *one* level progression
-    int arcanaBaseForCurrentLevel = (player.level - 1) * ARCANA_PER_LEVEL;
-    int arcanaProgressThisLevel = player.currentArcana - arcanaBaseForCurrentLevel;
-    if (arcanaNeededForLevelUp > 0) {
-         arcanaRatio = static_cast<float>(arcanaProgressThisLevel) / arcanaNeededForLevelUp;
+    // Calculate the base arcana for the current 100-block (e.g., 121 -> 100, 250 -> 200)
+    int baseArcanaForCurrentBlock = (player.currentArcana / 100) * 100;
+    // Determine the next multiple of 100 (e.g., 121 -> 200, 250 -> 300)
+    int nextMultipleOf100 = baseArcanaForCurrentBlock + 100;
+    // Calculate the arcana gained *within* the current 100-block (e.g., 121 -> 21, 250 -> 50)
+    int arcanaProgressInBlock = player.currentArcana - baseArcanaForCurrentBlock;
+    // The amount needed to reach the next multiple is always 100 (unless max level?)
+    int arcanaNeededForNextBlock = 100;
+
+    if (arcanaNeededForNextBlock > 0) {
+         // The ratio is the progress within the current block divided by the size of the block (100)
+         arcanaRatio = static_cast<float>(arcanaProgressInBlock) / arcanaNeededForNextBlock;
     }
     arcanaRatio = std::max(0.0f, std::min(arcanaRatio, 1.0f));
+    // --- END MODIFIED CALCULATION ---
+
 
     SDL_Rect arcanaFgRect = {barX, currentY, static_cast<int>(arcanaBarWidth * arcanaRatio), arcanaBarHeight};
     SDL_SetRenderDrawColor(renderer, arcanaFgColor.r, arcanaFgColor.g, arcanaFgColor.b, arcanaFgColor.a);
     SDL_RenderFillRect(renderer, &arcanaFgRect);
 
-    // Render Numerical Text (Progress within current level)
-    std::string arcanaText = std::to_string(arcanaProgressThisLevel) + " / " + std::to_string(arcanaNeededForLevelUp);
+    // --- MODIFIED TEXT DISPLAY ---
+    // Render Numerical Text (Current Arcana / Next Multiple of 100)
+    std::string arcanaText = std::to_string(player.currentArcana) + " / " + std::to_string(nextMultipleOf100);
+    // --- END MODIFIED TEXT DISPLAY ---
+
     TTF_SizeText(numberFont, arcanaText.c_str(), &textW, &textH);
     renderTextAtPos(renderer, numberFont, arcanaText, textColor,
                     barX + (arcanaBarWidth - textW) / 2,

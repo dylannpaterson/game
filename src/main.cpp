@@ -274,6 +274,30 @@ int main(int argc, char *argv[]) {
         "slime_attack_9", "../assets/sprites/animations/enemies/slime/attack/"
                           "slime_attack_0009.png");
 
+    // Load Crystal Textures ***
+    //  Replace paths with your actual crystal image files
+    loadSuccess &= assetManager.loadTexture(
+        "health_crystal_texture",
+        "../assets/sprites/health_crystal.png"); // Example path
+    loadSuccess &= assetManager.loadTexture(
+        "mana_crystal_texture",
+        "../assets/sprites/mana_crystal.png"); // Example path
+
+    // *** NEW: Load Rune Pedestal Animation Frames ***
+    for (int i = 1; i <= 10; ++i) {
+      std::string key = "rune_pedestal_" + std::to_string(i);
+      // Adjust path and filename pattern as needed
+      std::string path = "../assets/sprites/animations/environment/"
+                         "rune_pedestal/rune_pedestal_" +
+                         std::to_string(i) + ".png";
+      loadSuccess &= assetManager.loadTexture(key, path);
+      if (!loadSuccess) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Failed to load pedestal frame: %s", path.c_str());
+        // Decide if you want to break or just log if a frame fails
+      }
+    }
+
     if (!loadSuccess) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                    "Asset loading failed!"); /* Handle error */
@@ -394,8 +418,16 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
       running = false;
       return;
     } else if (event.type == SDL_WINDOWEVENT &&
-               event.window.event ==
-                   SDL_WINDOWEVENT_RESIZED) { /* ... handle resize ... */
+               event.window.event == SDL_WINDOWEVENT_RESIZED) {
+      // Get new dimensions from the event data
+      gameData.windowWidth = event.window.data1;
+      gameData.windowHeight = event.window.data2;
+      SDL_Log("Window resized to %d x %d", gameData.windowWidth,
+              gameData.windowHeight);
+      // Optional: Update logical size if your rendering depends on it.
+      SDL_RenderSetLogicalSize(gameData.renderer, gameData.windowWidth,
+                               gameData.windowHeight);
+      // Need to consider how this affects camera, UI scaling etc.
     }
 
     switch (currentAppState) {
@@ -456,12 +488,38 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
             gameData.activeProjectiles.clear();
             gameData.currentLevelIndex = 1;
             Enemy::resetIdCounter(); // Use static method
+            // *** MODIFIED CALL to generateLevel ***
+            std::optional<SDL_Point>
+                pedestalPosOpt; // Variable to receive position
             gameData.currentLevel =
                 generateLevel(gameData.levelWidth, gameData.levelHeight,
                               gameData.levelMaxRooms, gameData.levelMinRoomSize,
                               gameData.levelMaxRoomSize, gameData.enemies,
-                              gameData.tileWidth, gameData.tileHeight);
+                              gameData.tileWidth, gameData.tileHeight,
+                              pedestalPosOpt); // Pass the optional Point
+
+            // *** NEW: Create pedestal object if position was found ***
+            if (pedestalPosOpt.has_value()) {
+              gameData.currentPedestal.emplace(pedestalPosOpt.value().x,
+                                               pedestalPosOpt.value().y);
+              // Mark occupation grid for pedestal (optional, depends if it
+              // blocks movement)
+              // gameData.occupationGrid[pedestalPosOpt.value().y][pedestalPosOpt.value().x]
+              // = true;
+            } else {
+              gameData.currentPedestal
+                  .reset(); // Ensure no pedestal if placement failed
+            }
+            // *** END NEW ***
             gameData.levelRooms = gameData.currentLevel.rooms;
+            // --- NEW: Apply enemy scaling based on floor ---
+            SDL_Log("Applying enemy scaling for floor %d...",
+                    gameData.currentLevelIndex);
+            for (auto &enemy : gameData.enemies) {
+              enemy.applyFloorScaling(gameData.currentLevelIndex,
+                                      gameData.enemyStatScalingPerFloor);
+            }
+            // --- END Apply enemy scaling ---
             // Init Occupation Grid
             gameData.occupationGrid.assign(
                 gameData.currentLevel.height,
@@ -1094,6 +1152,21 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
   // SDL_Log("DEBUG: [UpdateLogic Start] Current Phase: %d",
   //         (int)gameData.currentPhase);
 
+  // --- *** NEW: Update Pedestal Animation *** ---
+  if (gameData.currentPedestal.has_value()) {
+    RunePedestal &pedestal = gameData.currentPedestal.value(); // Get reference
+    if (!pedestal.frameTextureNames.empty()) { // Check if frames exist
+      pedestal.animationTimer += deltaTime;
+      float frameDuration = 1.0f / pedestal.animationSpeed;
+      if (pedestal.animationTimer >= frameDuration) {
+        pedestal.animationTimer -= frameDuration; // Subtract duration
+        pedestal.currentFrame =
+            (pedestal.currentFrame + 1) % pedestal.frameTextureNames.size();
+      }
+    }
+  }
+  // --- *** END Update Pedestal Animation *** ---
+
   // update player
   gameData.currentGamePlayer.update(deltaTime, gameData);
 
@@ -1144,15 +1217,161 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       gameData.currentPhase; // Track phase changes for logging
 
   switch (gameData.currentPhase) {
-  case TurnPhase::Planning_PlayerInput:
+  case TurnPhase::Planning_PlayerInput: {
+
+    // *** MOVED LEVEL TRANSITION CHECK HERE ***
+    // Check at the START of the player's turn if they are on the exit tile
+    PlayerCharacter &player = gameData.currentGamePlayer; // Alias for clarity
+    // Ensure the player is NOT currently moving (should be true in this phase,
+    // but good check)
+    if (!player.isMoving &&
+        player.targetTileX == gameData.currentLevel.endCol &&
+        player.targetTileY == gameData.currentLevel.endRow) {
+      SDL_Log("Player is starting turn on exit tile! Advancing to next level.");
+      gameData.currentLevelIndex++;
+      gameData.enemies.clear();           // Clear enemies
+      gameData.activeProjectiles.clear(); // Clear projectiles
+      gameData.playerIntendedAction = {}; // Clear intent
+      gameData.enemyIntendedActions.clear();
+
+      // Generate New Level
+      Enemy::resetIdCounter(); // Reset IDs for new level
+      // *** MODIFIED CALL to generateLevel ***
+      std::optional<SDL_Point> pedestalPosOpt; // Variable to receive position
+      gameData.currentLevel = generateLevel(
+          gameData.levelWidth, gameData.levelHeight, gameData.levelMaxRooms,
+          gameData.levelMinRoomSize, gameData.levelMaxRoomSize,
+          gameData.enemies, gameData.tileWidth, gameData.tileHeight,
+          pedestalPosOpt); // Pass the optional Point
+
+      // *** NEW: Create pedestal object if position was found ***
+      if (pedestalPosOpt.has_value()) {
+        gameData.currentPedestal.emplace(pedestalPosOpt.value().x,
+                                         pedestalPosOpt.value().y);
+        // Mark occupation grid for pedestal (optional, depends if it blocks
+        // movement)
+        // gameData.occupationGrid[pedestalPosOpt.value().y][pedestalPosOpt.value().x]
+        // = true;
+      } else {
+        gameData.currentPedestal
+            .reset(); // Ensure no pedestal if placement failed
+      }
+      // *** END NEW ***
+      gameData.levelRooms = gameData.currentLevel.rooms;
+
+      // --- Apply enemy scaling based on floor ---
+      SDL_Log("Applying enemy scaling for floor %d...",
+              gameData.currentLevelIndex);
+      for (auto &enemy : gameData.enemies) {
+        enemy.applyFloorScaling(gameData.currentLevelIndex,
+                                gameData.enemyStatScalingPerFloor);
+      }
+      // --- END Apply enemy scaling ---
+
+      // Re-Initialize Occupation Grid
+      gameData.occupationGrid.assign(
+          gameData.currentLevel.height,
+          std::vector<bool>(gameData.currentLevel.width, false));
+      for (int y = 0; y < gameData.currentLevel.height; ++y)
+        for (int x = 0; x < gameData.currentLevel.width; ++x)
+          if (gameData.currentLevel.tiles[y][x] == '#')
+            gameData.occupationGrid[y][x] = true;
+
+      // Reset Player Position to New Start
+      player.targetTileX = gameData.currentLevel.startCol;
+      player.targetTileY = gameData.currentLevel.startRow;
+      player.x =
+          player.targetTileX * gameData.tileWidth + gameData.tileWidth / 2.0f;
+      player.y =
+          player.targetTileY * gameData.tileHeight + gameData.tileHeight / 2.0f;
+      player.startTileX = player.targetTileX;
+      player.startTileY = player.targetTileY;
+      player.isMoving = false; // Ensure player is not moving
+      // Mark new player position on grid
+      if (isWithinBounds(player.targetTileX, player.targetTileY,
+                         gameData.currentLevel.width,
+                         gameData.currentLevel.height)) {
+        gameData.occupationGrid[player.targetTileY][player.targetTileX] = true;
+      }
+
+      // Mark initial enemy positions on grid for new level
+      for (const auto &enemy : gameData.enemies) {
+        if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                           gameData.currentLevel.height)) {
+          if (!gameData.occupationGrid[enemy.y][enemy.x]) {
+            gameData.occupationGrid[enemy.y][enemy.x] = true;
+          } else {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "New level enemy %d spawn location [%d,%d] was "
+                        "already occupied.",
+                        enemy.id, enemy.x, enemy.y);
+          }
+        }
+      }
+
+      // Reset Visibility
+      gameData.visibilityMap.assign(
+          gameData.currentLevel.height,
+          std::vector<float>(gameData.currentLevel.width, 0.0f));
+      updateVisibility(gameData.currentLevel, gameData.levelRooms,
+                       player.targetTileX, player.targetTileY,
+                       gameData.hallwayVisibilityDistance,
+                       gameData.visibilityMap);
+
+      // Transition directly to the start of the *next* turn's planning
+      // (Effectively skipping the rest of the current frame's update logic for
+      // this phase)
+      SDL_Log("New level %d generated. Restarting Planning_PlayerInput phase.",
+              gameData.currentLevelIndex);
+      // No phase change needed, we are already in Planning_PlayerInput, just
+      // exit updateLogic early.
+      return; // <<<< EXIT updateLogic early after level transition
+
+    } // End if player is on exit tile check
     // SDL_Log("DEBUG: [UpdateLogic] In Planning_PlayerInput phase."); //
     // Usually not needed
+
+    if (!player.isMoving) { // Only check if player is not currently mid-move
+      // Use std::find_if with an index to allow removal
+      auto it = std::find_if(
+          gameData.droppedItems.begin(), gameData.droppedItems.end(),
+          [&](const ItemDrop &item) {
+            return item.x == player.targetTileX && item.y == player.targetTileY;
+          });
+
+      if (it != gameData.droppedItems.end()) {
+        // Found an item at the player's location
+        ItemDrop &itemToPickup = *it; // Get reference to the item
+
+        // Apply effect based on type
+        if (itemToPickup.type == ItemType::HealthCrystal) {
+          int healthToRestore =
+              static_cast<int>(player.maxHealth * 0.30f); // 30% of max health
+          int oldHealth = player.health;
+          player.health = std::min(player.health + healthToRestore,
+                                   player.maxHealth); // Add and clamp
+          SDL_Log("INFO: Picked up Health Crystal. Restored %d HP (%d -> %d).",
+                  healthToRestore, oldHealth, player.health);
+        } else if (itemToPickup.type == ItemType::ManaCrystal) {
+          int manaToRestore =
+              static_cast<int>(player.maxMana * 0.30f); // 30% of max mana
+          int oldMana = player.mana;
+          player.mana = std::min(player.mana + manaToRestore,
+                                 player.maxMana); // Add and clamp
+          SDL_Log("INFO: Picked up Mana Crystal. Restored %d MP (%d -> %d).",
+                  manaToRestore, oldMana, player.mana);
+        }
+
+        // Remove the item from the dropped items list
+        gameData.droppedItems.erase(it); // Erase the found item
+      }
+    }
     planningWallClockStartTime = 0; // Reset timers when in player input phase
     resolutionStartTime = 0;
     totalEnemyPlanningCpuTime = 0;
 
     break; // Waiting for input
-
+  }
   case TurnPhase::Planning_EnemyAI: { // Scope for variables
     // *** START TIMING Planning_EnemyAI (Wall Clock) ***
     SDL_Log(
@@ -1615,93 +1834,6 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
 
     SDL_Log("DEBUG: Entered Resolution_Update Check");
 
-    // *** Check for Level Transition AFTER player movement finishes ***
-    if (playerFinishedMovingThisFrame) {
-      PlayerCharacter &player = gameData.currentGamePlayer; // Alias for clarity
-      // Check if player landed on the exit tile
-      if (player.targetTileX == gameData.currentLevel.endCol &&
-          player.targetTileY == gameData.currentLevel.endRow) {
-        SDL_Log("Player reached exit tile! Advancing to next level.");
-        gameData.currentLevelIndex++;
-        gameData.enemies.clear();           // Clear enemies
-        gameData.activeProjectiles.clear(); // Clear projectiles
-        gameData.playerIntendedAction = {}; // Clear intent
-        gameData.enemyIntendedActions.clear();
-
-        // Generate New Level
-        Enemy::resetIdCounter(); // Reset IDs for new level
-        gameData.currentLevel = generateLevel(
-            gameData.levelWidth, gameData.levelHeight, gameData.levelMaxRooms,
-            gameData.levelMinRoomSize, gameData.levelMaxRoomSize,
-            gameData.enemies, gameData.tileWidth, gameData.tileHeight);
-        gameData.levelRooms = gameData.currentLevel.rooms;
-
-        // Re-Initialize Occupation Grid
-        gameData.occupationGrid.assign(
-            gameData.currentLevel.height,
-            std::vector<bool>(gameData.currentLevel.width, false));
-        for (int y = 0; y < gameData.currentLevel.height; ++y)
-          for (int x = 0; x < gameData.currentLevel.width; ++x)
-            if (gameData.currentLevel.tiles[y][x] == '#')
-              gameData.occupationGrid[y][x] = true;
-
-        // Reset Player Position to New Start
-        player.targetTileX = gameData.currentLevel.startCol;
-        player.targetTileY = gameData.currentLevel.startRow;
-        player.x =
-            player.targetTileX * gameData.tileWidth + gameData.tileWidth / 2.0f;
-        player.y = player.targetTileY * gameData.tileHeight +
-                   gameData.tileHeight / 2.0f;
-        player.startTileX = player.targetTileX;
-        player.startTileY = player.targetTileY;
-        player.isMoving = false; // Ensure player is not moving
-        // Mark new player position on grid
-        if (isWithinBounds(player.targetTileX, player.targetTileY,
-                           gameData.currentLevel.width,
-                           gameData.currentLevel.height)) {
-          gameData.occupationGrid[player.targetTileY][player.targetTileX] =
-              true;
-        }
-
-        // Mark initial enemy positions on grid for new level
-        for (const auto &enemy : gameData.enemies) {
-          if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
-                             gameData.currentLevel.height)) {
-            if (!gameData.occupationGrid[enemy.y][enemy.x]) {
-              gameData.occupationGrid[enemy.y][enemy.x] = true;
-            } else {
-              SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                          "New level enemy %d spawn location [%d,%d] was "
-                          "already occupied.",
-                          enemy.id, enemy.x, enemy.y);
-            }
-          }
-        }
-
-        // Reset Visibility
-        gameData.visibilityMap.assign(
-            gameData.currentLevel.height,
-            std::vector<float>(gameData.currentLevel.width, 0.0f));
-        updateVisibility(gameData.currentLevel, gameData.levelRooms,
-                         player.targetTileX, player.targetTileY,
-                         gameData.hallwayVisibilityDistance,
-                         gameData.visibilityMap);
-
-        // Transition directly to the start of the next turn's planning
-        SDL_Log("New level %d generated. Transitioning to Player Input.",
-                gameData.currentLevelIndex);
-        gameData.currentPhase = TurnPhase::Planning_PlayerInput;
-        // Reset relevant state for the new turn
-        gameData.currentEnemyPlanningIndex = 0;
-        gameData.enemyIntendedActions.resize(
-            gameData.enemies.size()); // Resize for potentially new enemy count
-        gameData.showTargetingReticle = false;
-        gameData.currentSpellIndex = -1;
-        // Skip the rest of the current frame's update logic for this turn
-        return; // <<<< EXIT updateLogic early after level transition
-      }
-    }
-
     if (isResolutionComplete(gameData)) {
       SDL_Log("DEBUG: [UpdateLogic] Movement Resolution Complete. "
               "Transitioning to TurnEnd_ApplyEffects.");
@@ -1737,28 +1869,59 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
     bool playerDied = gameData.currentGamePlayer.health <= 0;
     int arcanaGained = 0;
     gameData.enemies.erase(
-        std::remove_if(gameData.enemies.begin(), gameData.enemies.end(),
-                       [&](const Enemy &e) {
-                         if (e.health <= 0) {
-                           SDL_Log("Cleaning up dead enemy %d at [%d,%d].",
-                                   e.id, e.x, e.y);
-                           arcanaGained += e.arcanaValue;
-                           if (isWithinBounds(e.x, e.y,
-                                              gameData.currentLevel.width,
-                                              gameData.currentLevel.height)) {
-                             if (gameData.occupationGrid[e.y][e.x]) {
-                               gameData.occupationGrid[e.y][e.x] = false;
-                             } else {
-                               SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                                           "Attempted to clear unoccupied grid "
-                                           "cell [%d,%d] for dead enemy %d.",
-                                           e.x, e.y, e.id);
-                             }
-                           }
-                           return true;
-                         }
-                         return false;
-                       }),
+        std::remove_if(
+            gameData.enemies.begin(), gameData.enemies.end(),
+            [&](const Enemy &e) {
+              if (e.health <= 0) {
+                SDL_Log("Cleaning up dead enemy %d at [%d,%d].", e.id, e.x,
+                        e.y);
+                arcanaGained += e.arcanaValue;
+
+                // --- *** NEW: Crystal Drop Logic *** ---
+                if ((rand() % 100) < gameData.crystalDropChancePercent) {
+                  ItemType dropType;
+                  std::string textureKey;
+                  // Determine crystal type (Health or Mana)
+                  if ((rand() % 100) < gameData.healthCrystalChancePercent) {
+                    dropType = ItemType::HealthCrystal;
+                    textureKey = "health_crystal_texture"; // Use consistent key
+                    SDL_Log(
+                        "INFO: Enemy %d dropped a Health Crystal at [%d,%d].",
+                        e.id, e.x, e.y);
+                  } else {
+                    dropType = ItemType::ManaCrystal;
+                    textureKey = "mana_crystal_texture"; // Use consistent key
+                    SDL_Log("INFO: Enemy %d dropped a Mana Crystal at [%d,%d].",
+                            e.id, e.x, e.y);
+                  }
+
+                  // Create the ItemDrop object
+                  ItemDrop newItem;
+                  newItem.x = e.x; // Drop at enemy's location
+                  newItem.y = e.y;
+                  newItem.type = dropType;
+                  newItem.textureName = textureKey;
+
+                  // Add to the game's list of dropped items
+                  gameData.droppedItems.push_back(newItem);
+                }
+                // --- *** END Crystal Drop Logic *** ---
+
+                if (isWithinBounds(e.x, e.y, gameData.currentLevel.width,
+                                   gameData.currentLevel.height)) {
+                  if (gameData.occupationGrid[e.y][e.x]) {
+                    gameData.occupationGrid[e.y][e.x] = false;
+                  } else {
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                                "Attempted to clear unoccupied grid "
+                                "cell [%d,%d] for dead enemy %d.",
+                                e.x, e.y, e.id);
+                  }
+                }
+                return true;
+              }
+              return false;
+            }),
         gameData.enemies.end());
     if (arcanaGained > 0)
       gameData.currentGamePlayer.GainArcana(arcanaGained);
@@ -1824,6 +1987,20 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
                                         gameData.tileHeight);
           // Mark occupation grid immediately
           gameData.occupationGrid[spawnY][spawnX] = true;
+
+          if (!gameData.enemies.empty()) {
+            gameData.enemies.back().applyFloorScaling(
+                gameData.currentLevelIndex, gameData.enemyStatScalingPerFloor);
+            SDL_Log("Applied floor scaling to reinforcement Enemy ID %d.",
+                    newId);
+          } else {
+            // This case should theoretically not happen if emplace_back
+            // succeeded, but defensive check
+            SDL_LogError(
+                SDL_LOG_CATEGORY_APPLICATION,
+                "Failed to access reinforcement enemy after emplace_back!");
+          }
+
           SDL_Log("Reinforcement (Enemy %d) spawned at [%d, %d]. Total "
                   "enemies: %zu",
                   newId, spawnX, spawnY, gameData.enemies.size());
@@ -1974,6 +2151,145 @@ void renderScene(GameData &gameData, AssetManager &assets) {
       }
     } // End x, y loops
   } // End level rendering check
+
+  // --- *** NEW: Render Dropped Items *** ---
+  for (const auto &item : gameData.droppedItems) {
+    // Check visibility of the item's tile
+    float visibility = 0.0f;
+    if (isWithinBounds(item.x, item.y, gameData.currentLevel.width,
+                       gameData.currentLevel.height) &&
+        item.y < gameData.visibilityMap.size() &&
+        item.x < gameData.visibilityMap[item.y].size()) {
+      visibility = gameData.visibilityMap[item.y][item.x];
+    }
+
+    if (visibility > 0.0f) { // Only render if the tile is visible
+      SDL_Texture *itemTexture = assets.getTexture(item.textureName);
+      if (itemTexture) {
+        SDL_Rect itemRect = {
+            (item.x * gameData.tileWidth) - gameData.cameraX,
+            (item.y * gameData.tileHeight) - gameData.cameraY,
+            gameData.tileWidth / 2, // Smaller size for item? Adjust as needed
+            gameData.tileHeight / 2 // Smaller size for item? Adjust as needed
+        };
+        // Center the smaller item texture within the tile visually
+        itemRect.x += gameData.tileWidth / 4;
+        itemRect.y += gameData.tileHeight / 4;
+
+        // Apply visibility alpha
+        Uint8 alpha = static_cast<Uint8>(visibility * 255);
+        SDL_SetTextureAlphaMod(itemTexture, alpha);
+        SDL_SetTextureBlendMode(itemTexture,
+                                SDL_BLENDMODE_BLEND); // Ensure blending
+
+        SDL_RenderCopy(gameData.renderer, itemTexture, nullptr, &itemRect);
+
+        // Reset alpha/blend mode if other things rely on defaults
+        SDL_SetTextureAlphaMod(itemTexture, 255); // Reset alpha for next use
+        // SDL_SetTextureBlendMode(itemTexture, SDL_BLENDMODE_NONE); // Usually
+        // not needed to reset blend
+
+      } else {
+        // Optional: Render a fallback if texture is missing
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Item texture '%s' not found!", item.textureName.c_str());
+        SDL_Rect fallbackRect = {(item.x * gameData.tileWidth) -
+                                     gameData.cameraX + gameData.tileWidth / 4,
+                                 (item.y * gameData.tileHeight) -
+                                     gameData.cameraY + gameData.tileHeight / 4,
+                                 gameData.tileWidth / 2,
+                                 gameData.tileHeight / 2};
+        Uint8 r = 255, g = 255, b = 0; // Yellow fallback
+        if (item.type == ItemType::HealthCrystal) {
+          r = 255;
+          g = 0;
+          b = 0;
+        } // Red
+        else if (item.type == ItemType::ManaCrystal) {
+          r = 0;
+          g = 0;
+          b = 255;
+        } // Blue
+
+        Uint8 alpha =
+            static_cast<Uint8>(visibility * 128); // Dimmer fallback alpha
+        SDL_SetRenderDrawBlendMode(gameData.renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(gameData.renderer, r, g, b, alpha);
+        SDL_RenderFillRect(gameData.renderer, &fallbackRect);
+        SDL_SetRenderDrawBlendMode(gameData.renderer, SDL_BLENDMODE_NONE);
+      }
+    }
+  }
+  // --- *** END Render Dropped Items *** ---
+
+      // --- *** NEW: Render Rune Pedestal *** ---
+      if (gameData.currentPedestal.has_value()) {
+        const RunePedestal& pedestal = gameData.currentPedestal.value(); // Get const reference
+
+        // Check visibility of the pedestal's tile
+        float visibility = 0.0f;
+        if (isWithinBounds(pedestal.x, pedestal.y, gameData.currentLevel.width, gameData.currentLevel.height) &&
+            pedestal.y < gameData.visibilityMap.size() && pedestal.x < gameData.visibilityMap[pedestal.y].size()) {
+            visibility = gameData.visibilityMap[pedestal.y][pedestal.x];
+        }
+
+        if (visibility > 0.0f && pedestal.isActive) { // Only render if visible and active
+            // Get the correct frame texture
+            SDL_Texture* pedestalTexture = nullptr;
+            if (!pedestal.frameTextureNames.empty() &&
+                pedestal.currentFrame >= 0 &&
+                pedestal.currentFrame < pedestal.frameTextureNames.size())
+            {
+                pedestalTexture = assets.getTexture(pedestal.frameTextureNames[pedestal.currentFrame]);
+            }
+
+            if (pedestalTexture) {
+                SDL_Rect pedestalRect = {
+                    (pedestal.x * gameData.tileWidth) - gameData.cameraX,
+                    (pedestal.y * gameData.tileHeight) - gameData.cameraY,
+                    gameData.tileWidth, // Render pedestal at full tile size? Adjust if needed
+                    gameData.tileHeight
+                };
+                // Adjust position if pedestal graphic isn't exactly tile-sized (e.g., center it)
+                // Example: If pedestal gfx is smaller and needs centering:
+                // int gfxW = gameData.tileWidth * 0.8; // Example smaller width
+                // int gfxH = gameData.tileHeight * 0.8; // Example smaller height
+                // pedestalRect.x += (gameData.tileWidth - gfxW) / 2;
+                // pedestalRect.y += (gameData.tileHeight - gfxH) / 2;
+                // pedestalRect.w = gfxW;
+                // pedestalRect.h = gfxH;
+
+
+                // Apply visibility alpha
+                Uint8 alpha = static_cast<Uint8>(visibility * 255);
+                SDL_SetTextureAlphaMod(pedestalTexture, alpha);
+                SDL_SetTextureBlendMode(pedestalTexture, SDL_BLENDMODE_BLEND); // Ensure blending
+
+                SDL_RenderCopy(gameData.renderer, pedestalTexture, nullptr, &pedestalRect);
+
+                // Reset alpha/blend mode if needed
+                SDL_SetTextureAlphaMod(pedestalTexture, 255);
+
+            } else {
+                // Optional: Render a fallback if texture is missing for the current frame
+                 if (!pedestal.frameTextureNames.empty()) {
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Pedestal texture '%s' (frame %d) not found!",
+                                pedestal.frameTextureNames[pedestal.currentFrame].c_str(), pedestal.currentFrame);
+                 } else {
+                     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Pedestal has no frame texture names defined!");
+                 }
+                 // Draw a simple placeholder (e.g., magenta square)
+                 SDL_Rect fallbackRect = {(pedestal.x * gameData.tileWidth) - gameData.cameraX,
+                                          (pedestal.y * gameData.tileHeight) - gameData.cameraY,
+                                          gameData.tileWidth, gameData.tileHeight};
+                 Uint8 alpha = static_cast<Uint8>(visibility * 128);
+                 SDL_SetRenderDrawBlendMode(gameData.renderer, SDL_BLENDMODE_BLEND);
+                 SDL_SetRenderDrawColor(gameData.renderer, 255, 0, 255, alpha); // Magenta fallback
+                 SDL_RenderFillRect(gameData.renderer, &fallbackRect);
+                 SDL_SetRenderDrawBlendMode(gameData.renderer, SDL_BLENDMODE_NONE);
+            }
+        }
+    }
 
   // --- Render Entities ---
   for (const auto &enemy : gameData.enemies) {

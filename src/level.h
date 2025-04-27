@@ -5,6 +5,7 @@
 #include <string>
 #include <SDL.h>
 #include "enemy.h" // Make sure this is included if Enemy is used in Level
+#include <optional> // For std::optional
 
 struct Level {
     int width;
@@ -21,6 +22,7 @@ struct Level {
 int manhattanDistance(const SDL_Rect& room1, const SDL_Rect& room2);
 
 // Declaration of the generateLevel function (CRITICAL UPDATE HERE)
-Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH);
+Level generateLevel(int width, int height, int maxRooms, int minRoomSize, int maxRoomSize, std::vector<Enemy>& enemies, int tileW, int tileH,
+    std::optional<SDL_Point>& outPedestalPos);
 
 #endif

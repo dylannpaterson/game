@@ -39,8 +39,8 @@ Enemy::Enemy(int uniqueId, EnemyType eType, int startX, int startY, int tileW,
   // Set attributes based on EnemyType
   switch (type) {
   case EnemyType::SLIME:
-    health = 15;
-    maxHealth = 15;
+    health = 20;
+    maxHealth = 20;
     width = static_cast<int>(tileW * 0.8); // Ensure width/height are int
     height = static_cast<int>(tileH * 0.8);
     arcanaValue = 12;
@@ -573,3 +573,36 @@ int Enemy::GetAttackDamage() const {
   return baseAttackDamage;
 }
 
+void Enemy::applyFloorScaling(int currentFloorIndex, float scalingFactorPerFloor) {
+  if (currentFloorIndex <= 1) {
+      // No scaling on floor 1 or invalid floors
+      return;
+  }
+
+  // Calculate the multiplier: 1.0 + (floors above 1) * scaling_factor
+  // Example: Floor 2 -> 1.0 + (2-1)*0.05 = 1.05
+  // Example: Floor 3 -> 1.0 + (3-1)*0.05 = 1.10
+  float multiplier = pow(1.0f + scalingFactorPerFloor,static_cast<float>(currentFloorIndex - 1));
+
+  // Store original values for logging if needed
+  int oldMaxHealth = maxHealth;
+  int oldDamage = baseAttackDamage;
+  int oldArcana = arcanaValue;
+
+  // Scale stats (round to nearest integer for health/damage/arcana)
+  maxHealth = static_cast<int>(std::round(static_cast<float>(maxHealth) * multiplier));
+  baseAttackDamage = static_cast<int>(std::round(static_cast<float>(baseAttackDamage) * multiplier));
+  arcanaValue = static_cast<int>(std::round(static_cast<float>(arcanaValue) * multiplier));
+
+  // Ensure stats don't become zero if they were non-zero before scaling very slightly down due to rounding
+  if (oldMaxHealth > 0 && maxHealth <= 0) maxHealth = 1;
+  if (oldDamage > 0 && baseAttackDamage <= 0) baseAttackDamage = 1;
+  if (oldArcana > 0 && arcanaValue <= 0) arcanaValue = 1;
+
+
+  // Reset current health to the new max health after scaling
+  health = maxHealth;
+
+  SDL_Log("INFO: Enemy %d scaled for Floor %d (Multiplier: %.2f). HP: %d -> %d, DMG: %d -> %d, Arcana: %d -> %d",
+          id, currentFloorIndex, multiplier, oldMaxHealth, maxHealth, oldDamage, baseAttackDamage, oldArcana, arcanaValue);
+}

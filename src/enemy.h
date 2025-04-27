@@ -102,6 +102,7 @@ public:
   void startAttackAnimation(const GameData &gameData);
   void takeDamage(int amount);
   int GetAttackDamage() const;
+  void applyFloorScaling(int currentFloorIndex, float scalingFactorPerFloor);
 
   // --- NEW: Public Static Method to Reset ID Counter ---
   static void resetIdCounter() { nextId = 0; }

@@ -37,6 +37,41 @@ struct IntendedAction {
     // Consider adding caster information if needed later (e.g., casterID or pointer)
 };
 
+enum class ItemType {
+    HealthCrystal,
+    ManaCrystal
+};
+
+// Structure to represent an item dropped on the ground
+struct ItemDrop {
+    int x; // Tile X coordinate
+    int y; // Tile Y coordinate
+    ItemType type; // What kind of item it is
+    std::string textureName; // Key for the AssetManager
+    // Add other properties if needed later (e.g., amount, identifier)
+};
+
+struct RunePedestal {
+    int x; // Tile X coordinate
+    int y; // Tile Y coordinate
+    std::vector<std::string> frameTextureNames; // Keys for animation frames
+    float animationTimer = 0.0f;
+    int currentFrame = 0;
+    float animationSpeed = 4.0f; // Frames per second (adjust as needed)
+    bool isActive = true; // Can it be interacted with?
+
+    // Default constructor might be needed if using std::optional without direct initialization
+    RunePedestal() : x(0), y(0), animationSpeed(4.0f), isActive(true) {}
+
+    // Constructor for placement
+    RunePedestal(int posX, int posY) : x(posX), y(posY), animationSpeed(4.0f), isActive(true) {
+        // Populate frame names (ensure these match loaded assets)
+        for (int i = 1; i <= 10; ++i) {
+            frameTextureNames.push_back("rune_pedestal_" + std::to_string(i));
+        }
+    }
+};
+
 
 // --- NEW: Turn Phases ---
 // Replaces the old GameState enum to manage the distinct stages of a simultaneous turn.
@@ -81,7 +116,9 @@ struct GameData {
     PlayerCharacter currentGamePlayer{CharacterType::FemaleMage, 0, 0, 64, 64}; // Example initialization
     std::vector<Enemy> enemies;                 // Stores all enemies currently in the level
     std::vector<Projectile> activeProjectiles;  // Stores projectiles currently in flight
+    std::vector<ItemDrop> droppedItems; // *** NEW: Container for dropped items ***
     Level currentLevel;                         // Holds the current level layout (tiles, dimensions)
+    std::optional<RunePedestal> currentPedestal;// Stores the single pedestal for the current level
     std::vector<SDL_Rect> levelRooms;           // Stores the generated room rectangles
     std::vector<std::vector<float>> visibilityMap; // Stores visibility level (0.0 to 1.0) for each tile
     std::vector<std::vector<bool>> occupationGrid; // Represents the CURRENT occupied state of tiles (walls, entities)
@@ -130,17 +167,12 @@ struct GameData {
     int levelMaxRoomSize = 15;
     int hallwayVisibilityDistance = 5;
     int currentLevelIndex = 1;
+    float enemyStatScalingPerFloor = 0.10f;
+    int crystalDropChancePercent = 30; // *** NEW: Chance (0-100) for an enemy to drop *any* crystal ***
+    int healthCrystalChancePercent = 50; // *** NEW: Chance (0-100) for a dropped crystal to be RED (Health) ***
     int maxEnemyCount = 100;
     int spawnChancePercent = 15;
 
-
-    // --- OBSOLETE STATE (Marked for removal/ignore in new system) ---
-    /*
-    GameState currentGameState = GameState::MainMenu; // Replaced by currentPhase for gameplay loop
-    int enemiesActingThisTurn = 0; // Replaced by the Resolution phase logic determining completion
-    int currentEnemyUpdateIndex = 0; // Replaced by currentEnemyPlanningIndex for AI planning phase
-    const int ENEMY_UPDATES_PER_FRAME = 10; // No longer needed for batching AI decisions this way
-    */
 
     // --- Frame Input Flags --- (Can still be useful in handleEvents)
     bool menuUpThisFrame = false;
