@@ -81,12 +81,12 @@ clean: CMakeFiles/WizardRoguelike.dir/clean
 CMakeFiles/WizardRoguelike.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=1,2,3,4,5 "Built target WizardRoguelike"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12 "Built target WizardRoguelike"
 .PHONY : CMakeFiles/WizardRoguelike.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/WizardRoguelike.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/dylan/game/build-windows/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/dylan/game/build-windows/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/WizardRoguelike.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/dylan/game/build-windows/CMakeFiles 0
 .PHONY : CMakeFiles/WizardRoguelike.dir/rule

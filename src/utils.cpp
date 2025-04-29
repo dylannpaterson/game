@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <SDL.h>
+#include <SDL_render.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 #include <iostream>
@@ -80,7 +81,7 @@ SDL_Context initializeSDL(int width, int height) {
     }
 
     // Create Renderer
-    context.renderer = SDL_CreateRenderer(context.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    context.renderer = SDL_CreateRenderer(context.window, -1, SDL_RENDERER_SOFTWARE);
     if (context.renderer == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
         SDL_DestroyWindow(context.window);

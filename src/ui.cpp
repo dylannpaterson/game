@@ -276,7 +276,7 @@ void renderSpellMenu(SDL_Renderer *renderer, TTF_Font *font,
 // --- renderSpellBar using original utils::renderText ---
 void renderSpellBar(GameData &gameData, AssetManager &assets) {
   const int MAX_BAR_SLOTS = 5; // For QWERT
-  const std::vector<std::string> keyLabels = {"Q", "W", "E", "R", "T"};
+  const std::vector<std::string> keyLabels = {"1", "2", "3", "4", "5"};
 
   SDL_Renderer *renderer = gameData.renderer;
   TTF_Font* font = assets.getFont("spellbar_font"); // Use the smaller font

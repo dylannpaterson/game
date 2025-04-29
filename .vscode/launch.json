@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run WizardRoguelike (GDB)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WizardRoguelike", // Adjust path if needed!
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build", // Or "${workspaceFolder}/build"
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "make build" // Optional: Runs the 'make build' task first
+        }
+        // Add other configurations if needed (e.g., one without debugging)
+    ]
+}

@@ -129,13 +129,61 @@ WizardRoguelike/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/build
 .PHONY : WizardRoguelike/fast
 
-src/character_select.obj: src/character_select.cpp.obj
-.PHONY : src/character_select.obj
+src/asset_manager.o: src/asset_manager.cpp.o
+.PHONY : src/asset_manager.o
 
 # target to build an object file
-src/character_select.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj
-.PHONY : src/character_select.cpp.obj
+src/asset_manager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o
+.PHONY : src/asset_manager.cpp.o
+
+src/asset_manager.i: src/asset_manager.cpp.i
+.PHONY : src/asset_manager.i
+
+# target to preprocess a source file
+src/asset_manager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.i
+.PHONY : src/asset_manager.cpp.i
+
+src/asset_manager.s: src/asset_manager.cpp.s
+.PHONY : src/asset_manager.s
+
+# target to generate assembly for a file
+src/asset_manager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.s
+.PHONY : src/asset_manager.cpp.s
+
+src/character.o: src/character.cpp.o
+.PHONY : src/character.o
+
+# target to build an object file
+src/character.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character.cpp.o
+.PHONY : src/character.cpp.o
+
+src/character.i: src/character.cpp.i
+.PHONY : src/character.i
+
+# target to preprocess a source file
+src/character.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character.cpp.i
+.PHONY : src/character.cpp.i
+
+src/character.s: src/character.cpp.s
+.PHONY : src/character.s
+
+# target to generate assembly for a file
+src/character.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character.cpp.s
+.PHONY : src/character.cpp.s
+
+src/character_select.o: src/character_select.cpp.o
+.PHONY : src/character_select.o
+
+# target to build an object file
+src/character_select.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o
+.PHONY : src/character_select.cpp.o
 
 src/character_select.i: src/character_select.cpp.i
 .PHONY : src/character_select.i
@@ -153,13 +201,37 @@ src/character_select.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.s
 .PHONY : src/character_select.cpp.s
 
-src/level.obj: src/level.cpp.obj
-.PHONY : src/level.obj
+src/enemy.o: src/enemy.cpp.o
+.PHONY : src/enemy.o
 
 # target to build an object file
-src/level.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj
-.PHONY : src/level.cpp.obj
+src/enemy.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o
+.PHONY : src/enemy.cpp.o
+
+src/enemy.i: src/enemy.cpp.i
+.PHONY : src/enemy.i
+
+# target to preprocess a source file
+src/enemy.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.i
+.PHONY : src/enemy.cpp.i
+
+src/enemy.s: src/enemy.cpp.s
+.PHONY : src/enemy.s
+
+# target to generate assembly for a file
+src/enemy.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.s
+.PHONY : src/enemy.cpp.s
+
+src/level.o: src/level.cpp.o
+.PHONY : src/level.o
+
+# target to build an object file
+src/level.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/level.cpp.o
+.PHONY : src/level.cpp.o
 
 src/level.i: src/level.cpp.i
 .PHONY : src/level.i
@@ -177,13 +249,13 @@ src/level.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/level.cpp.s
 .PHONY : src/level.cpp.s
 
-src/main.obj: src/main.cpp.obj
-.PHONY : src/main.obj
+src/main.o: src/main.cpp.o
+.PHONY : src/main.o
 
 # target to build an object file
-src/main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj
-.PHONY : src/main.cpp.obj
+src/main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
 .PHONY : src/main.i
@@ -201,13 +273,13 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/menu.obj: src/menu.cpp.obj
-.PHONY : src/menu.obj
+src/menu.o: src/menu.cpp.o
+.PHONY : src/menu.o
 
 # target to build an object file
-src/menu.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj
-.PHONY : src/menu.cpp.obj
+src/menu.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o
+.PHONY : src/menu.cpp.o
 
 src/menu.i: src/menu.cpp.i
 .PHONY : src/menu.i
@@ -225,6 +297,102 @@ src/menu.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s
 .PHONY : src/menu.cpp.s
 
+src/projectile.o: src/projectile.cpp.o
+.PHONY : src/projectile.o
+
+# target to build an object file
+src/projectile.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o
+.PHONY : src/projectile.cpp.o
+
+src/projectile.i: src/projectile.cpp.i
+.PHONY : src/projectile.i
+
+# target to preprocess a source file
+src/projectile.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.i
+.PHONY : src/projectile.cpp.i
+
+src/projectile.s: src/projectile.cpp.s
+.PHONY : src/projectile.s
+
+# target to generate assembly for a file
+src/projectile.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.s
+.PHONY : src/projectile.cpp.s
+
+src/ui.o: src/ui.cpp.o
+.PHONY : src/ui.o
+
+# target to build an object file
+src/ui.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o
+.PHONY : src/ui.cpp.o
+
+src/ui.i: src/ui.cpp.i
+.PHONY : src/ui.i
+
+# target to preprocess a source file
+src/ui.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/ui.cpp.i
+.PHONY : src/ui.cpp.i
+
+src/ui.s: src/ui.cpp.s
+.PHONY : src/ui.s
+
+# target to generate assembly for a file
+src/ui.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/ui.cpp.s
+.PHONY : src/ui.cpp.s
+
+src/utils.o: src/utils.cpp.o
+.PHONY : src/utils.o
+
+# target to build an object file
+src/utils.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o
+.PHONY : src/utils.cpp.o
+
+src/utils.i: src/utils.cpp.i
+.PHONY : src/utils.i
+
+# target to preprocess a source file
+src/utils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/utils.cpp.i
+.PHONY : src/utils.cpp.i
+
+src/utils.s: src/utils.cpp.s
+.PHONY : src/utils.s
+
+# target to generate assembly for a file
+src/utils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/utils.cpp.s
+.PHONY : src/utils.cpp.s
+
+src/visibility.o: src/visibility.cpp.o
+.PHONY : src/visibility.o
+
+# target to build an object file
+src/visibility.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o
+.PHONY : src/visibility.cpp.o
+
+src/visibility.i: src/visibility.cpp.i
+.PHONY : src/visibility.i
+
+# target to preprocess a source file
+src/visibility.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.i
+.PHONY : src/visibility.cpp.i
+
+src/visibility.s: src/visibility.cpp.s
+.PHONY : src/visibility.s
+
+# target to generate assembly for a file
+src/visibility.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.s
+.PHONY : src/visibility.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -234,18 +402,39 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... WizardRoguelike"
-	@echo "... src/character_select.obj"
+	@echo "... src/asset_manager.o"
+	@echo "... src/asset_manager.i"
+	@echo "... src/asset_manager.s"
+	@echo "... src/character.o"
+	@echo "... src/character.i"
+	@echo "... src/character.s"
+	@echo "... src/character_select.o"
 	@echo "... src/character_select.i"
 	@echo "... src/character_select.s"
-	@echo "... src/level.obj"
+	@echo "... src/enemy.o"
+	@echo "... src/enemy.i"
+	@echo "... src/enemy.s"
+	@echo "... src/level.o"
 	@echo "... src/level.i"
 	@echo "... src/level.s"
-	@echo "... src/main.obj"
+	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/menu.obj"
+	@echo "... src/menu.o"
 	@echo "... src/menu.i"
 	@echo "... src/menu.s"
+	@echo "... src/projectile.o"
+	@echo "... src/projectile.i"
+	@echo "... src/projectile.s"
+	@echo "... src/ui.o"
+	@echo "... src/ui.i"
+	@echo "... src/ui.s"
+	@echo "... src/utils.o"
+	@echo "... src/utils.i"
+	@echo "... src/utils.s"
+	@echo "... src/visibility.o"
+	@echo "... src/visibility.i"
+	@echo "... src/visibility.s"
 .PHONY : help
 
 

@@ -21,7 +21,8 @@ enum class ActionType {
     Wait,       // Explicitly choose to do nothing
     Move,       // Intend to move to a target tile
     Attack,     // Intend to perform a melee attack (e.g., bump) - Can be expanded
-    CastSpell   // Intend to cast a specific spell
+    CastSpell,   // Intend to cast a specific spell
+    Interact
 };
 
 // --- NEW: Structure to hold planned actions ---
@@ -54,20 +55,41 @@ struct ItemDrop {
 struct RunePedestal {
     int x; // Tile X coordinate
     int y; // Tile Y coordinate
-    std::vector<std::string> frameTextureNames; // Keys for animation frames
+
+    // --- Animation Frames ---
+    std::vector<std::string> idleFrameTextureNames;     // Keys for idle animation frames
+    std::vector<std::string> deactivationFrameTextureNames; // Keys for deactivation animation
+
+    // --- Animation State ---
     float animationTimer = 0.0f;
     int currentFrame = 0;
-    float animationSpeed = 4.0f; // Frames per second (adjust as needed)
-    bool isActive = true; // Can it be interacted with?
+    float idleAnimationSpeed = 4.0f;         // Frames per second for idle
+    float deactivationAnimationSpeed = 8.0f; // Faster speed for deactivation? (Adjust)
 
-    // Default constructor might be needed if using std::optional without direct initialization
-    RunePedestal() : x(0), y(0), animationSpeed(4.0f), isActive(true) {}
+    // --- Pedestal State ---
+    bool isActive = true;         // Can it be interacted with?
+    bool isDeactivating = false;  // Is it currently playing the deactivation animation?
+    // Note: When isActive is false AND isDeactivating is false, it's fully deactivated.
+
+    // Default constructor
+    RunePedestal() : x(0), y(0), idleAnimationSpeed(4.0f), deactivationAnimationSpeed(8.0f), isActive(true), isDeactivating(false) {}
 
     // Constructor for placement
-    RunePedestal(int posX, int posY) : x(posX), y(posY), animationSpeed(4.0f), isActive(true) {
-        // Populate frame names (ensure these match loaded assets)
+    RunePedestal(int posX, int posY) : x(posX), y(posY), idleAnimationSpeed(4.0f), deactivationAnimationSpeed(8.0f), isActive(true), isDeactivating(false) {
+        // Populate IDLE frame names (ensure these match loaded assets)
         for (int i = 1; i <= 10; ++i) {
-            frameTextureNames.push_back("rune_pedestal_" + std::to_string(i));
+            idleFrameTextureNames.push_back("rune_pedestal_" + std::to_string(i));
+        }
+        // Populate DEACTIVATION frame names (ensure these match loaded assets)
+        // Example: Assuming 9 deactivation frames named rune_pedestal_off_1 to _9
+        for (int i = 1; i <= 9; ++i) {
+             deactivationFrameTextureNames.push_back("rune_pedestal_off_" + std::to_string(i));
+        }
+        // Ensure there's at least one deactivation frame if logic relies on the last frame
+        if (deactivationFrameTextureNames.empty()) {
+             SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "RunePedestal created with no deactivation frames defined!");
+             // Optionally add a fallback frame name here
+             // deactivationFrameTextureNames.push_back("rune_pedestal_off_fallback");
         }
     }
 };

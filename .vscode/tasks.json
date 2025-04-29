@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "make build", // This label MUST match preLaunchTask in launch.json
+            "type": "shell",
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceFolder}/build" // Run make in the build directory
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false // Or true if it's your primary build method in VS Code
+            },
+            "problemMatcher": ["$gcc"] // Helps VS Code parse compiler errors
+        }
+        // ... other tasks ...
+    ]
+}

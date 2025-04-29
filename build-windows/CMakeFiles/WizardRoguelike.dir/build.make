@@ -69,92 +69,197 @@ include CMakeFiles/WizardRoguelike.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/WizardRoguelike.dir/flags.make
 
-CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj: CMakeFiles/WizardRoguelike.dir/flags.make
-CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj: CMakeFiles/WizardRoguelike.dir/includes_CXX.rsp
-CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj: /home/dylan/game/src/main.cpp
-CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj -MF CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj.d -o CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj -c /home/dylan/game/src/main.cpp
+CMakeFiles/WizardRoguelike.dir/src/main.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/main.cpp.o: /home/dylan/game/src/main.cpp
+CMakeFiles/WizardRoguelike.dir/src/main.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/main.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/main.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/main.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/main.cpp.o -c /home/dylan/game/src/main.cpp
 
 CMakeFiles/WizardRoguelike.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/main.cpp.i"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/main.cpp > CMakeFiles/WizardRoguelike.dir/src/main.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/main.cpp > CMakeFiles/WizardRoguelike.dir/src/main.cpp.i
 
 CMakeFiles/WizardRoguelike.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/main.cpp.s"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/main.cpp -o CMakeFiles/WizardRoguelike.dir/src/main.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/main.cpp -o CMakeFiles/WizardRoguelike.dir/src/main.cpp.s
 
-CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj: CMakeFiles/WizardRoguelike.dir/flags.make
-CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj: CMakeFiles/WizardRoguelike.dir/includes_CXX.rsp
-CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj: /home/dylan/game/src/menu.cpp
-CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj -MF CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj.d -o CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj -c /home/dylan/game/src/menu.cpp
+CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o: /home/dylan/game/src/menu.cpp
+CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o -c /home/dylan/game/src/menu.cpp
 
 CMakeFiles/WizardRoguelike.dir/src/menu.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/menu.cpp.i"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/menu.cpp > CMakeFiles/WizardRoguelike.dir/src/menu.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/menu.cpp > CMakeFiles/WizardRoguelike.dir/src/menu.cpp.i
 
 CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/menu.cpp -o CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/menu.cpp -o CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s
 
-CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj: CMakeFiles/WizardRoguelike.dir/flags.make
-CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj: CMakeFiles/WizardRoguelike.dir/includes_CXX.rsp
-CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj: /home/dylan/game/src/character_select.cpp
-CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj -MF CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj.d -o CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj -c /home/dylan/game/src/character_select.cpp
+CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o: /home/dylan/game/src/character_select.cpp
+CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o -c /home/dylan/game/src/character_select.cpp
 
 CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.i"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/character_select.cpp > CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/character_select.cpp > CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.i
 
 CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.s"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/character_select.cpp -o CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/character_select.cpp -o CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.s
 
-CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj: CMakeFiles/WizardRoguelike.dir/flags.make
-CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj: CMakeFiles/WizardRoguelike.dir/includes_CXX.rsp
-CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj: /home/dylan/game/src/level.cpp
-CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj -MF CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj.d -o CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj -c /home/dylan/game/src/level.cpp
+CMakeFiles/WizardRoguelike.dir/src/character.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/character.cpp.o: /home/dylan/game/src/character.cpp
+CMakeFiles/WizardRoguelike.dir/src/character.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/character.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/character.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/character.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/character.cpp.o -c /home/dylan/game/src/character.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/character.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/character.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/character.cpp > CMakeFiles/WizardRoguelike.dir/src/character.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/character.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/character.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/character.cpp -o CMakeFiles/WizardRoguelike.dir/src/character.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/level.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/level.cpp.o: /home/dylan/game/src/level.cpp
+CMakeFiles/WizardRoguelike.dir/src/level.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/level.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/level.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/level.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/level.cpp.o -c /home/dylan/game/src/level.cpp
 
 CMakeFiles/WizardRoguelike.dir/src/level.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/level.cpp.i"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/level.cpp > CMakeFiles/WizardRoguelike.dir/src/level.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/level.cpp > CMakeFiles/WizardRoguelike.dir/src/level.cpp.i
 
 CMakeFiles/WizardRoguelike.dir/src/level.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/level.cpp.s"
-	/usr/bin/x86_64-w64-mingw32-g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/level.cpp -o CMakeFiles/WizardRoguelike.dir/src/level.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/level.cpp -o CMakeFiles/WizardRoguelike.dir/src/level.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o: /home/dylan/game/src/enemy.cpp
+CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o -c /home/dylan/game/src/enemy.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/enemy.cpp > CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/enemy.cpp -o CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o: /home/dylan/game/src/utils.cpp
+CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o -c /home/dylan/game/src/utils.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/utils.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/utils.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/utils.cpp > CMakeFiles/WizardRoguelike.dir/src/utils.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/utils.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/utils.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/utils.cpp -o CMakeFiles/WizardRoguelike.dir/src/utils.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o: /home/dylan/game/src/ui.cpp
+CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o -c /home/dylan/game/src/ui.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/ui.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/ui.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/ui.cpp > CMakeFiles/WizardRoguelike.dir/src/ui.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/ui.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/ui.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/ui.cpp -o CMakeFiles/WizardRoguelike.dir/src/ui.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o: /home/dylan/game/src/visibility.cpp
+CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o -c /home/dylan/game/src/visibility.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/visibility.cpp > CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/visibility.cpp -o CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o: /home/dylan/game/src/projectile.cpp
+CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o -c /home/dylan/game/src/projectile.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/projectile.cpp > CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/projectile.cpp -o CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.s
+
+CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o: CMakeFiles/WizardRoguelike.dir/flags.make
+CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o: /home/dylan/game/src/asset_manager.cpp
+CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o: CMakeFiles/WizardRoguelike.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o -MF CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o.d -o CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o -c /home/dylan/game/src/asset_manager.cpp
+
+CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/dylan/game/src/asset_manager.cpp > CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.i
+
+CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/dylan/game/src/asset_manager.cpp -o CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.s
 
 # Object files for target WizardRoguelike
 WizardRoguelike_OBJECTS = \
-"CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj" \
-"CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj" \
-"CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj" \
-"CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj"
+"CMakeFiles/WizardRoguelike.dir/src/main.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/character.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/level.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o" \
+"CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o"
 
 # External object files for target WizardRoguelike
 WizardRoguelike_EXTERNAL_OBJECTS =
 
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/src/main.cpp.obj
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/src/menu.cpp.obj
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.obj
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/src/level.cpp.obj
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/build.make
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/linkLibs.rsp
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/objects1.rsp
-WizardRoguelike.exe: CMakeFiles/WizardRoguelike.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable WizardRoguelike.exe"
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/main.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/character_select.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/character.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/level.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/enemy.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/utils.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/visibility.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/src/asset_manager.cpp.o
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/build.make
+WizardRoguelike: /usr/lib/aarch64-linux-gnu/libSDL2.so
+WizardRoguelike: /usr/lib/aarch64-linux-gnu/libSDL2main.a
+WizardRoguelike: CMakeFiles/WizardRoguelike.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/dylan/game/build-windows/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable WizardRoguelike"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/WizardRoguelike.dir/link.txt --verbose=$(VERBOSE)
-	/usr/bin/cmake -E copy_if_different /home/dylan/game/windows_dlls/SDL2.dll /home/dylan/game/build-windows/bin
-	/usr/bin/cmake -E copy_if_different /home/dylan/game/windows_dlls/SDL2_image.dll /home/dylan/game/build-windows/bin
-	/usr/bin/cmake -E copy_if_different /home/dylan/game/windows_dlls/SDL2_ttf.dll /home/dylan/game/build-windows/bin
 
 # Rule to build all files generated by this target.
-CMakeFiles/WizardRoguelike.dir/build: WizardRoguelike.exe
+CMakeFiles/WizardRoguelike.dir/build: WizardRoguelike
 .PHONY : CMakeFiles/WizardRoguelike.dir/build
 
 CMakeFiles/WizardRoguelike.dir/clean:
