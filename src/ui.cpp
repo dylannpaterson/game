@@ -172,7 +172,7 @@ void renderUI(GameData &gameData, AssetManager &assets) {
   if (levelTexture != nullptr) {
       SDL_Rect levelRect = {gameData.windowWidth - 150, 10, 0, 0};
       SDL_QueryTexture(levelTexture, nullptr, nullptr, &levelRect.w, &levelRect.h);
-      levelRect.x = gameData.windowWidth - levelRect.w - 10; // Right-align
+      levelRect.x = gameData.logicalWidth - levelRect.w - 10; // Right-align
       SDL_RenderCopy(gameData.renderer, levelTexture, nullptr, &levelRect);
       SDL_DestroyTexture(levelTexture);
   } else {
@@ -188,7 +188,7 @@ void renderUI(GameData &gameData, AssetManager &assets) {
        gameData.renderer, font, floorText, textColor);
    if (floorTexture != nullptr) {
        SDL_QueryTexture(floorTexture, nullptr, nullptr, &floorRect.w, &floorRect.h);
-       floorRect.x = gameData.windowWidth - floorRect.w - 10; // Right-align
+       floorRect.x = gameData.logicalWidth - floorRect.w - 10; // Right-align
 
        // Need levelRect height to position below it
        SDL_Rect tempLevelRect = {0,0,0,0};
@@ -241,8 +241,9 @@ void renderSpellMenu(SDL_Renderer *renderer, TTF_Font *font,
   int textOffsetY = 10; // Padding at the top
   for (int i = 0; i < player.knownSpells.size(); ++i) {
     const Spell &spell = player.knownSpells[i];
+    int effectiveCost = player.GetEffectiveManaCost(i);
     std::string spellText =
-        spell.name + " (" + std::to_string(spell.manaCost) + " Mana)";
+        spell.name + " (" + std::to_string(effectiveCost) + " Mana)";
 
     SDL_Color textColor;
     if (i == currentSelectionIndex) {
@@ -250,7 +251,7 @@ void renderSpellMenu(SDL_Renderer *renderer, TTF_Font *font,
     } else {
       textColor = normalColor;
     }
-    if (player.mana < spell.manaCost) {
+    if (player.mana < effectiveCost) {
       if (i == currentSelectionIndex) {
         textColor = cannotCastColor;
       } else {
@@ -290,8 +291,8 @@ void renderSpellBar(GameData &gameData, AssetManager &assets) {
   int totalBarWidth =
       (slotSize * MAX_BAR_SLOTS) + (padding * (MAX_BAR_SLOTS - 1));
   int barHeight = slotSize + 2 * padding;
-  int barX = (gameData.windowWidth - totalBarWidth) / 2;
-  int barY = gameData.windowHeight - barHeight - 10;
+  int barX = (gameData.logicalWidth - totalBarWidth) / 2; // Center based on LOGICAL width
+  int barY = gameData.logicalHeight - barHeight - 10;   // Align to bottom of LOGICAL height
 
   SDL_Color barBgColor = {20, 20, 40, 180};
   SDL_Color slotBgColor = {40, 40, 60, 200};
@@ -309,7 +310,8 @@ void renderSpellBar(GameData &gameData, AssetManager &assets) {
   int currentSlotX = barX + padding;
   for (int i = 0; i < MAX_BAR_SLOTS && i < spells.size(); ++i) {
     const Spell &spell = spells[i];
-    bool canCast = gameData.currentGamePlayer.mana >= spell.manaCost;
+    int effectiveCost = gameData.currentGamePlayer.GetEffectiveManaCost(i);
+    bool canCast = gameData.currentGamePlayer.mana >= effectiveCost;
 
     SDL_Rect slotRect = {currentSlotX, barY + padding, slotSize, slotSize};
 
@@ -386,8 +388,8 @@ void renderCharacterSheet(GameData& gameData, AssetManager& assets) {
     // --- Sheet Appearance ---
     int sheetWidth = 600; // Adjust as needed
     int sheetHeight = 700; // Adjust as needed
-    int sheetX = (gameData.windowWidth - sheetWidth) / 2;
-    int sheetY = (gameData.windowHeight - sheetHeight) / 2;
+    int sheetX = (gameData.logicalWidth - sheetWidth) / 2;  // Center based on LOGICAL width
+    int sheetY = (gameData.logicalHeight - sheetHeight) / 2; // Center based on LOGICAL height
     SDL_Color bgColor = {10, 20, 40, 220}; // Dark blue, semi-transparent
     SDL_Color textColor = {220, 220, 220, 255}; // Light gray
     SDL_Color statColor = {200, 200, 255, 255}; // Light blue for stats
@@ -506,7 +508,8 @@ void renderCharacterSheet(GameData& gameData, AssetManager& assets) {
         }
 
         // Render Spell Name & Cost
-        std::string spellInfo = spell.name + " (" + std::to_string(spell.manaCost) + " MP)";
+        int effectiveCost = player.GetEffectiveManaCost(&spell - &player.knownSpells[0]); // Get index of spell
+        std::string spellInfo = spell.name + " (" + std::to_string(effectiveCost) + " MP)";
         // **FIX: Use the renamed helper function**
         renderTextAtPos(renderer, smallFont, spellInfo, spellColor, rightColX + iconSize + spellPadding, currentY + (iconSize / 2 - TTF_FontHeight(smallFont) / 2) ); // Align text vertically with icon center
 
@@ -514,8 +517,10 @@ void renderCharacterSheet(GameData& gameData, AssetManager& assets) {
     }
 
     // --- Instructions ---
-    int instructionY = sheetY + sheetHeight - TTF_FontHeight(smallFont) - 10;
+    int instructionY = sheetY + sheetHeight - TTF_FontHeight(smallFont) - 10; // Y position is fine relative to sheetY + sheetHeight
+    int instructionX = sheetX + sheetWidth - 150; // Relative to sheet right edge is probably intended and fine
+
     // **FIX: Use the renamed helper function**
-    renderTextAtPos(renderer, smallFont, "Press 'I' to close", textColor, sheetX + sheetWidth - 150, instructionY);
+    renderTextAtPos(renderer, smallFont, "Press 'I' to close", textColor, instructionX, instructionY);
 }
 

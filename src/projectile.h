@@ -11,6 +11,7 @@ struct GameData;
 enum class ProjectileType {
     Firebolt,
     IceShard,
+    MagicMissile
     // Add more as needed
 };
 

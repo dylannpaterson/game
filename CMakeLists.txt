@@ -32,6 +32,7 @@ add_executable(WizardRoguelike
     src/visibility.cpp
     src/projectile.cpp
     src/asset_manager.cpp
+    src/orbital_missile.cpp
 )
 
 target_link_libraries(WizardRoguelike

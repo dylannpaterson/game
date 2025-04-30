@@ -13,6 +13,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/WizardRoguelike.dir/src/main.cpp.o.d"
   "CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o"
   "CMakeFiles/WizardRoguelike.dir/src/menu.cpp.o.d"
+  "CMakeFiles/WizardRoguelike.dir/src/orbital_missile.cpp.o"
+  "CMakeFiles/WizardRoguelike.dir/src/orbital_missile.cpp.o.d"
   "CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o"
   "CMakeFiles/WizardRoguelike.dir/src/projectile.cpp.o.d"
   "CMakeFiles/WizardRoguelike.dir/src/ui.cpp.o"

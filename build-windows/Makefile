@@ -297,6 +297,30 @@ src/menu.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/menu.cpp.s
 .PHONY : src/menu.cpp.s
 
+src/orbital_missile.o: src/orbital_missile.cpp.o
+.PHONY : src/orbital_missile.o
+
+# target to build an object file
+src/orbital_missile.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/orbital_missile.cpp.o
+.PHONY : src/orbital_missile.cpp.o
+
+src/orbital_missile.i: src/orbital_missile.cpp.i
+.PHONY : src/orbital_missile.i
+
+# target to preprocess a source file
+src/orbital_missile.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/orbital_missile.cpp.i
+.PHONY : src/orbital_missile.cpp.i
+
+src/orbital_missile.s: src/orbital_missile.cpp.s
+.PHONY : src/orbital_missile.s
+
+# target to generate assembly for a file
+src/orbital_missile.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/WizardRoguelike.dir/build.make CMakeFiles/WizardRoguelike.dir/src/orbital_missile.cpp.s
+.PHONY : src/orbital_missile.cpp.s
+
 src/projectile.o: src/projectile.cpp.o
 .PHONY : src/projectile.o
 
@@ -423,6 +447,9 @@ help:
 	@echo "... src/menu.o"
 	@echo "... src/menu.i"
 	@echo "... src/menu.s"
+	@echo "... src/orbital_missile.o"
+	@echo "... src/orbital_missile.i"
+	@echo "... src/orbital_missile.s"
 	@echo "... src/projectile.o"
 	@echo "... src/projectile.i"
 	@echo "... src/projectile.s"

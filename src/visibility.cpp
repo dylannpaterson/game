@@ -10,7 +10,7 @@ void updateVisibility(const Level& level, const std::vector<SDL_Rect>& rooms, in
     int width = level.width;
     int height = level.height;
     int brightRadius = 4;
-    int dimRadius = 7;
+    int dimRadius = 6;
     int rayThickness = 1;
 
     for (int y = 0; y < height; ++y) {

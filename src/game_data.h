@@ -11,6 +11,7 @@
 #include "enemy.h"      // For std::vector<Enemy>
 #include "level.h"      // For Level
 #include "projectile.h" // For std::vector<Projectile>
+#include "orbital_missile.h" 
 #include <SDL.h>        // For SDL_Renderer*, SDL_Texture* etc.
 #include <SDL_ttf.h>    // For TTF_Font*
 
@@ -138,6 +139,7 @@ struct GameData {
     PlayerCharacter currentGamePlayer{CharacterType::FemaleMage, 0, 0, 64, 64}; // Example initialization
     std::vector<Enemy> enemies;                 // Stores all enemies currently in the level
     std::vector<Projectile> activeProjectiles;  // Stores projectiles currently in flight
+    std::vector<OrbitalMissile> activeOrbitals;
     std::vector<ItemDrop> droppedItems; // *** NEW: Container for dropped items ***
     Level currentLevel;                         // Holds the current level layout (tiles, dimensions)
     std::optional<RunePedestal> currentPedestal;// Stores the single pedestal for the current level
@@ -180,8 +182,10 @@ struct GameData {
     // --- Settings ---
     int windowWidth = 1920;
     int windowHeight = 1080;
-    int tileWidth = 128;
-    int tileHeight = 128;
+    int logicalWidth = 1920;  // <-- ADD THIS (Set your desired logical width)
+    int logicalHeight = 1080; // <-- ADD THIS (Set your desired logical height)
+    int tileWidth = 96;
+    int tileHeight = 96;
     int levelWidth = 120;
     int levelHeight = 75;
     int levelMaxRooms = 15;

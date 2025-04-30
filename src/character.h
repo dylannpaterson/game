@@ -53,6 +53,8 @@ struct PlayerCharacter {
   float fractionalMana = 0.0f;
   float manaRegenRate = 0.0f;
   float spellDamageModifier = 1.0f;
+  int currentShield = 0;      // Current remaining shield points
+  int shieldDecayPerTurn = 0; // Amount the shield decays each turn
 
   // --- Position & Movement ---
   int tileWidth;
@@ -95,6 +97,13 @@ struct PlayerCharacter {
   float targetingAnimationSpeed =
       4.0f; // Frames per second for targeting (adjust as needed)
 
+  // ---> ADD Ward Animation State <---
+  std::vector<std::string>
+      wardFrameTextureKeys; // Holds keys like "ward_frame_1"
+  float wardAnimationTimer = 0.0f;
+  int currentWardFrame = 0;
+  float wardAnimationSpeed = 8.0f; // Frames per second (adjust speed)
+
   // ADDED: Enum for facing direction INSIDE the struct
   enum class FacingDirection { Right, Left };
   // ADDED: Member variable to store current direction
@@ -125,15 +134,23 @@ struct PlayerCharacter {
   // --- Spellcasting Methods ---
   bool canCastSpell(int spellIndex) const;
   // Pass AssetManager by pointer or reference if needed for textures
-  bool castSpell(int spellIndex, int targetX, int targetY,
-                 std::vector<Enemy> &enemies,
-                 std::vector<Projectile> &projectiles,
+  bool castSpell(int spellIndex, int targetX, int targetY, GameData &gameData,
                  AssetManager *assets); // Pass AssetManager
   const Spell &getSpell(int spellIndex) const;
+  int GetEffectiveSpellRange(
+      int spellIndex) const; // Calculates range including modifiers
+  int GetEffectiveManaCost(
+      int spellIndex) const; // Calculates cost including modifiers
+  int calculateSpellDamage(int spellIndex, int targetTileX, int targetTileY,
+                           const Enemy *target = nullptr) const;
+  int calculateSpellDamage(int numDice, int dieType, int bonus, int targetTileX,
+                           int targetTileY,
+                           const Enemy *target = nullptr) const;
 
   // --- Other Methods ---
   void takeDamage(int amount);
   void RegenerateMana(float timeStep);
+  void ApplyTurnEndEffects();
 
 }; // End of PlayerCharacter struct declaration
 

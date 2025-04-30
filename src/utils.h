@@ -19,5 +19,6 @@ struct SDL_Context {
 SDL_Context initializeSDL(int width, int height);
 void cleanupSDL(SDL_Context& context); // Function to handle SDL cleanup
 bool findNearestValidTarget(const GameData& gameData, int spellIndex, SDL_Point& outTargetPos);
+int rollDice(int numDice, int dieType, int bonus);
 
 #endif // UTILS_H

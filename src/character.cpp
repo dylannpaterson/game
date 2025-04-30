@@ -29,10 +29,24 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       tileHeight(tileH) {
   // Initialize known spells based on type
   if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
-    knownSpells.emplace_back("Fireball", 10, 5, SpellTargetType::Enemy,
-                             SpellEffectType::Damage, 20.0f, "fireball_icon");
-    knownSpells.emplace_back("Minor Heal", 15, 0, SpellTargetType::Self,
-                             SpellEffectType::Heal, 30.0f, "minor_heal_icon");
+    knownSpells.emplace_back("Fireball", 7, 3, SpellTargetType::Enemy,
+                             SpellEffectType::Damage, 6, 6, 0,
+                             0.1, // numDice=6, dieType=6, bonus=0 -> 6d6
+                             "fireball_icon");
+    knownSpells.emplace_back(
+        "Ward", 20, SpellTargetType::Self, SpellEffectType::ApplyShield,
+        50.0f, // Shield Magnitude (using baseHealAmount field)
+        0.20f, // Decay 20% of max per turn
+        "ward_icon");
+    // ---> ADD Magic Missiles <---
+    knownSpells.emplace_back(
+        "Magic Missiles", 15, SpellTargetType::Self,
+        SpellEffectType::SummonOrbital, 3, 6,
+        500.0f,  // Summon 3 orbitals, 6 tile range, 3 sec lifetime
+        2, 6, 0, // Payload: 1d4+1 damage
+        "magic_missile_launched",
+        700.0f,                 // Launched projectile texture key & speed
+        "magic_missiles_icon"); // Icon for spell bar/menu
   }
 
   // CRITICAL: Calculate initial stats based on starting level and base stats
@@ -49,17 +63,25 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
                              "female_mage_idle_3", "female_mage_idle_4",
                              "female_mage_idle_5"};
 
-    walkFrameTextureNames = {"female_mage_walk_1", "female_mage_walk_2",
-                             "female_mage_walk_3", "female_mage_walk_4",
-                             "female_mage_walk_5","female_mage_walk_6", "female_mage_walk_7",
-                             "female_mage_walk_8", "female_mage_walk_9",
-                             "female_mage_walk_10", "female_mage_walk_11"};
+    walkFrameTextureNames = {
+        "female_mage_walk_1",  "female_mage_walk_2", "female_mage_walk_3",
+        "female_mage_walk_4",  "female_mage_walk_5", "female_mage_walk_6",
+        "female_mage_walk_7",  "female_mage_walk_8", "female_mage_walk_9",
+        "female_mage_walk_10", "female_mage_walk_11"};
     targetingFrameTextureNames = {
         "female_mage_target_1", "female_mage_target_2", "female_mage_target_3",
         "female_mage_target_4", "female_mage_target_5"};
+
+    for (int i = 1; i <= 9; ++i) {
+      wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
+    }
   } else if (type == CharacterType::MaleMage) {
     // Add male frames here if/when you create them
     idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
+
+    for (int i = 1; i <= 9; ++i) {
+      wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
+    }
   }
 }
 
@@ -143,12 +165,17 @@ void PlayerCharacter::GainArcana(int amount) {
     std::cout << "Level Up! " << oldLevel << " -> " << level << std::endl;
     RecalculateStats();
 
-    int healthIncrease = std::max(0, maxHealth - oldMaxHealth); // Calculate the difference (ensure non-negative)
-    int manaIncrease = std::max(0, maxMana - oldMaxMana);     // Calculate the difference (ensure non-negative)
+    int healthIncrease = std::max(
+        0, maxHealth -
+               oldMaxHealth); // Calculate the difference (ensure non-negative)
+    int manaIncrease = std::max(
+        0,
+        maxMana - oldMaxMana); // Calculate the difference (ensure non-negative)
 
-    health = std::min(health + healthIncrease, maxHealth); // Add the increase, clamp to new max
-    mana = std::min(mana + manaIncrease, maxMana);         // Add the increase, clamp to new max
-
+    health = std::min(health + healthIncrease,
+                      maxHealth); // Add the increase, clamp to new max
+    mana = std::min(mana + manaIncrease,
+                    maxMana); // Add the increase, clamp to new max
   }
 }
 
@@ -299,6 +326,25 @@ void PlayerCharacter::startMove(int targetX, int targetY) {
 }
 
 void PlayerCharacter::update(float deltaTime, GameData &gameData) {
+  // ---> ADD Ward Animation Update <---
+  if (currentShield > 0 && !wardFrameTextureKeys.empty()) {
+    wardAnimationTimer += deltaTime;
+    // Ensure speed is positive to avoid division by zero
+    float effectiveWardAnimSpeed =
+        std::max(0.1f, wardAnimationSpeed); // Prevent speed <= 0
+    float wardFrameDuration = 1.0f / effectiveWardAnimSpeed;
+
+    if (wardAnimationTimer >= wardFrameDuration) {
+      wardAnimationTimer -=
+          wardFrameDuration; // Subtract duration, don't just reset
+      currentWardFrame = (currentWardFrame + 1) % wardFrameTextureKeys.size();
+    }
+  } else {
+    // Reset ward animation if shield is gone or no frames defined
+    wardAnimationTimer = 0.0f;
+    currentWardFrame = 0;
+  }
+  // --- END Ward Animation Update ---
   if (isMoving) {
     // --- Handle Movement Interpolation ---
     moveTimer += deltaTime;
@@ -456,46 +502,53 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
 
     // --- Determine Idle vs. Targeting State ---
     if (gameData.showTargetingReticle) { // Check if player is targeting
-        // --- Update Targeting Animation ---
-        if (!targetingFrameTextureNames.empty()) {
-            targetingAnimationTimer += deltaTime;
-            float targetingFrameDuration = 1.0f / targetingAnimationSpeed;
-            if (targetingAnimationTimer >= targetingFrameDuration) {
-                targetingAnimationTimer -= targetingFrameDuration;
-                currentTargetingFrame = (currentTargetingFrame + 1) % targetingFrameTextureNames.size();
-                // Optional Log: Log targeting frame change
-                // SDL_Log("DEBUG: [PlayerUpdate] Targeting Frame Updated. Frame=%d", currentTargetingFrame);
-            }
-        } else {
-             if (targetingAnimationTimer == 0.0f) {
-                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is targeting but targetingFrameTextureNames is empty!");
-             }
-             targetingAnimationTimer += deltaTime;
+      // --- Update Targeting Animation ---
+      if (!targetingFrameTextureNames.empty()) {
+        targetingAnimationTimer += deltaTime;
+        float targetingFrameDuration = 1.0f / targetingAnimationSpeed;
+        if (targetingAnimationTimer >= targetingFrameDuration) {
+          targetingAnimationTimer -= targetingFrameDuration;
+          currentTargetingFrame =
+              (currentTargetingFrame + 1) % targetingFrameTextureNames.size();
+          // Optional Log: Log targeting frame change
+          // SDL_Log("DEBUG: [PlayerUpdate] Targeting Frame Updated. Frame=%d",
+          // currentTargetingFrame);
         }
-        // Reset idle animation state while targeting
-        idleAnimationTimer = 0.0f;
-        currentIdleFrame = 0;
+      } else {
+        if (targetingAnimationTimer == 0.0f) {
+          SDL_LogWarn(
+              SDL_LOG_CATEGORY_APPLICATION,
+              "Player is targeting but targetingFrameTextureNames is empty!");
+        }
+        targetingAnimationTimer += deltaTime;
+      }
+      // Reset idle animation state while targeting
+      idleAnimationTimer = 0.0f;
+      currentIdleFrame = 0;
 
     } else { // Player is idle (not moving, not targeting)
-        // --- Update Idle Animation ---
-        if (!idleFrameTextureNames.empty()) {
-            idleAnimationTimer += deltaTime;
-            float idleFrameDuration = 1.0f / idleAnimationSpeed;
-            if (idleAnimationTimer >= idleFrameDuration) {
-                idleAnimationTimer -= idleFrameDuration;
-                currentIdleFrame = (currentIdleFrame + 1) % idleFrameTextureNames.size();
-                // Optional Log: Log idle frame change
-                // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. Frame=%d", currentIdleFrame);
-            }
-        } else {
-             if (idleAnimationTimer == 0.0f) {
-                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Player is idle but idleFrameTextureNames is empty!");
-             }
-             idleAnimationTimer += deltaTime;
+      // --- Update Idle Animation ---
+      if (!idleFrameTextureNames.empty()) {
+        idleAnimationTimer += deltaTime;
+        float idleFrameDuration = 1.0f / idleAnimationSpeed;
+        if (idleAnimationTimer >= idleFrameDuration) {
+          idleAnimationTimer -= idleFrameDuration;
+          currentIdleFrame =
+              (currentIdleFrame + 1) % idleFrameTextureNames.size();
+          // Optional Log: Log idle frame change
+          // SDL_Log("DEBUG: [PlayerUpdate] Idle Frame Updated. Frame=%d",
+          // currentIdleFrame);
         }
-        // Reset targeting animation state while idle
-        targetingAnimationTimer = 0.0f;
-        currentTargetingFrame = 0;
+      } else {
+        if (idleAnimationTimer == 0.0f) {
+          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                      "Player is idle but idleFrameTextureNames is empty!");
+        }
+        idleAnimationTimer += deltaTime;
+      }
+      // Reset targeting animation state while idle
+      targetingAnimationTimer = 0.0f;
+      currentTargetingFrame = 0;
     }
     // --- End Idle vs. Targeting ---
 
@@ -512,7 +565,7 @@ bool PlayerCharacter::canCastSpell(int spellIndex) const {
     return false;
   }
   const Spell &spell = knownSpells[spellIndex];
-  return mana >= spell.manaCost; // Check against current mana
+  return mana >= GetEffectiveManaCost(spellIndex); // Check against current mana
 }
 // Placeholder for getSpell
 const Spell &PlayerCharacter::getSpell(int spellIndex) const {
@@ -521,20 +574,46 @@ const Spell &PlayerCharacter::getSpell(int spellIndex) const {
   }
   return knownSpells[spellIndex];
 }
-// Placeholder for takeDamage
 void PlayerCharacter::takeDamage(int amount) {
-  health -= amount;
-  std::cout << "Player took " << amount << " damage. Health: " << health << "/"
-            << maxHealth << std::endl;
-  if (health <= 0) {
-    health = 0;
-    std::cout << "Player has been defeated!" << std::endl;
+  if (amount <= 0)
+    return; // No damage taken
+
+  SDL_Log("DEBUG: Player taking %d damage. Current Shield: %d, Health: %d/%d",
+          amount, currentShield, health, maxHealth);
+
+  // Apply damage to shield first
+  if (currentShield > 0) {
+    int absorbedByShield = std::min(amount, currentShield);
+    currentShield -= absorbedByShield;
+    amount -= absorbedByShield; // Reduce damage amount
+
+    SDL_Log(
+        "DEBUG: Shield absorbed %d damage. Shield Left: %d. Remaining Dmg: %d",
+        absorbedByShield, currentShield, amount);
+
+    // If shield drops to 0, reset decay amount
+    if (currentShield <= 0) {
+      currentShield = 0; // Ensure it's exactly 0
+      shieldDecayPerTurn = 0;
+      SDL_Log("DEBUG: Shield depleted.");
+    }
+  }
+
+  // Apply remaining damage to health
+  if (amount > 0) {
+    health -= amount;
+    SDL_Log("DEBUG: Applied %d damage to health. Health: %d/%d", amount, health,
+            maxHealth);
+    if (health <= 0) {
+      health = 0; // Prevent negative health
+      SDL_Log("Player has been defeated!");
+      // Handle player death logic here
+    }
   }
 }
 // Placeholder for castSpell - NEEDS LATER MODIFICATION for damage based on Int
 bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
-                                int castTargetY, std::vector<Enemy> &enemies,
-                                std::vector<Projectile> &projectiles,
+                                int castTargetY, GameData &gameData,
                                 AssetManager *assets) // Changed parameter type
 {
   // 1. Validate Spell Index and Mana Cost
@@ -546,145 +625,363 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
   const Spell &spell = knownSpells[spellIndex];
   if (!canCastSpell(spellIndex)) {
     SDL_Log("CastSpell: Cannot cast '%s', not enough mana (%d/%d).",
-            spell.name.c_str(), mana, spell.manaCost);
+            spell.name.c_str(), mana, GetEffectiveManaCost(spellIndex));
     return false;
   }
 
-  // 2. Check Range (if applicable)
+  std::vector<Enemy> &enemies = gameData.enemies;
+  std::vector<Projectile> &projectiles = gameData.activeProjectiles;
+
+  // --- Calculate Effective Attributes (Example Platzholders) ---
+  // Here you would apply modifiers based on player stats, level, buffs etc.
+  // For now, we just use the base values from the spell struct.
+  int effectiveManaCost = spell.baseManaCost; // - GetManaCostReduction();
+  int effectiveRange = GetEffectiveSpellRange(spellIndex); // + GetRangeBonus();
+  // --- End Effective Attribute Calculation ---
+
+  // 2. Check Effective Mana Cost
+  if (mana < effectiveManaCost) {
+    SDL_Log("CastSpell: Cannot cast '%s', not enough mana (%d/%d).",
+            spell.name.c_str(), mana, effectiveManaCost);
+    return false;
+  }
+
+  // 3. Check Effective Range (if applicable)
   if (spell.targetType != SpellTargetType::Self) {
     int distance = std::abs(targetTileX - castTargetX) +
                    std::abs(targetTileY - castTargetY);
-    if (distance > spell.range) {
-      SDL_Log("CastSpell: Target [%d,%d] out of range for '%s' (Range: %d, "
-              "Dist: %d).",
-              castTargetX, castTargetY, spell.name.c_str(), spell.range,
+    if (distance > effectiveRange) {
+      SDL_Log("CastSpell: Target [%d,%d] out of effective range for '%s' "
+              "(Range: %d, Dist: %d).",
+              castTargetX, castTargetY, spell.name.c_str(), effectiveRange,
               distance);
       return false; // Target out of range
     }
   }
 
-  // 3. Deduct Mana Cost (do this early)
-  mana -= spell.manaCost;
-  SDL_Log("CastSpell: Spent %d mana for '%s'. Remaining: %d/%d", spell.manaCost,
-          spell.name.c_str(), mana, maxMana);
+  // 4. Deduct Mana Cost (use effective cost)
+  mana -= effectiveManaCost;
+  SDL_Log("CastSpell: Spent %d mana for '%s'. Remaining: %d/%d",
+          effectiveManaCost, spell.name.c_str(), mana, maxMana);
 
-  // 4. Apply Spell Effect / Create Projectile
+  // 5. Apply Spell Effect / Create Projectile
   bool effectApplied = false;
   switch (spell.effectType) {
   case SpellEffectType::Damage:
     if (spell.targetType == SpellTargetType::Enemy ||
         spell.targetType == SpellTargetType::Tile ||
         spell.targetType == SpellTargetType::Area) {
-
-      // --- Find Target Enemy ID (for homing projectiles) ---
-      int targetId = -1; // Default: -1 indicates no specific enemy target
-                         // (e.g., targeting a tile)
-      // Only search for an enemy ID if the spell specifically targets enemies
+      // <<< MODIFIED: Use centralized calculation >>>
+      // Find target enemy pointer (optional but useful for calc function)
+      const Enemy *targetEnemyPtr = nullptr;
+      int targetId = -1;
       if (spell.targetType == SpellTargetType::Enemy) {
         for (const auto &enemy : enemies) {
-          // Check if a living enemy exists at the target logical coordinates
           if (enemy.health > 0 && enemy.x == castTargetX &&
               enemy.y == castTargetY) {
-            targetId = enemy.id; // Store the ID of the found enemy
-            SDL_Log("CastSpell: Found target Enemy ID %d at [%d,%d].", targetId,
-                    castTargetX, castTargetY);
-            break; // Stop searching once found
+            targetEnemyPtr = &enemy;
+            targetId = enemy.id; // Store ID for projectile homing
+            break;
           }
         }
-        // Log if no enemy was found at the targeted tile
-        if (targetId == -1) {
-          SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                      "CastSpell: Targeted enemy at [%d,%d] but no living "
-                      "enemy found there.",
-                      castTargetX, castTargetY);
-          // Depending on game design, spell might fizzle or still launch
-          // towards the tile
-        }
       }
-      // ---------------------------------------------------------
-      // --- Create Projectile ---
-      // Determine projectile texture name (e.g., based on spell name)
-      std::string projectileTextureName;
-      if (spell.name == "Fireball")
-        projectileTextureName = "fireball"; // Example mapping
-      // Add mappings for other projectile spells here...
-      else
-        projectileTextureName = spell.iconName; // Fallback to icon name? Risky.
 
-      SDL_Texture *projTexture = nullptr;
-      if (assets &&
-          !projectileTextureName.empty()) { // Check if assets pointer is valid
-        projTexture = assets->getTexture(projectileTextureName);
-      }
+      // Calculate final damage using the NEW method
+      int finalDamage = this->calculateSpellDamage(spellIndex, castTargetX,
+                                                   castTargetY, targetEnemyPtr);
+      SDL_Log("DEBUG: CastSpell '%s' calculated final damage: %d",
+              spell.name.c_str(), finalDamage);
+      // Create Projectile - Logic unchanged, just pass rolledDamage
+      std::string projectileTextureName; // = GetProjectileTextureName(spell);
+                                         // // Map spell to texture
+      if (spell.name == "Fireball")
+        projectileTextureName = "fireball";
+      else
+        projectileTextureName = spell.iconName; // Fallback
+
+      SDL_Texture *projTexture =
+          assets ? assets->getTexture(projectileTextureName) : nullptr;
 
       if (projTexture) {
-        // Calculate damage based on spell value and player stats
-        int calculatedDamage =
-            static_cast<int>(spell.value * spellDamageModifier);
+        float startVisualX = this->x;
+        float startVisualY = this->y;
+        float targetVisualX = castTargetX * tileWidth + tileWidth / 2.0f;
+        float targetVisualY = castTargetY * tileHeight + tileHeight / 2.0f;
+        float projectileSpeed = 600.0f;
+        int projWidth = 32, projHeight = 32;
+        ProjectileType pType = ProjectileType::Firebolt;
 
-        // Calculate visual start/end points
-        float startVisualX = this->x; // Player's current visual center X
-        float startVisualY = this->y; // Player's current visual center Y
-        float targetVisualX = castTargetX * tileWidth +
-                              tileWidth / 2.0f; // Center of target tile X
-        float targetVisualY = castTargetY * tileHeight +
-                              tileHeight / 2.0f; // Center of target tile Y
-
-        // Define projectile properties (speed, size)
-        float projectileSpeed = 600.0f; // Example speed (pixels per second)
-        int projWidth = 32, projHeight = 32; // Example size
-        ProjectileType pType =
-            ProjectileType::Firebolt; // Determine type based on spell if needed
-
-        // Add the projectile to the active list
+        // ---> Pass rolledDamage instead of calculatedDamage <---
         projectiles.emplace_back(pType, projTexture, projWidth, projHeight,
                                  startVisualX, startVisualY, targetVisualX,
-                                 targetVisualY, projectileSpeed,
-                                 calculatedDamage, targetId);
+                                 targetVisualY, projectileSpeed, finalDamage,
+                                 targetId); // Use rolledDamage
+
         SDL_Log("CastSpell: Launched '%s' projectile towards [%d,%d] with %d "
-                "damage.",
-                spell.name.c_str(), castTargetX, castTargetY, calculatedDamage);
+                "potential damage.",
+                spell.name.c_str(), castTargetX, castTargetY, finalDamage);
         effectApplied = true;
-      } else {
-        SDL_LogWarn(
-            SDL_LOG_CATEGORY_APPLICATION,
-            "CastSpell: Failed to get projectile texture '%s' for spell '%s'.",
-            projectileTextureName.c_str(), spell.name.c_str());
-        // Spell still cost mana, but projectile wasn't created.
-        // Depending on design, maybe refund mana? For now, mana is spent.
+      } else { /* ... log texture warning ... */
       }
-    } else {
-      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                  "CastSpell: Damage effect type requires Enemy, Tile, or Area "
-                  "target type for projectile.");
+    } else { /* ... log target type warning ... */
     }
     break;
 
   case SpellEffectType::Heal:
     if (spell.targetType == SpellTargetType::Self) {
-      int healAmount = static_cast<int>(
-          spell.value); // Healing might not scale with Int/DmgMod
-      health = std::min(health + healAmount,
-                        maxHealth); // Apply healing, clamp to max
+      // Use baseHealAmount from the struct now
+      int healAmount = static_cast<int>(spell.baseHealAmount);
+      // Maybe apply Spirit modifier here? Example: +1 heal per 10 Spirit?
+      // healAmount += GetEffectiveSpirit() / 10;
+      health = std::min(health + healAmount, maxHealth);
       SDL_Log("CastSpell: Healed self for %d. Health: %d/%d", healAmount,
               health, maxHealth);
       effectApplied = true;
-    } else {
-      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                  "CastSpell: Heal effect type currently only supports Self "
-                  "target type.");
+    } else { /* ... log warning ... */
     }
     break;
 
+  case SpellEffectType::ApplyShield:
+    if (spell.targetType == SpellTargetType::Self) {
+      // Calculate shield magnitude (can be modified by stats later)
+      int shieldMagnitude = static_cast<int>(std::round(
+          spell.baseHealAmount)); // Using baseHealAmount field for magnitude
+      // Example modifier: Maybe Spirit increases shield strength slightly?
+      // shieldMagnitude += GetEffectiveSpirit() / 5; // e.g., +1 shield per 5
+      // spirit
+
+      // Calculate the decay amount for this specific application
+      int decayAmount = 0;
+      if (spell.shieldDecayPercent > 0.0f && shieldMagnitude > 0) {
+        decayAmount = static_cast<int>(std::round(
+            static_cast<float>(shieldMagnitude) * spell.shieldDecayPercent));
+        // Ensure decay is at least 1 if percentage > 0 and magnitude > 0?
+        // Optional design choice. decayAmount = std::max(1, decayAmount);
+      }
+
+      SDL_Log("CastSpell: Applied '%s'. Shield Value: %d, Decay/Turn: %d",
+              spell.name.c_str(), shieldMagnitude, decayAmount);
+
+      // Set the player's shield values
+      currentShield = shieldMagnitude;
+      shieldDecayPerTurn = decayAmount; // Store the calculated decay amount
+
+      effectApplied = true;
+    } else {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "ApplyShield effect currently only supports Self target type.");
+    }
+    break;
+
+  case SpellEffectType::SummonOrbital:
+    if (spell.targetType == SpellTargetType::Self) {
+      SDL_Log("CastSpell: Summoning %d orbitals.", spell.numOrbitals);
+      for (int i = 0; i < spell.numOrbitals; ++i) {
+        // Calculate starting position near player
+        float angle = (i == 0 && spell.numOrbitals == 1) ? 0
+                                                         : // Center if only one
+                          (2.0f * M_PI * static_cast<float>(i)) /
+                              static_cast<float>(spell.numOrbitals);
+        float spawnRadius = (float)tileWidth * 0.3f; // Closer orbit/start
+        float startX = this->x + spawnRadius * cos(angle);
+        float startY = this->y + spawnRadius * sin(angle);
+
+        // Add to GameData's list
+        gameData.activeOrbitals.emplace_back(
+            // No ownerId needed
+            startX, startY, spell.orbitalLifetime,
+            spell.orbitalAcquisitionRange,
+            spell.numDamageDice, // Use spell's damage dice for payload
+            spell.damageDieType, spell.baseDamageBonus,
+            spell
+                .orbitalProjectileTextureKey, // Texture for launched projectile
+            spell.orbitalProjectileSpeed,     // Speed for launched projectile
+            i                                 // Formation index
+        );
+      }
+      effectApplied = true;
+    } else {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "SummonOrbital effect currently only supports Self target type.");
+    }
+    break; // End SummonOrbital case
+
   // Add cases for Buff, Debuff, Summon, etc.
-  case SpellEffectType::Buff:
-  case SpellEffectType::Debuff:
-  case SpellEffectType::Summon:
+  default:
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "CastSpell: Effect type %d not yet implemented.",
                 (int)spell.effectType);
     break;
   }
 
-  return effectApplied; // Return true if the spell had a resolvable effect
+  return effectApplied;
+}
+
+int PlayerCharacter::GetEffectiveSpellRange(int spellIndex) const {
+  // 1. Basic Validation
+  if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "GetEffectiveSpellRange called with invalid index: %d",
+                spellIndex);
+    return 0; // Return 0 range for invalid spells
+  }
+
+  const Spell &spell = knownSpells[spellIndex];
+  int effectiveRange = spell.baseRange;
+
+  // --- Apply Modifiers Here (Future Enhancement) ---
+  // Example: Bonus range based on Intelligence?
+  // int rangeBonusFromInt = std::max(0, GetEffectiveIntelligence() - 15) / 5;
+  // // e.g., +1 range per 5 Int over 15 effectiveRange += rangeBonusFromInt;
+
+  // Example: Modifiers from equipped items or temporary buffs?
+  // effectiveRange += GetRangeBonusFromEquipment();
+  // effectiveRange += GetRangeBonusFromBuffs();
+
+  // --- End Apply Modifiers ---
+
+  // Ensure range doesn't become negative if modifiers are subtractive
+  return std::max(0, effectiveRange);
+}
+
+// --- Definition for GetEffectiveManaCost ---
+int PlayerCharacter::GetEffectiveManaCost(int spellIndex) const {
+  // 1. Basic Validation
+  if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "GetEffectiveManaCost called with invalid index: %d",
+                spellIndex);
+    // Return a high cost or handle error appropriately for invalid spells
+    return 9999;
+  }
+
+  const Spell &spell = knownSpells[spellIndex];
+  int effectiveCost = spell.baseManaCost;
+
+  // --- Apply Modifiers Here (Future Enhancement) ---
+  // Example: Cost reduction based on Spirit or a specific skill?
+  // int costReductionFromSpirit = GetEffectiveSpirit() / 20; // e.g., -1 cost
+  // per 20 Spirit effectiveCost -= costReductionFromSpirit;
+
+  // Example: Modifiers from equipped items ("Ring of Mana Thriftyness")
+  // effectiveCost *= GetManaCostMultiplierFromEquipment(); // e.g., 0.9 for 10%
+  // reduction
+
+  // --- End Apply Modifiers ---
+
+  // Ensure cost doesn't go below a minimum threshold (e.g., 0 or 1)
+  return std::max(0, effectiveCost); // Cannot have negative mana cost
+}
+
+void PlayerCharacter::ApplyTurnEndEffects() {
+  // 1. Shield Decay
+  if (currentShield > 0) {
+    int shieldBeforeDecay = currentShield;
+    currentShield -= shieldDecayPerTurn; // Apply the pre-calculated decay
+
+    if (currentShield <= 0) {
+      currentShield = 0;      // Prevent negative shield
+      shieldDecayPerTurn = 0; // Reset decay if shield is gone
+      SDL_Log("DEBUG: Shield decayed to zero.");
+    } else {
+      SDL_Log("DEBUG: Shield decayed by %d. Current Shield: %d",
+              shieldDecayPerTurn, currentShield);
+    }
+  }
+
+  // 2. Mana Regeneration (Moved from main loop)
+  RegenerateMana(1.0f); // Assuming 1.0 represents one turn step
+
+  // 3. Add other effects later (e.g., poison damage, buff durations)
+}
+
+int PlayerCharacter::calculateSpellDamage(int spellIndex, int targetTileX,
+                                          int targetTileY,
+                                          const Enemy *target) const {
+  if (spellIndex < 0 || spellIndex >= knownSpells.size()) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Invalid spell index %d for damage calculation.", spellIndex);
+    return 0;
+  }
+  const Spell &spell = knownSpells[spellIndex];
+
+  // 1. Roll Base Dice
+  int currentDamage =
+      rollDice(spell.numDamageDice, spell.damageDieType, spell.baseDamageBonus);
+
+  // 2. Apply Player Modifiers (Intelligence, etc.)
+  currentDamage =
+      static_cast<int>(std::round(currentDamage * this->spellDamageModifier));
+
+  // 3. Apply Distance Bonus (Now possible with target coordinates)
+  if (spell.targetType != SpellTargetType::Self &&
+      spell.baseDistanceDamageBonusPercent > 0.0f) {
+    // Calculate Manhattan distance from caster's logical position to target
+    // tile
+    int distance = std::abs(this->targetTileX - targetTileX) +
+                   std::abs(this->targetTileY - targetTileY);
+    int tilesBeyondAdjacent = std::max(0, distance - 1);
+
+    if (tilesBeyondAdjacent > 0) {
+      float effectiveDistanceBonusPercent =
+          spell.baseDistanceDamageBonusPercent;
+      // Add other potential distance modifiers here later (from skills, etc.)
+      float distanceMultiplier =
+          1.0f + (static_cast<float>(tilesBeyondAdjacent) *
+                  effectiveDistanceBonusPercent);
+      int damageBeforeDistanceBonus = currentDamage;
+      currentDamage = static_cast<int>(
+          std::round(static_cast<float>(currentDamage) * distanceMultiplier));
+
+      SDL_Log("DEBUG [CalcDmg]: Applied distance bonus. Dist: %d, Mult: %.2f, "
+              "Dmg: %d -> %d",
+              distance, distanceMultiplier, damageBeforeDistanceBonus,
+              currentDamage);
+    }
+  }
+
+  // 4. Apply Spell Upgrades (Future Placeholder)
+  // currentDamage = applyUpgrades(currentDamage, spellIndex);
+
+  // 5. Apply Target Modifiers (Resistances/Vulnerabilities - Future
+  // Placeholder) if (target != nullptr) { currentDamage =
+  // applyTargetResistances(currentDamage, target, spell.damageType); }
+
+  // Ensure damage isn't negative
+  return std::max(0, currentDamage);
+}
+
+int PlayerCharacter::calculateSpellDamage(int numDice, int dieType, int bonus, int targetTileX, int targetTileY, const Enemy* target) const {
+  // 1. Roll Base Dice
+  int currentDamage = rollDice(numDice, dieType, bonus);
+  int initialRoll = currentDamage; // Store for logging
+
+  // 2. Apply Player Modifiers (Intelligence, etc.)
+  // Use the spellDamageModifier calculated in RecalculateStats()
+  currentDamage = static_cast<int>(std::round(currentDamage * this->spellDamageModifier));
+  SDL_Log("DEBUG [CalcDmg]: Base Roll (%dd%d+%d) = %d. After Player Mod (x%.2f) = %d",
+          numDice, dieType, bonus, initialRoll, this->spellDamageModifier, currentDamage);
+
+
+  // 3. Apply Distance Bonus (Placeholder - Requires Spell Struct access or parameters)
+  // NOTE: This overload currently CANNOT apply spell-specific distance bonuses
+  // because it doesn't know which spell is being calculated.
+  // If distance bonus needs to apply to orbital payloads, the orbital needs
+  // to pass more info OR this function needs the spell reference again.
+  // For now, distance bonus is only applied via the spellIndex overload.
+  // Consider adding spell reference parameter if distance bonus needed here.
+
+
+  // 4. Apply Spell Upgrades (Future Placeholder)
+  // currentDamage = applyUpgrades(currentDamage, spellIndex); // Needs spell context
+
+  // 5. Apply Target Modifiers (Resistances/Vulnerabilities - Future Placeholder)
+  // if (target != nullptr) { currentDamage = applyTargetResistances(currentDamage, target, /* needs damage type */); }
+
+  // Ensure damage isn't negative
+  int finalDamage = std::max(0, currentDamage);
+  SDL_Log("DEBUG [CalcDmg]: Final Damage = %d", finalDamage);
+  return finalDamage;
 }
