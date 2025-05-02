@@ -59,18 +59,16 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   // Idle animation frames
   // Initialize the vector of texture names
   if (type == CharacterType::FemaleMage) {
-    idleFrameTextureNames = {"female_mage_idle_1", "female_mage_idle_2",
-                             "female_mage_idle_3", "female_mage_idle_4",
-                             "female_mage_idle_5"};
+    for (int i = 1; i <= 7; ++i) {
+      idleFrameTextureNames.push_back("mage_idle_" + std::to_string(i));
+    }
 
-    walkFrameTextureNames = {
-        "female_mage_walk_1",  "female_mage_walk_2", "female_mage_walk_3",
-        "female_mage_walk_4",  "female_mage_walk_5", "female_mage_walk_6",
-        "female_mage_walk_7",  "female_mage_walk_8", "female_mage_walk_9",
-        "female_mage_walk_10", "female_mage_walk_11"};
-    targetingFrameTextureNames = {
-        "female_mage_target_1", "female_mage_target_2", "female_mage_target_3",
-        "female_mage_target_4", "female_mage_target_5"};
+    for (int i = 1; i <= 7; ++i) {
+      walkFrameTextureNames.push_back("mage_walk_" + std::to_string(i));
+    }
+        for (int i = 1; i <= 7; ++i) {
+          targetingFrameTextureNames.push_back("mage_target_" + std::to_string(i));
+        }
 
     for (int i = 1; i <= 9; ++i) {
       wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
@@ -244,72 +242,6 @@ void PlayerCharacter::RegenerateMana(
   }
 }
 
-// --- Existing Method Modifications (Examples - NEEDED LATER) ---
-
-/*
-// Modify takeDamage to use calculated maxHealth
-void PlayerCharacter::takeDamage(int amount) {
-     health -= amount;
-     std::cout << "Player took " << amount << " damage. Health: " << health <<
-"/" << maxHealth << std::endl; // maxHealth is now dynamic if (health <= 0) {
-          health = 0;
-          std::cout << "Player has been defeated!" << std::endl;
-     }
-}
-
-// Modify castSpell to use calculated spellDamageModifier and check calculated
-maxMana bool PlayerCharacter::castSpell(int spellIndex, int castTargetX, int
-castTargetY, std::vector<Enemy>& enemies, std::vector<Projectile>& projectiles,
-    SDL_Texture* projectileTexture) {
-
-    // ... (Check spellIndex validity) ...
-    const Spell& spell = knownSpells[spellIndex];
-
-    // 1. Check Mana Cost (against current mana)
-    if (mana < spell.manaCost) {
-         // ... (fail message) ...
-        return false;
-    }
-
-    // ... (Check range etc.) ...
-
-    // --- Apply Spell Effect ---
-    bool castSuccess = false;
-    switch (spell.targetType) {
-        case SpellTargetType::Self:
-            if (spell.effectType == SpellEffectType::Heal) {
-                int healAmount = static_cast<int>(spell.value *
-spellDamageModifier); // Apply modifier maybe? Or only to damage? health +=
-healAmount; health = std::min(health, maxHealth); // Use calculated maxHealth
-                 // ... (log message) ...
-                castSuccess = true;
-            }
-            break;
-        case SpellTargetType::Enemy:
-             // ... (check valid target) ...
-            if (spell.effectType == SpellEffectType::Damage) {
-                 // ... (calculate projectile start/target) ...
-                // Damage calculation will happen *later* when projectile hits,
-                // BUT the projectile should store the damage amount calculated
-NOW int damageAmount = static_cast<int>(spell.value * spellDamageModifier); //
-Apply modifier HERE
-
-                // Launch projectile, passing calculated damageAmount
-                 projectiles.emplace_back(..., damageAmount); // Need to add
-damage to Projectile struct/constructor castSuccess = true;
-            }
-            break;
-         // ... (other cases) ...
-    } // End switch
-
-    // 4. Deduct Mana if Cast Was Successful
-    if (castSuccess) {
-        mana -= spell.manaCost;
-         // ... (log mana remaining) ...
-    }
-    return castSuccess;
-}
-*/
 
 // --- Other existing methods (startMove, update for movement) likely unchanged
 // for now --- Placeholder implementations for existing methods if needed
@@ -648,13 +580,15 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
 
   // 3. Check Effective Range (if applicable)
   if (spell.targetType != SpellTargetType::Self) {
-    int distance = std::abs(targetTileX - castTargetX) +
-                   std::abs(targetTileY - castTargetY);
-    if (distance > effectiveRange) {
+    int dx = targetTileX - castTargetX;
+    int dy = targetTileY - castTargetY;
+    int distSq = dx * dx + dy * dy; // L2 norm squared
+
+    if (distSq > effectiveRange*effectiveRange) {
       SDL_Log("CastSpell: Target [%d,%d] out of effective range for '%s' "
               "(Range: %d, Dist: %d).",
               castTargetX, castTargetY, spell.name.c_str(), effectiveRange,
-              distance);
+              distSq);
       return false; // Target out of range
     }
   }

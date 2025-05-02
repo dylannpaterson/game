@@ -55,6 +55,8 @@ bool isWithinBounds(int x, int y, int width, int height) {
 SDL_Context initializeSDL(int width, int height) {
   SDL_Context context;
 
+  SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+
   // Initialize SDL Video
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -99,7 +101,7 @@ SDL_Context initializeSDL(int width, int height) {
 
   // Create Renderer
   context.renderer =
-      SDL_CreateRenderer(context.window, -1, SDL_RENDERER_SOFTWARE);
+      SDL_CreateRenderer(context.window, -1, SDL_RENDERER_ACCELERATED);
   if (context.renderer == nullptr) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                  "Renderer could not be created! SDL_Error: %s\n",

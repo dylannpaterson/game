@@ -110,277 +110,18 @@ int main(int argc, char *argv[]) {
     // Player initialized in GameData constructor
 
     // --- Load Assets ---
-    bool loadSuccess = true;
-    loadSuccess &=
-        assetManager.loadTexture("splash", "../assets/splash/splash.png");
-    loadSuccess &= assetManager.loadTexture("start_tile",
-                                            "../assets/sprites/start_tile.png");
-    loadSuccess &= assetManager.loadTexture("exit_tile",
-                                            "../assets/sprites/exit_tile.png");
-    loadSuccess &= assetManager.loadTexture(
-        "reticle", "../assets/sprites/target_reticle.png");
-    loadSuccess &=
-        assetManager.loadTexture("fireball", "../assets/sprites/fireball.PNG");
-    loadSuccess &= assetManager.loadTexture(
-        "fireball_icon", "../assets/sprites/fireball_icon.PNG");
-    loadSuccess &= assetManager.loadTexture("ward_icon",
-                                            "../assets/sprites/ward_icon.PNG");
-    loadSuccess &= assetManager.loadTexture("wall_texture",
-                                            "../assets/sprites/wall_1.PNG");
-    loadSuccess &=
-        assetManager.loadTexture("floor_1", "../assets/sprites/floor_1.PNG");
-    loadSuccess &=
-        assetManager.loadTexture("floor_2", "../assets/sprites/floor_2.PNG");
-    loadSuccess &=
-        assetManager.loadFont("main_font", "../assets/fonts/LUMOS.TTF", 36);
-    loadSuccess &=
-        assetManager.loadFont("spellbar_font", "../assets/fonts/LUMOS.TTF", 18);
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_portrait", "../assets/sprites/female_mage_portrait.PNG");
-    loadSuccess &= assetManager.loadTexture(
-        "male_mage_portrait", "../assets/sprites/male_mage_portrait.PNG");
-    loadSuccess &= assetManager.loadTexture("slime_texture",
-                                            "../assets/sprites/slime.PNG");
-    // Idle animation frames
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_idle_1", "../assets/sprites/animations/female_mage/idle/"
-                              "female_mage_idle_0001.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_idle_2", "../assets/sprites/animations/female_mage/idle/"
-                              "female_mage_idle_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_idle_3", "../assets/sprites/animations/female_mage/idle/"
-                              "female_mage_idle_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_idle_4", "../assets/sprites/animations/female_mage/idle/"
-                              "female_mage_idle_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_idle_5", "../assets/sprites/animations/female_mage/idle/"
-                              "female_mage_idle_0005.png");
+    // --- Load Assets ---
 
-    // --- ADDED: Load Walking Animation Frames ---
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_1",
-        "../assets/sprites/animations/female_mage/walk/" // Ensure path is
-                                                         // correct
-        "female_mage_walk_0001.png");                    // Example filename
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_2", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_3", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_4", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_5", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0005.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_6", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0006.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_7", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0007.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_8", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0008.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_9", "../assets/sprites/animations/female_mage/walk/"
-                              "female_mage_walk_0009.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_10", "../assets/sprites/animations/female_mage/walk/"
-                               "female_mage_walk_0010.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_walk_11", "../assets/sprites/animations/female_mage/walk/"
-                               "female_mage_walk_0011.png");
-
-    // --- END Load Walking Animation Frames ---
-
-    // --- ADDED: Load Targeting Animation Frames ---
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_target_1",
-        "../assets/sprites/animations/female_mage/targetting/" // Ensure path is
-                                                               // correct
-        "female_mage_targetting_0001.png"); // Example filename
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_target_2",
-        "../assets/sprites/animations/female_mage/targetting/"
-        "female_mage_targetting_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_target_3",
-        "../assets/sprites/animations/female_mage/targetting/"
-        "female_mage_targetting_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_target_4",
-        "../assets/sprites/animations/female_mage/targetting/"
-        "female_mage_targetting_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "female_mage_target_5",
-        "../assets/sprites/animations/female_mage/targetting/"
-        "female_mage_targetting_0005.png");
-    // --- END Load Targeting Animation Frames ---
-
-    // Load slime idle animation assests
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_1", "../assets/sprites/animations/enemies/slime/idle/"
-                        "slime_idle_0001.png"); // Example path/name
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_2",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_3",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_4",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_5",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0005.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_6",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0006.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_7",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0007.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_8",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0008.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_idle_9",
-        "../assets/sprites/animations/enemies/slime/idle/slime_idle_0009.png");
-
-    // Load slime walk animation assets
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_1", "../assets/sprites/animations/enemies/slime/walk/"
-                        "slime_walk_0001.png"); // Example path/name
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_2",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_3",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_4",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_5",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0005.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_6",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0006.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_7",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0007.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_8",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0008.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_walk_9",
-        "../assets/sprites/animations/enemies/slime/walk/slime_walk_0009.png");
-
-    // Load slime attack animation assets
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_1", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0001.png"); // Example path/name
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_2", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0002.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_3", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0003.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_4", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0004.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_5", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0005.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_6", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0006.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_7", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0007.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_8", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0008.png");
-    loadSuccess &= assetManager.loadTexture(
-        "slime_attack_9", "../assets/sprites/animations/enemies/slime/attack/"
-                          "slime_attack_0009.png");
-
-    loadSuccess &= assetManager.loadTexture(
-        "magic_missiles_icon",
-        "../assets/sprites/animations/spells/magic_missile/magic_missile_icon.png"); // Spell icon
-    loadSuccess &= assetManager.loadTexture(
-        "magic_missile_orbiting",
-        "../assets/sprites/animations/spells/magic_missile/magic_missile_launched.png"); // Visual for waiting
-    loadSuccess &= assetManager.loadTexture(
-        "magic_missile_launched",
-        "../assets/sprites/animations/spells/magic_missile/magic_missile_launched.png"); // Visual for
-
-    // Load Crystal Textures ***
-    //  Replace paths with your actual crystal image files
-    loadSuccess &= assetManager.loadTexture(
-        "health_crystal_texture",
-        "../assets/sprites/health_crystal.png"); // Example path
-    loadSuccess &= assetManager.loadTexture(
-        "mana_crystal_texture",
-        "../assets/sprites/mana_crystal.png"); // Example path
-
-    // *** NEW: Load Rune Pedestal Animation Frames ***
-    for (int i = 1; i <= 10; ++i) {
-      std::string key = "rune_pedestal_" + std::to_string(i);
-      // Adjust path and filename pattern as needed
-      std::string path = "../assets/sprites/animations/environment/"
-                         "rune_pedestal/rune_pedestal_" +
-                         std::to_string(i) + ".png";
-      loadSuccess &= assetManager.loadTexture(key, path);
-      if (!loadSuccess) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to load pedestal frame: %s", path.c_str());
-        // Decide if you want to break or just log if a frame fails
-      }
+    bool assetsLoaded = loadAllAssets(assetManager);
+    if (!assetsLoaded) {
+      SDL_LogError(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Critical asset loading failed! Check asset_loader function.");
+      // Decide how to handle this - maybe exit?
+      cleanupSDL(sdlContext);
+      return 1; // Exit if essential assets failed
     }
 
-    // *** NEW: Load Rune Pedestal Deactivation Animation Frames ***
-    // Adjust the loop range (1 to 5 here) and filename pattern to match your
-    // assets
-    for (int i = 1; i <= 9; ++i) {
-      std::string key = "rune_pedestal_off_" + std::to_string(i);
-      std::string path =
-          "../assets/sprites/animations/environment/"
-          "rune_pedestal/rune_pedestal_deactivating_" + // Ensure correct
-                                                        // path/prefix
-          std::to_string(i) +
-          ".png";
-      loadSuccess &= assetManager.loadTexture(key, path);
-      if (!loadSuccess) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to load pedestal deactivation frame: %s",
-                    path.c_str());
-      }
-    }
-    // *** END Load Deactivation Frames ***
-
-    // *** NEW: Load Ward Animation Frames ***
-    for (int i = 1; i <= 9; ++i) {
-      std::string key = "ward_active_" + std::to_string(i);
-      // Adjust path and filename pattern as needed
-      std::string path = "../assets/sprites/animations/spells/"
-                         "ward/ward_active_000" +
-                         std::to_string(i) + ".png";
-      loadSuccess &= assetManager.loadTexture(key, path);
-      if (!loadSuccess) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Failed to load ward: %s",
-                    path.c_str());
-        // Decide if you want to break or just log if a frame fails
-      }
-    }
-
-    if (!loadSuccess) {
-      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                   "Asset loading failed!"); /* Handle error */
-    }
     SDL_Texture *reticleTex = assetManager.getTexture("reticle");
     if (reticleTex)
       SDL_SetTextureBlendMode(reticleTex, SDL_BLENDMODE_BLEND);
@@ -543,12 +284,13 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
             int effectiveRange =
                 gameData.currentGamePlayer.GetEffectiveSpellRange(
                     gameData.currentSpellIndex);
-            int distance = std::abs(gameData.currentGamePlayer.targetTileX -
-                                    gameData.targetIndicatorX) +
-                           std::abs(gameData.currentGamePlayer.targetTileY -
-                                    gameData.targetIndicatorY);
+            int dx = gameData.currentGamePlayer.targetTileX -
+                     gameData.targetIndicatorX;
+            int dy = gameData.currentGamePlayer.targetTileY -
+                     gameData.targetIndicatorY;
+            int distSq = dx * dx + dy * dy; // L2 norm squared
 
-            if (distance <= effectiveRange) { // Check if target is within range
+            if (distSq <= effectiveRange * effectiveRange) { // Check if target is within range
               gameData.playerIntendedAction.type = ActionType::CastSpell;
               gameData.playerIntendedAction.spellIndex =
                   gameData.currentSpellIndex;
@@ -584,7 +326,7 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
             } else {
               SDL_Log(
                   "Target out of range (Dist: %d, Range: %d). Click ignored.",
-                  distance, effectiveRange);
+                  distSq, effectiveRange);
               // Maybe add a visual/audio cue for out-of-range click
             }
           } else {
@@ -1003,12 +745,10 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                     int effectiveRange =
                         gameData.currentGamePlayer.GetEffectiveSpellRange(
                             gameData.currentSpellIndex);
-                    int distance =
-                        std::abs(gameData.currentGamePlayer.targetTileX -
-                                 gameData.targetIndicatorX) +
-                        std::abs(gameData.currentGamePlayer.targetTileY -
-                                 gameData.targetIndicatorY);
-                    if (distance <= effectiveRange) {
+                            int dx = gameData.currentGamePlayer.targetTileX - gameData.targetIndicatorX;
+                            int dy = gameData.currentGamePlayer.targetTileY - gameData.targetIndicatorY;
+                            int distSq = dx * dx + dy * dy; // L2 norm squared
+                    if (distSq <= effectiveRange * effectiveRange) {
                       gameData.playerIntendedAction.type =
                           ActionType::CastSpell;
                       gameData.playerIntendedAction.spellIndex =
@@ -2174,7 +1914,7 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
         OrbitalMissile &orbital = gameData.activeOrbitals[i];
 
         // Update returns true if orbital launched or expired
-        if (orbital.update(deltaTime, gameData,assets)) {
+        if (orbital.update(deltaTime, gameData, assets)) {
           // Orbital is markedForRemoval within its update if needed
         }
       }
@@ -2801,8 +2541,8 @@ void renderScene(GameData &gameData, AssetManager &assets) {
     SDL_Rect playerRect;
     int texW, texH;
     SDL_QueryTexture(playerTexture, NULL, NULL, &texW, &texH);
-    playerRect.w = 0.8 * gameData.tileWidth;  // Example fixed width
-    playerRect.h = 0.8 * gameData.tileHeight; // Example fixed height
+    playerRect.w = gameData.tileWidth;  // Example fixed width
+    playerRect.h = gameData.tileHeight; // Example fixed height
     playerRect.x = static_cast<int>(std::round(gameData.currentGamePlayer.x -
                                                playerRect.w / 2.0f)) -
                    gameData.cameraX;
@@ -2910,12 +2650,13 @@ void renderScene(GameData &gameData, AssetManager &assets) {
   }
   // --- END WARD EFFECT RENDERING ---
 
-       // ---> ADD Orbital Rendering <---
-       for (const auto& orbital : gameData.activeOrbitals) {
-        // Pass necessary arguments to orbital's render method
-        orbital.render(gameData.renderer, assets, gameData.cameraX, gameData.cameraY);
-   }
-   // --- END Orbital Rendering ---
+  // ---> ADD Orbital Rendering <---
+  for (const auto &orbital : gameData.activeOrbitals) {
+    // Pass necessary arguments to orbital's render method
+    orbital.render(gameData.renderer, assets, gameData.cameraX,
+                   gameData.cameraY);
+  }
+  // --- END Orbital Rendering ---
 
   // --- Render Projectiles ---
   for (const auto &proj : gameData.activeProjectiles) {
@@ -2944,13 +2685,12 @@ void renderScene(GameData &gameData, AssetManager &assets) {
       if (gameData.currentSpellIndex != -1) {
         const Spell &spell =
             gameData.currentGamePlayer.getSpell(gameData.currentSpellIndex);
-        int distance = std::abs(gameData.currentGamePlayer.targetTileX -
-                                gameData.targetIndicatorX) +
-                       std::abs(gameData.currentGamePlayer.targetTileY -
-                                gameData.targetIndicatorY);
+            int dx = gameData.currentGamePlayer.targetTileX - gameData.targetIndicatorX;
+            int dy = gameData.currentGamePlayer.targetTileY - gameData.targetIndicatorY;
+            int distSq = dx * dx + dy * dy; // L2 norm squared
         int effectiveRange = gameData.currentGamePlayer.GetEffectiveSpellRange(
             gameData.currentSpellIndex);
-        if (distance <= effectiveRange) {
+        if (distSq <= effectiveRange * effectiveRange) {
           if (reticleTexture)
             SDL_SetTextureColorMod(reticleTexture, 255, 255, 255);
           SDL_SetRenderDrawColor(gameData.renderer, 255, 255, 255,

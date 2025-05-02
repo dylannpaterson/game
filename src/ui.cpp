@@ -8,6 +8,7 @@
 #include <SDL_ttf.h>
 #include <string>
 #include <algorithm> // For std::min
+#include <cmath>
 
 // **FIX: Rename the helper function to avoid conflict**
 // Helper function to render text at a specific position

@@ -9,16 +9,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
-link_directories(${SDL2_LIBRARY_DIRS})
+
 
 find_package(SDL2_ttf REQUIRED)
-include_directories(${SDL2_TTF_INCLUDE_DIRS})
-link_directories(${SDL2_TTF_LIBRARY_DIRS})
+
 
 find_package(SDL2_image REQUIRED)
-include_directories(${SDL2_IMAGE_INCLUDE_DIRS})
-link_directories(${SDL2_IMAGE_LIBRARY_DIRS})
+
 
 add_executable(WizardRoguelike
     src/main.cpp
@@ -35,13 +32,11 @@ add_executable(WizardRoguelike
     src/orbital_missile.cpp
 )
 
-target_link_libraries(WizardRoguelike
-    ${SDL2_LIBRARIES}
-    SDL2::SDL2main
-    ${SDL2_TTF_LIBRARIES}
-    SDL2_ttf # While redundant with the above, sometimes necessary for clarity
-    ${SDL2_IMAGE_LIBRARIES}
-    SDL2_image # Similar to SDL2_ttf
+target_link_libraries(WizardRoguelike PUBLIC
+    SDL2::SDL2main          # Handles main() differences FIRST
+    SDL2::SDL2              # Main SDL2 library target SECOND
+    SDL2_image::SDL2_image  # SDL2_image library target
+    SDL2_ttf::SDL2_ttf      # SDL2_ttf library target
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -49,19 +44,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(WINDOWS_BIN_DIR "${CMAKE_SOURCE_DIR}/windows_libs/x86_64-w64-mingw32/bin")
 
     # List of required DLLs (You may need to check dependencies, e.g., libpng, zlib)
-    set(REQUIRED_DLLS
-        "${WINDOWS_BIN_DIR}/SDL2.dll"
-        "${WINDOWS_BIN_DIR}/SDL2_image.dll"
-        "${WINDOWS_BIN_DIR}/SDL2_ttf.dll"
-        # Add other DLLs found in windows_libs/../bin like:
-        "${WINDOWS_BIN_DIR}/libpng16-16.dll"
-        "${WINDOWS_BIN_DIR}/zlib1.dll"
-        "${WINDOWS_BIN_DIR}/libjpeg-9.dll"  # Check exact names!
-        "${WINDOWS_BIN_DIR}/libtiff-5.dll"
-        "${WINDOWS_BIN_DIR}/libwebp-7.dll"
-        "${WINDOWS_BIN_DIR}/libfreetype-6.dll"
-        # ... any others?
-    )
+# Corrected list of required DLLs with full paths
+set(REQUIRED_DLLS
+"${CMAKE_SOURCE_DIR}/windows_libs/SDL2-2.32.4/x86_64-w64-mingw32/bin/SDL2.dll"
+"${CMAKE_SOURCE_DIR}/windows_libs/SDL2_image-2.8.8/x86_64-w64-mingw32/bin/SDL2_image.dll"
+"${CMAKE_SOURCE_DIR}/windows_libs/SDL2_ttf-2.24.0/x86_64-w64-mingw32/bin/SDL2_ttf.dll"
+
+        # MinGW Runtime DLLs (Using verified paths from 'find' command)
+        "/usr/lib/gcc/x86_64-w64-mingw32/13-posix/libgcc_s_seh-1.dll"  # <-- Verified path
+        "/usr/lib/gcc/x86_64-w64-mingw32/13-posix/libstdc++-6.dll"    # <-- Verified path
+        "/usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll"   
+
+)
 
     # Copy DLLs to the build directory where the executable is created
     add_custom_command(TARGET WizardRoguelike POST_BUILD

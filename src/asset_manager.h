@@ -48,4 +48,6 @@ private:
     void clearAssets();
 };
 
+bool loadAllAssets(AssetManager& assetManager);
+
 #endif // ASSET_MANAGER_H
