@@ -30,6 +30,7 @@ add_executable(WizardRoguelike
     src/projectile.cpp
     src/asset_manager.cpp
     src/orbital_missile.cpp
+    src/visual_effect.cpp
 )
 
 target_link_libraries(WizardRoguelike PUBLIC

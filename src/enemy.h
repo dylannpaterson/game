@@ -3,6 +3,7 @@
 #ifndef ENEMY_H
 #define ENEMY_H
 
+#include "status_effect.h"
 #include <SDL.h>
 #include <string>
 #include <vector> // Added for animation frame names
@@ -49,6 +50,9 @@ public:
   // --- Context ---
   int tileWidth;
   int tileHeight;
+
+  // --- Status Effects ---
+  std::vector<StatusEffect> activeStatusEffects; // <<< ADDED
 
   // --- Facing Direction ---
   enum class FacingDirection { Left, Right };
@@ -108,6 +112,12 @@ public:
   static void resetIdCounter() { nextId = 0; }
   // --- Static method to get next ID during creation ---
   static int getNextId() { return nextId++; }
+
+  void AddStatusEffect(StatusEffectType type, int duration);
+  void RemoveStatusEffect(
+      StatusEffectType type); // Optional: For dispel effects later
+  bool HasStatusEffect(StatusEffectType type) const;
+  void UpdateStatusEffectDurations(); // Called each turn end
 
 private:
   // --- Static ID counter (remains private) ---

@@ -4,6 +4,7 @@
 
 #include "projectile.h" // Include projectile definition for casting spells
 #include "spell.h"      // Include your spell definitions
+#include "status_effect.h"
 #include <SDL.h> // For SDL_Texture* forward declaration if needed, or include fully
 #include <string> // For spell names eventually, if not already included by spell.h
 #include <vector> // For std::vector
@@ -56,6 +57,9 @@ struct PlayerCharacter {
   int currentShield = 0;      // Current remaining shield points
   int shieldDecayPerTurn = 0; // Amount the shield decays each turn
 
+  // --- Status Effects ---
+  std::vector<StatusEffect> activeStatusEffects; // <<< ADDED
+
   // --- Position & Movement ---
   int tileWidth;
   int tileHeight;
@@ -63,6 +67,8 @@ struct PlayerCharacter {
   float y;
   int targetTileX;
   int targetTileY;
+  int logicalTileX; // <<< NEW: Tile player definitively occupies logically
+  int logicalTileY; // <<< NEW: Tile player definitively occupies logically
   bool isMoving;
   int startTileX;
   int startTileY;
@@ -146,6 +152,13 @@ struct PlayerCharacter {
   int calculateSpellDamage(int numDice, int dieType, int bonus, int targetTileX,
                            int targetTileY,
                            const Enemy *target = nullptr) const;
+
+  // --- Status Effect Methods --- // <<< ADDED
+  void AddStatusEffect(StatusEffectType type, int duration);
+  void RemoveStatusEffect(
+      StatusEffectType type); // Optional: For dispel effects later
+  bool HasStatusEffect(StatusEffectType type) const;
+  void UpdateStatusEffectDurations(); // Called each turn end
 
   // --- Other Methods ---
   void takeDamage(int amount);

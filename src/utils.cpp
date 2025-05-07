@@ -55,7 +55,7 @@ bool isWithinBounds(int x, int y, int width, int height) {
 SDL_Context initializeSDL(int width, int height) {
   SDL_Context context;
 
-  SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+  //SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 
   // Initialize SDL Video
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -152,8 +152,14 @@ bool findNearestValidTarget(const GameData &gameData, int spellIndex,
     return false;
   }
   const Spell &spell = player.knownSpells[spellIndex]; // Get the spell details
-  int effectiveRange = gameData.currentGamePlayer.GetEffectiveSpellRange(
-    gameData.currentSpellIndex);
+
+
+  // --- *** CORRECTED LINE *** ---
+  // Use the spellIndex parameter passed to this function, NOT gameData.currentSpellIndex
+  int effectiveRange = player.GetEffectiveSpellRange(spellIndex);
+  // --- *** END CORRECTION *** ---
+  SDL_Log("DEBUG: [NearestTarget] Checking for spell '%s' (Index: %d) with Effective Range: %d", spell.name.c_str(), spellIndex, effectiveRange);
+
 
   // Check if the spell targets enemies (required for this function)
   if (spell.targetType != SpellTargetType::Enemy) {

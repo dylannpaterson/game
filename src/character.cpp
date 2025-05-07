@@ -4,6 +4,7 @@
 #include "enemy.h"
 #include "game_data.h"
 #include "projectile.h"
+#include "status_effect.h"
 #include "utils.h"
 #include "visibility.h"
 #include <algorithm> // For std::max/min
@@ -19,6 +20,8 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       baseIntelligence(10), baseSpirit(7), baseAgility(8),
       x(initialTileX * tileW + tileW / 2.0f), // Center visual X
       y(initialTileY * tileH + tileH / 2.0f), // Center visual Y
+      logicalTileX(initialTileX),             // <<< Initialize logical position
+      logicalTileY(initialTileY),             // <<< Initialize logical position
       targetTileX(initialTileX),              // Initial logical position
       targetTileY(initialTileY), isMoving(false),
       startTileX(initialTileX), // Start is same as target initially
@@ -29,10 +32,14 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       tileHeight(tileH) {
   // Initialize known spells based on type
   if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
-    knownSpells.emplace_back("Fireball", 7, 3, SpellTargetType::Enemy,
-                             SpellEffectType::Damage, 6, 6, 0,
-                             0.1, // numDice=6, dieType=6, bonus=0 -> 6d6
-                             "fireball_icon");
+    knownSpells.emplace_back("Fireball", 7, 10, SpellTargetType::Enemy,
+                             SpellEffectType::Damage, 6, 6, 0, // Damage: 6d6+0
+                             0.05f, // 5% bonus dmg per tile beyond adjacent
+                             "fireball_icon",
+                             0, // AoE Radius (0 for single target)
+                             StatusEffectType::None, // <<< APPLY Stunned
+                             0                       // <<< DURATION 1 turn
+    );
     knownSpells.emplace_back(
         "Ward", 20, SpellTargetType::Self, SpellEffectType::ApplyShield,
         50.0f, // Shield Magnitude (using baseHealAmount field)
@@ -43,10 +50,21 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
         "Magic Missiles", 15, SpellTargetType::Self,
         SpellEffectType::SummonOrbital, 3, 6,
         500.0f,  // Summon 3 orbitals, 6 tile range, 3 sec lifetime
-        2, 6, 0, // Payload: 1d4+1 damage
+        2, 6, 0, // Payload: 2d6 damage
         "magic_missile_launched",
         700.0f,                 // Launched projectile texture key & speed
         "magic_missiles_icon"); // Icon for spell bar/menu
+
+    knownSpells.emplace_back(
+        "Blizzard", 40,              // High Cost
+        8,                           // Range to center tile
+        SpellTargetType::Tile,       // Target a tile for the center
+        SpellEffectType::AreaDamage, // New Effect Type
+        4, 8, 0,                     // Damage: 4d8+5 (Moderate)
+        0.0f,                        // No distance bonus for AoE usually
+        "blizzard_icon",             // Icon key
+        1                            // AoE Radius (1 = 3x3 area)
+    );
   }
 
   // CRITICAL: Calculate initial stats based on starting level and base stats
@@ -59,18 +77,18 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   // Idle animation frames
   // Initialize the vector of texture names
   if (type == CharacterType::FemaleMage) {
-    for (int i = 1; i <= 7; ++i) {
+    for (int i = 0; i < 8; ++i) {
       idleFrameTextureNames.push_back("mage_idle_" + std::to_string(i));
     }
 
-    for (int i = 1; i <= 7; ++i) {
+    for (int i = 0; i < 8; ++i) {
       walkFrameTextureNames.push_back("mage_walk_" + std::to_string(i));
     }
-        for (int i = 1; i <= 7; ++i) {
-          targetingFrameTextureNames.push_back("mage_target_" + std::to_string(i));
-        }
+    for (int i = 8; i < 8; ++i) {
+      targetingFrameTextureNames.push_back("mage_target_" + std::to_string(i));
+    }
 
-    for (int i = 1; i <= 9; ++i) {
+    for (int i = 0; i < 8; ++i) {
       wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
     }
   } else if (type == CharacterType::MaleMage) {
@@ -242,18 +260,36 @@ void PlayerCharacter::RegenerateMana(
   }
 }
 
-
 // --- Other existing methods (startMove, update for movement) likely unchanged
 // for now --- Placeholder implementations for existing methods if needed
-void PlayerCharacter::startMove(int targetX, int targetY) {
-  if (!isMoving && (targetX != targetTileX || targetY != targetTileY)) {
+void PlayerCharacter::startMove(int newTargetX, int newTargetY) {
+  // Only start if not moving and target is different from *logical* position
+  if (!isMoving && (newTargetX != logicalTileX || newTargetY != logicalTileY)) {
     isMoving = true;
-    startTileX = targetTileX;
-    startTileY = targetTileY;
-    targetTileX = targetX;
-    targetTileY = targetY;
+    startTileX = logicalTileX; // Start animation from current logical tile
+    startTileY = logicalTileY;
+    targetTileX = newTargetX; // Set the destination target
+    targetTileY = newTargetY;
     moveProgress = 0.0f;
     moveTimer = 0.0f;
+    // Update facing direction based on the intended move
+    if (targetTileX > startTileX) {
+      currentFacingDirection = FacingDirection::Right;
+    } else if (targetTileX < startTileX) {
+      currentFacingDirection = FacingDirection::Left;
+    }
+
+    SDL_Log("DEBUG: Player startMove initiated. From logical [%d,%d] to target "
+            "[%d,%d]",
+            startTileX, startTileY, targetTileX, targetTileY);
+  } else if (isMoving) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Player told to startMove while already moving.");
+  } else {
+    SDL_LogWarn(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Player told to startMove to their current logical location [%d,%d].",
+        logicalTileX, logicalTileY);
   }
 }
 
@@ -360,6 +396,13 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
       x = targetTileX * tileWidth + tileWidth / 2.0f;
       y = targetTileY * tileHeight + tileHeight / 2.0f;
 
+      // <<< UPDATE LOGICAL POSITION UPON COMPLETION >>>
+      logicalTileX = targetTileX;
+      logicalTileY = targetTileY;
+      SDL_Log("... Logical position updated to [%d,%d].", logicalTileX,
+              logicalTileY);
+      // <<< END LOGICAL POSITION UPDATE >>>
+
       // --- Update Occupation Grid ---
       // This part assumes the grid was ALREADY updated when the move *started*.
       // The purpose here might be more complex if concurrent movement required
@@ -411,9 +454,8 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
       SDL_Log("DEBUG: [PlayerUpdate Completed] Final visibility update from "
               "[%d, %d]",
               targetTileX, targetTileY);
-      updateVisibility(gameData.currentLevel, gameData.levelRooms,
-                       targetTileX, // Use final logical X
-                       targetTileY, // Use final logical Y
+      updateVisibility(gameData.currentLevel, gameData.levelRooms, logicalTileX,
+                       logicalTileY, // Use final logical position
                        gameData.hallwayVisibilityDistance,
                        gameData.visibilityMap);
 
@@ -485,8 +527,8 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
     // --- End Idle vs. Targeting ---
 
     // Ensure visual position matches logical position when idle
-    x = targetTileX * tileWidth + tileWidth / 2.0f;
-    y = targetTileY * tileHeight + tileHeight / 2.0f;
+    x = logicalTileX * tileWidth + tileWidth / 2.0f;
+    y = logicalTileY * tileHeight + tileHeight / 2.0f;
 
   } // End if(isMoving) / else block
 } // End of PlayerCharacter::update
@@ -584,7 +626,7 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
     int dy = targetTileY - castTargetY;
     int distSq = dx * dx + dy * dy; // L2 norm squared
 
-    if (distSq > effectiveRange*effectiveRange) {
+    if (distSq > effectiveRange * effectiveRange) {
       SDL_Log("CastSpell: Target [%d,%d] out of effective range for '%s' "
               "(Range: %d, Dist: %d).",
               castTargetX, castTargetY, spell.name.c_str(), effectiveRange,
@@ -649,6 +691,7 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
         projectiles.emplace_back(pType, projTexture, projWidth, projHeight,
                                  startVisualX, startVisualY, targetVisualX,
                                  targetVisualY, projectileSpeed, finalDamage,
+                                 spellIndex,
                                  targetId); // Use rolledDamage
 
         SDL_Log("CastSpell: Launched '%s' projectile towards [%d,%d] with %d "
@@ -660,6 +703,107 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
     } else { /* ... log target type warning ... */
     }
     break;
+
+  case SpellEffectType::AreaDamage: // <<< NEW CASE for Blizzard
+    SDL_Log("CastSpell: Resolving Area Damage for '%s' centered at [%d, %d], "
+            "Radius: %d",
+            spell.name.c_str(), castTargetX, castTargetY,
+            spell.areaOfEffectRadius);
+
+    // Iterate through the square area defined by the radius
+    for (int dx = -spell.areaOfEffectRadius; dx <= spell.areaOfEffectRadius;
+         ++dx) {
+      for (int dy = -spell.areaOfEffectRadius; dy <= spell.areaOfEffectRadius;
+           ++dy) {
+        int currentTileX = castTargetX + dx;
+        int currentTileY = castTargetY + dy;
+
+        // Optional: Circular AoE Check (uncomment if you prefer circles)
+        // if (dx*dx + dy*dy > spell.areaOfEffectRadius *
+        // spell.areaOfEffectRadius) {
+        //     continue; // Skip tiles outside the circle
+        // }
+
+        // Check if the tile is within level bounds
+        if (!isWithinBounds(currentTileX, currentTileY,
+                            gameData.currentLevel.width,
+                            gameData.currentLevel.height)) {
+          continue; // Skip tiles outside the map
+        }
+
+        // Find if any enemy is on this tile
+        // IMPORTANT: Need to iterate through enemies vector by index to modify
+        // health
+        for (int enemyIdx = 0; enemyIdx < enemies.size(); ++enemyIdx) {
+          Enemy &currentEnemy = enemies[enemyIdx]; // Get a mutable reference
+
+          if (currentEnemy.health > 0 && currentEnemy.x == currentTileX &&
+              currentEnemy.y == currentTileY) {
+            // Found a living enemy in the AoE
+            SDL_Log("... Found Enemy %d at [%d, %d]", currentEnemy.id,
+                    currentTileX, currentTileY);
+
+            // Calculate damage for this specific enemy
+            // Note: Pass currentEnemy pointer to calculation function
+            int damageToEnemy = this->calculateSpellDamage(
+                spellIndex, currentTileX, currentTileY, &currentEnemy);
+
+            SDL_Log("... Applying %d damage to Enemy %d", damageToEnemy,
+                    currentEnemy.id);
+            currentEnemy.takeDamage(damageToEnemy); // Apply damage
+
+            effectApplied = true; // Mark that at least one enemy was hit
+            // Optional: Don't break here, hit all enemies on the same tile if
+            // stacking occurs
+          }
+        } // End loop through enemies for one tile
+      } // End dy loop
+    } // End dx loop
+
+    // --- SPAWN VISUAL EFFECT ---
+    { // Scope for effect variables
+      // Prepare frame keys for the blizzard effect
+      std::vector<std::string> blizzardFrames;
+      // Assuming 12 frames named "blizzard_effect_1" to "blizzard_effect_12"
+      // (adjust if padding used) IMPORTANT: Ensure frame count matches what you
+      // loaded in AssetManager
+      int frameCount = 10; // <<< MATCH THIS TO YOUR ACTUAL ASSETS
+      for (int i = 0; i < frameCount; ++i) {
+        // Construct key based on how loadAnimationSequence creates them
+        blizzardFrames.push_back("blizzard_effect_" + std::to_string(i));
+      }
+
+      if (!blizzardFrames.empty()) {
+        // Calculate visual center and size for the effect
+        float effectCenterX =
+            (castTargetX + 0.5f) * gameData.tileWidth; // Center of target tile
+        float effectCenterY = (castTargetY + 0.5f) * gameData.tileHeight;
+        // Size covers the whole AoE (radius 1 = 3x3 tiles)
+        int effectWidth =
+            gameData.tileWidth * (1 + 2 * spell.areaOfEffectRadius);
+        int effectHeight =
+            gameData.tileHeight * (1 + 2 * spell.areaOfEffectRadius);
+        float effectSpeed = 16.0f;   // Animation speed (FPS) - Adjust!
+        float effectDuration = 0.0f; // Play once based on animation length
+        bool loops = false;
+
+        gameData.activeEffects.emplace_back(
+            effectCenterX, effectCenterY, effectWidth, effectHeight,
+            blizzardFrames, effectSpeed, effectDuration, loops);
+        SDL_Log("... Spawned Blizzard visual effect (%dx%d)", effectWidth,
+                effectHeight);
+      } else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not generate frame keys for Blizzard effect.");
+      }
+    } // End scope for effect variables
+    // --- END SPAWN VISUAL EFFECT ---
+
+    // Add visual effect spawning here later if desired
+    // Example: gameData.activeEffects.push_back(BlizzardEffect(castTargetX,
+    // castTargetY, spell.areaOfEffectRadius));
+
+    break; // End AreaDamage case
 
   case SpellEffectType::Heal:
     if (spell.targetType == SpellTargetType::Self) {
@@ -809,7 +953,70 @@ int PlayerCharacter::GetEffectiveManaCost(int spellIndex) const {
   return std::max(0, effectiveCost); // Cannot have negative mana cost
 }
 
+void PlayerCharacter::AddStatusEffect(StatusEffectType type, int duration) {
+  if (duration <= 0)
+    return; // Don't add effects with no duration
+
+  // Optional: Check for existing effect of the same type
+  // Behaviour can vary: Refresh duration? Stack? Ignore? Let's REFRESH for now.
+  for (auto &existingEffect : activeStatusEffects) {
+    if (existingEffect.type == type) {
+      existingEffect.durationTurns = std::max(
+          existingEffect.durationTurns, duration); // Take the longer duration
+      SDL_Log("DEBUG: Player Status Refreshed: %d duration %d turns.",
+              (int)type, existingEffect.durationTurns);
+      return; // Refreshed, no need to add new
+    }
+  }
+
+  // If not found, add the new effect
+  activeStatusEffects.emplace_back(type, duration);
+  SDL_Log("DEBUG: Player Status Added: %d duration %d turns.", (int)type,
+          duration);
+}
+
+void PlayerCharacter::RemoveStatusEffect(StatusEffectType type) {
+  // Removes ALL instances of a given type (if stacking allowed later)
+  activeStatusEffects.erase(std::remove_if(activeStatusEffects.begin(),
+                                           activeStatusEffects.end(),
+                                           [type](const StatusEffect &effect) {
+                                             return effect.type == type;
+                                           }),
+                            activeStatusEffects.end());
+  SDL_Log("DEBUG: Player Status Removed: %d.", (int)type);
+}
+
+bool PlayerCharacter::HasStatusEffect(StatusEffectType type) const {
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == type) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// This is called at the end of the turn to tick down durations
+void PlayerCharacter::UpdateStatusEffectDurations() {
+  bool effectRemoved = false;
+  // Iterate backwards for safe removal
+  for (int i = activeStatusEffects.size() - 1; i >= 0; --i) {
+    activeStatusEffects[i].durationTurns--;
+    if (activeStatusEffects[i].durationTurns <= 0) {
+      SDL_Log("DEBUG: Player Status Expired: %d.",
+              (int)activeStatusEffects[i].type);
+      // Swap-and-pop or direct erase (vector erase is simpler here)
+      activeStatusEffects.erase(activeStatusEffects.begin() + i);
+      effectRemoved = true;
+    }
+  }
+  // If any effects were removed, potentially recalculate stats if effects
+  // modify them if (effectRemoved) { RecalculateStats(); } // Example hook
+}
+
 void PlayerCharacter::ApplyTurnEndEffects() {
+
+  UpdateStatusEffectDurations(); // Tick down statuses first
+
   // 1. Shield Decay
   if (currentShield > 0) {
     int shieldBeforeDecay = currentShield;
@@ -887,32 +1094,37 @@ int PlayerCharacter::calculateSpellDamage(int spellIndex, int targetTileX,
   return std::max(0, currentDamage);
 }
 
-int PlayerCharacter::calculateSpellDamage(int numDice, int dieType, int bonus, int targetTileX, int targetTileY, const Enemy* target) const {
+int PlayerCharacter::calculateSpellDamage(int numDice, int dieType, int bonus,
+                                          int targetTileX, int targetTileY,
+                                          const Enemy *target) const {
   // 1. Roll Base Dice
   int currentDamage = rollDice(numDice, dieType, bonus);
   int initialRoll = currentDamage; // Store for logging
 
   // 2. Apply Player Modifiers (Intelligence, etc.)
   // Use the spellDamageModifier calculated in RecalculateStats()
-  currentDamage = static_cast<int>(std::round(currentDamage * this->spellDamageModifier));
-  SDL_Log("DEBUG [CalcDmg]: Base Roll (%dd%d+%d) = %d. After Player Mod (x%.2f) = %d",
-          numDice, dieType, bonus, initialRoll, this->spellDamageModifier, currentDamage);
+  currentDamage =
+      static_cast<int>(std::round(currentDamage * this->spellDamageModifier));
+  SDL_Log("DEBUG [CalcDmg]: Base Roll (%dd%d+%d) = %d. After Player Mod "
+          "(x%.2f) = %d",
+          numDice, dieType, bonus, initialRoll, this->spellDamageModifier,
+          currentDamage);
 
-
-  // 3. Apply Distance Bonus (Placeholder - Requires Spell Struct access or parameters)
-  // NOTE: This overload currently CANNOT apply spell-specific distance bonuses
-  // because it doesn't know which spell is being calculated.
+  // 3. Apply Distance Bonus (Placeholder - Requires Spell Struct access or
+  // parameters) NOTE: This overload currently CANNOT apply spell-specific
+  // distance bonuses because it doesn't know which spell is being calculated.
   // If distance bonus needs to apply to orbital payloads, the orbital needs
   // to pass more info OR this function needs the spell reference again.
   // For now, distance bonus is only applied via the spellIndex overload.
   // Consider adding spell reference parameter if distance bonus needed here.
 
-
   // 4. Apply Spell Upgrades (Future Placeholder)
-  // currentDamage = applyUpgrades(currentDamage, spellIndex); // Needs spell context
+  // currentDamage = applyUpgrades(currentDamage, spellIndex); // Needs spell
+  // context
 
-  // 5. Apply Target Modifiers (Resistances/Vulnerabilities - Future Placeholder)
-  // if (target != nullptr) { currentDamage = applyTargetResistances(currentDamage, target, /* needs damage type */); }
+  // 5. Apply Target Modifiers (Resistances/Vulnerabilities - Future
+  // Placeholder) if (target != nullptr) { currentDamage =
+  // applyTargetResistances(currentDamage, target, /* needs damage type */); }
 
   // Ensure damage isn't negative
   int finalDamage = std::max(0, currentDamage);

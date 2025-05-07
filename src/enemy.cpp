@@ -5,8 +5,10 @@
 #include "character.h" // Include character.h for PlayerCharacter definition
 #include "game_data.h" // Include game_data.h for GameData and IntendedAction
 #include "level.h"
+#include "status_effect.h"
 #include "utils.h"
 #include <SDL.h>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -21,17 +23,14 @@ Enemy::Enemy(int uniqueId, EnemyType eType, int startX, int startY, int tileW,
     : id(uniqueId), // Assign the unique ID
       type(eType), x(startX), y(startY), isMoving(false), startTileX(startX),
       startTileY(startY), targetTileX(startX), targetTileY(startY),
-      moveProgress(0.0f), moveTimer(0.0f),
-      isAttacking(false),
-      idleAnimationTimer(0.0f),
-      attackStartX(0.0f), attackStartY(0.0f),
-      attackTargetX(0.0f), attackTargetY(0.0f),
-      lungeDistanceRatio(0.4f),
+      moveProgress(0.0f), moveTimer(0.0f), isAttacking(false),
+      idleAnimationTimer(0.0f), attackStartX(0.0f), attackStartY(0.0f),
+      attackTargetX(0.0f), attackTargetY(0.0f), lungeDistanceRatio(0.4f),
       currentIdleFrame(0), tileWidth(tileW), tileHeight(tileH),
       // +++ Initialize facing direction +++
       currentFacingDirection(FacingDirection::Left) // Default to Left
-      // +++++++++++++++++++++++++++++++++++++
-       {
+// +++++++++++++++++++++++++++++++++++++
+{
   // Initialize visual position
   visualX = startX * tileWidth + tileWidth / 2.0f;
   visualY = startY * tileHeight + tileHeight / 2.0f;
@@ -53,21 +52,19 @@ Enemy::Enemy(int uniqueId, EnemyType eType, int startX, int startY, int tileW,
     lungeDistanceRatio = 0.6f; // Slime might make smaller lunges
 
     // --- ADDED: Initialize Slime Idle Frames ---
-    idleFrameTextureNames = {
-        "slime_idle_1", "slime_idle_2", "slime_idle_3",
-        "slime_idle_4", "slime_idle_5", "slime_idle_6",
-        "slime_idle_7", "slime_idle_8", "slime_idle_9"}; // Example names
+    for (int i = 0; i < 8; ++i) {
+      idleFrameTextureNames.push_back("slime_idle_" + std::to_string(i));
+    }
 
     // --- ADDED: Initialize Slime Walk Frames (9 frames) ---
-    walkFrameTextureNames = {"slime_walk_1", "slime_walk_2", "slime_walk_3",
-                             "slime_walk_4", "slime_walk_5", "slime_walk_6",
-                             "slime_walk_7", "slime_walk_8", "slime_walk_9"};
+    for (int i = 0; i < 8; ++i) {
+      walkFrameTextureNames.push_back("slime_walk_" + std::to_string(i));
+    }
 
     // --- ADDED: Initialize Slime Attack Frames (9 frames) ---
-    attackFrameTextureNames = {
-        "slime_attack_1", "slime_attack_2", "slime_attack_3",
-        "slime_attack_4", "slime_attack_5", "slime_attack_6",
-        "slime_attack_7", "slime_attack_8", "slime_attack_9"}; // Example names
+    for (int i = 0; i < 8; ++i) {
+      attackFrameTextureNames.push_back("slime_attack_" + std::to_string(i));
+    }
     // -----------------------------------------
 
     // Calculate total duration for one loop of attack animation
@@ -103,326 +100,450 @@ Enemy::Enemy(int uniqueId, EnemyType eType, int startX, int startY, int tileW,
 IntendedAction Enemy::planAction(const Level &levelData,
                                  const PlayerCharacter &player,
                                  const GameData &gameData) const {
-    IntendedAction plannedAction; // Start with ActionType::None
-    plannedAction.enemyId = this->id; // Store the enemy's ID
+  IntendedAction plannedAction;     // Start with ActionType::None
+  plannedAction.enemyId = this->id; // Store the enemy's ID
 
-    // Don't plan if already moving or attacking (shouldn't happen if called correctly, but safe)
-    if (isMoving || isAttacking) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d planAction called while moving/attacking. Returning None.", id);
-        return plannedAction; // Return ActionType::None
-    }
-
-    // --- Check Visibility (using const gameData) ---
-    float visibility = 0.0f;
-    if (isWithinBounds(x, y, gameData.currentLevel.width, gameData.currentLevel.height) &&
-        y < (int)gameData.visibilityMap.size() && x < (int)gameData.visibilityMap[y].size()) {
-        visibility = gameData.visibilityMap[y][x];
-    }
-    bool isVisible = (visibility > 0.0f);
-
-    // --- AI Logic (Similar to takeAction, but returns intent) ---
-    if (isVisible) {
-        // Visible Logic: Plan Attack or Move
-        int playerTileX = player.targetTileX; // Use player's logical position
-        int playerTileY = player.targetTileY;
-        int dx = playerTileX - x;
-        int dy = playerTileY - y;
-
-        // Check Adjacency for Attack Plan
-        if (std::abs(dx) <= 1 && std::abs(dy) <= 1 && (dx != 0 || dy != 0)) {
-            plannedAction.type = ActionType::Attack;
-            plannedAction.targetX = playerTileX; // Store player tile coords
-            plannedAction.targetY = playerTileY;
-            SDL_Log("Enemy %d [%d,%d] plans ATTACK on player at [%d,%d]", id, x, y, playerTileX, playerTileY);
-        } else {
-            // Not Adjacent: Plan to Move Towards Player
-            int moveX = 0, moveY = 0;
-            if (std::abs(dx) > std::abs(dy)) {
-                moveX = (dx > 0) ? 1 : -1;
-            } else if (dy != 0) {
-                moveY = (dy > 0) ? 1 : -1;
-            } else if (dx != 0) { // Only move horizontally if dy is 0
-                moveX = (dx > 0) ? 1 : -1;
-            }
-
-            int nextX = x + moveX;
-            int nextY = y + moveY;
-
-            // Check primary direction validity (using gameData.occupationGrid)
-            // IMPORTANT: Use the *current* occupation grid for planning.
-            bool primaryMoveValid =
-                isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
-                levelData.tiles[nextY][nextX] != '#' &&
-                !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
-
-            if (primaryMoveValid) {
-                plannedAction.type = ActionType::Move;
-                plannedAction.targetX = nextX;
-                plannedAction.targetY = nextY;
-                SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Primary)", id, x, y, nextX, nextY);
-            } else {
-                // Try alternative axis if primary failed
-                int altMoveX = 0, altMoveY = 0;
-                if (moveX != 0) { // Primary was horizontal, try vertical
-                    if (dy != 0) altMoveY = (dy > 0) ? 1 : -1;
-                } else if (moveY != 0) { // Primary was vertical, try horizontal
-                     if (dx != 0) altMoveX = (dx > 0) ? 1 : -1;
-                }
-                // If primary was zero (shouldn't happen unless dx=dy=0), stay put
-
-                int altNextX = x + altMoveX;
-                int altNextY = y + altMoveY;
-
-                if (altMoveX != 0 || altMoveY != 0) { // Check if alternative is possible
-                    bool altMoveValid =
-                        isWithinBounds(altNextX, altNextY, levelData.width, levelData.height) &&
-                        levelData.tiles[altNextY][altNextX] != '#' &&
-                        !gameData.occupationGrid[altNextY][altNextX]; // Check CURRENT occupation
-                    if (altMoveValid) {
-                        plannedAction.type = ActionType::Move;
-                        plannedAction.targetX = altNextX;
-                        plannedAction.targetY = altNextY;
-                        SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Alt)", id, x, y, altNextX, altNextY);
-                    } else {
-                        plannedAction.type = ActionType::Wait; // Blocked
-                        SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Alt)", id, x, y);
-                    }
-                } else {
-                    plannedAction.type = ActionType::Wait; // Blocked
-                    SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Primary, No Alt)", id, x, y);
-                }
-            }
-        }
-    } else {
-        // Invisible Logic: Plan Random Walk
-        int directions[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
-        int randIndex = rand() % 4;
-        int nextX = x + directions[randIndex][0];
-        int nextY = y + directions[randIndex][1];
-
-        bool isValidMove =
-            isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
-            levelData.tiles[nextY][nextX] != '#' &&
-            !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
-
-        if (isValidMove) {
-            plannedAction.type = ActionType::Move;
-            plannedAction.targetX = nextX;
-            plannedAction.targetY = nextY;
-            SDL_Log("Enemy %d [%d,%d] plans INVISIBLE MOVE to [%d,%d]", id, x, y, nextX, nextY);
-        } else {
-            plannedAction.type = ActionType::Wait; // Cannot move randomly
-            SDL_Log("Enemy %d [%d,%d] plans INVISIBLE WAIT (Blocked)", id, x, y);
-        }
-    }
-
+  // --- Initial Status Checks ---
+  // If Stunned, cannot plan *any* action (except maybe default Wait)
+  if (HasStatusEffect(StatusEffectType::Stunned)) {
+    SDL_Log("DEBUG: [PlanAction Enemy %d] Stunned. Planning WAIT.", id);
+    plannedAction.type = ActionType::Wait; // Force Wait if stunned
     return plannedAction;
+  }
+
+  // If Disoriented, force random move (simplest implementation for now)
+  if (HasStatusEffect(StatusEffectType::Disoriented)) {
+    SDL_Log("DEBUG: [PlanAction Enemy %d] Disoriented. Planning RANDOM MOVE.",
+            id);
+    int directions[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+    // Try a few random directions to find a valid one
+    for (int attempt = 0; attempt < 4; ++attempt) {
+      int randIndex = rand() % 4;
+      int nextX = x + directions[randIndex][0];
+      int nextY = y + directions[randIndex][1];
+      if (isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
+          levelData.tiles[nextY][nextX] != '#' &&
+          !gameData.occupationGrid[nextY][nextX]) {
+        plannedAction.type = ActionType::Move;
+        plannedAction.targetX = nextX;
+        plannedAction.targetY = nextY;
+        SDL_Log("... Random move target: [%d,%d]", nextX, nextY);
+        return plannedAction; // Found a random move
+      }
+    }
+    // If no random move possible after few tries, just wait
+    SDL_Log("... No valid random move found. Planning WAIT.");
+    plannedAction.type = ActionType::Wait;
+    return plannedAction;
+  }
+
+  // Don't plan if already moving or attacking (shouldn't happen if called
+  // correctly, but safe)
+  if (isMoving || isAttacking) {
+    SDL_LogWarn(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Enemy %d planAction called while moving/attacking. Returning None.",
+        id);
+    return plannedAction; // Return ActionType::None
+  }
+
+  // --- Check Visibility (using const gameData) ---
+  float visibility = 0.0f;
+  if (isWithinBounds(x, y, gameData.currentLevel.width,
+                     gameData.currentLevel.height) &&
+      y < (int)gameData.visibilityMap.size() &&
+      x < (int)gameData.visibilityMap[y].size()) {
+    visibility = gameData.visibilityMap[y][x];
+  }
+  bool isVisible = (visibility > 0.0f);
+
+  // --- AI Logic (Similar to takeAction, but returns intent) ---
+  if (isVisible) {
+    // Visible Logic: Plan Attack or Move
+    // <<< USE PLAYER'S LOGICAL POSITION >>>
+    int playerLogicalX = player.logicalTileX;
+    int playerLogicalY = player.logicalTileY;
+    // <<< END CHANGE >>>
+
+    int dx =
+        playerLogicalX - x; // Difference from enemy to player's logical pos
+    int dy = playerLogicalY - y;
+
+    bool isAdjacent =
+        (std::abs(dx) <= 1 && std::abs(dy) <= 1 && (dx != 0 || dy != 0));
+    SDL_Log("DEBUG: [PlanAction Enemy %d] At [%d,%d], Player Logical at "
+            "[%d,%d]. dx=%d, dy=%d. IsAdjacent: %s",
+            id, x, y, playerLogicalX, playerLogicalY, dx, dy,
+            isAdjacent ? "Yes" : "No");
+
+    if (isAdjacent && !HasStatusEffect(StatusEffectType::Blinded)) {
+      plannedAction.type = ActionType::Attack;
+      // Target the player's *logical* tile (where they are *now*)
+      plannedAction.targetX = playerLogicalX;
+      plannedAction.targetY = playerLogicalY;
+      SDL_Log("DEBUG: [PlanAction Enemy %d] Planning ATTACK on player at "
+              "logical target [%d,%d]",
+              id, playerLogicalX, playerLogicalY);
+    } else if (!isAdjacent && !HasStatusEffect(StatusEffectType::Immobilised)) {
+      // Not Adjacent: Plan to Move Towards Player
+      int moveX = 0, moveY = 0;
+      if (std::abs(dx) > std::abs(dy)) {
+        moveX = (dx > 0) ? 1 : -1;
+      } else if (dy != 0) {
+        moveY = (dy > 0) ? 1 : -1;
+      } else if (dx != 0) { // Only move horizontally if dy is 0
+        moveX = (dx > 0) ? 1 : -1;
+      }
+
+      int nextX = x + moveX;
+      int nextY = y + moveY;
+
+      // Check primary direction validity (using gameData.occupationGrid)
+      // IMPORTANT: Use the *current* occupation grid for planning.
+      bool primaryMoveValid =
+          isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
+          levelData.tiles[nextY][nextX] != '#' &&
+          !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
+
+      if (primaryMoveValid) {
+        plannedAction.type = ActionType::Move;
+        plannedAction.targetX = nextX;
+        plannedAction.targetY = nextY;
+        SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Primary)", id, x, y,
+                nextX, nextY);
+      } else {
+        // Try alternative axis if primary failed
+        int altMoveX = 0, altMoveY = 0;
+        if (moveX != 0) { // Primary was horizontal, try vertical
+          if (dy != 0)
+            altMoveY = (dy > 0) ? 1 : -1;
+        } else if (moveY != 0) { // Primary was vertical, try horizontal
+          if (dx != 0)
+            altMoveX = (dx > 0) ? 1 : -1;
+        }
+        // If primary was zero (shouldn't happen unless dx=dy=0), stay put
+
+        int altNextX = x + altMoveX;
+        int altNextY = y + altMoveY;
+
+        if (altMoveX != 0 ||
+            altMoveY != 0) { // Check if alternative is possible
+          bool altMoveValid =
+              isWithinBounds(altNextX, altNextY, levelData.width,
+                             levelData.height) &&
+              levelData.tiles[altNextY][altNextX] != '#' &&
+              !gameData.occupationGrid[altNextY]
+                                      [altNextX]; // Check CURRENT occupation
+          if (altMoveValid) {
+            plannedAction.type = ActionType::Move;
+            plannedAction.targetX = altNextX;
+            plannedAction.targetY = altNextY;
+            SDL_Log("Enemy %d [%d,%d] plans MOVE to [%d,%d] (Alt)", id, x, y,
+                    altNextX, altNextY);
+          } else {
+            plannedAction.type = ActionType::Wait; // Blocked
+            SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Alt)", id, x, y);
+          }
+        } else {
+          plannedAction.type = ActionType::Wait; // Blocked
+          SDL_Log("Enemy %d [%d,%d] plans WAIT (Blocked Primary, No Alt)", id,
+                  x, y);
+        }
+      }
+    }
+  } else {
+
+    if (HasStatusEffect(StatusEffectType::Immobilised)) {
+      plannedAction.type = ActionType::Wait;
+      SDL_Log(
+          "DEBUG: [PlanAction Enemy %d] Planning INVISIBLE WAIT (Immobilised).",
+          id);
+    } else {
+      // Invisible Logic: Plan Random Walk
+      int directions[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+      int randIndex = rand() % 4;
+      int nextX = x + directions[randIndex][0];
+      int nextY = y + directions[randIndex][1];
+
+      bool isValidMove =
+          isWithinBounds(nextX, nextY, levelData.width, levelData.height) &&
+          levelData.tiles[nextY][nextX] != '#' &&
+          !gameData.occupationGrid[nextY][nextX]; // Check CURRENT occupation
+
+      if (isValidMove) {
+        plannedAction.type = ActionType::Move;
+        plannedAction.targetX = nextX;
+        plannedAction.targetY = nextY;
+        SDL_Log("Enemy %d [%d,%d] plans INVISIBLE MOVE to [%d,%d]", id, x, y,
+                nextX, nextY);
+      } else {
+        plannedAction.type = ActionType::Wait; // Cannot move randomly
+        SDL_Log("Enemy %d [%d,%d] plans INVISIBLE WAIT (Blocked)", id, x, y);
+      }
+    }
+  }
+
+  // Final check - if Silenced, cannot CastSpell (enemies don't cast yet, but
+  // for future)
+  // if (plannedAction.type == ActionType::CastSpell &&
+  // HasStatusEffect(StatusEffectType::Silenced)) {
+  //    SDL_Log("DEBUG: [PlanAction Enemy %d] Cast planned but Silenced. Forcing
+  //    WAIT.", id); plannedAction.type = ActionType::Wait;
+  // }
+
+  return plannedAction;
 }
 // ----------------------------------
 
 // --- update Implementation (With added movement debugging) ---
-void Enemy::update(float deltaTime, GameData& gameData) {
+void Enemy::update(float deltaTime, GameData &gameData) {
 
-    if (isAttacking) {
-        attackAnimationTimer += deltaTime;
-        // Ensure duration is positive before division
-        float currentAttackDuration = attackAnimationDuration > 0.0f ? attackAnimationDuration : 1.0f; // Avoid div by zero
-        float attackProgress = std::min(attackAnimationTimer / currentAttackDuration, 1.0f); // Overall progress 0-1
+  if (isAttacking) {
+    attackAnimationTimer += deltaTime;
+    // Ensure duration is positive before division
+    float currentAttackDuration = attackAnimationDuration > 0.0f
+                                      ? attackAnimationDuration
+                                      : 1.0f; // Avoid div by zero
+    float attackProgress =
+        std::min(attackAnimationTimer / currentAttackDuration,
+                 1.0f); // Overall progress 0-1
 
+    // --- Calculate Lunge/Retreat Interpolation ---
+    float lungePhaseDuration =
+        currentAttackDuration * 0.5f; // Lunge takes first half
+    float retreatPhaseDuration =
+        currentAttackDuration * 0.5f; // Retreat takes second half
 
-        // --- Calculate Lunge/Retreat Interpolation ---
-        float lungePhaseDuration = currentAttackDuration * 0.5f; // Lunge takes first half
-        float retreatPhaseDuration = currentAttackDuration * 0.5f; // Retreat takes second half
-
-        // Safety check for duration
-        if (lungePhaseDuration <= 0.0f || retreatPhaseDuration <= 0.0f) {
-             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d attack animation duration is zero or negative! Aborting attack update.", id);
-             isAttacking = false; // Force exit attacking state
-             visualX = attackStartX; // Snap back
-             visualY = attackStartY;
-             attackAnimationTimer = 0.0f; currentAttackFrame = 0;
-             return;
-        }
-
-        float currentLungeTargetX = attackStartX + (attackTargetX - attackStartX) * lungeDistanceRatio;
-        float currentLungeTargetY = attackStartY + (attackTargetY - attackStartY) * lungeDistanceRatio;
-
-        if (attackAnimationTimer <= lungePhaseDuration) {
-            // --- Lunge Phase ---
-            float lungeProgress = attackAnimationTimer / lungePhaseDuration; // Progress within lunge phase (0-1)
-            // Non-linear interpolation for abruptness (e.g., quadratic ease-out: 1 - (1-p)^2 )
-            float easedProgress = 1.0f - (1.0f - lungeProgress) * (1.0f - lungeProgress);
-            visualX = attackStartX + (currentLungeTargetX - attackStartX) * easedProgress;
-            visualY = attackStartY + (currentLungeTargetY - attackStartY) * easedProgress;
-
-        } else {
-            // --- Retreat Phase ---
-            float retreatTimer = attackAnimationTimer - lungePhaseDuration; // Time elapsed in retreat phase
-            float retreatProgress = retreatTimer / retreatPhaseDuration; // Progress within retreat phase (0-1)
-            // Linear interpolation for slower retreat
-            visualX = currentLungeTargetX + (attackStartX - currentLungeTargetX) * retreatProgress;
-            visualY = currentLungeTargetY + (attackStartY - currentLungeTargetY) * retreatProgress;
-        }
-
-
-        // --- Update Attack Animation Frame ---
-        if (!attackFrameTextureNames.empty() && attackAnimationSpeed > 0) {
-            float frameDuration = 1.0f / attackAnimationSpeed;
-             if (frameDuration > 0) { // Safety check
-                currentAttackFrame = static_cast<int>(floor(attackAnimationTimer / frameDuration));
-                // Ensure frame index stays within bounds, especially at the very end
-                currentAttackFrame = std::min(currentAttackFrame, (int)attackFrameTextureNames.size() - 1);
-             } else {
-                 currentAttackFrame = 0; // Default if speed is invalid
-             }
-        }
-
-        // --- Check for Animation Completion ---
-        if (attackProgress >= 1.0f) {
-            isAttacking = false; // Animation finished
-            // Snap visual position back precisely to the starting tile center
-            visualX = attackStartX;
-            visualY = attackStartY;
-            // Reset all animation states
-            attackAnimationTimer = 0.0f; currentAttackFrame = 0;
-            idleAnimationTimer = 0.0f; currentIdleFrame = 0;
-            walkAnimationTimer = 0.0f; currentWalkFrame = 0;
-             SDL_Log("Enemy %d finished attack animation.", id);
-        }
-        // While attacking, don't process movement or idle animation updates below
-        return;
+    // Safety check for duration
+    if (lungePhaseDuration <= 0.0f || retreatPhaseDuration <= 0.0f) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "Enemy %d attack animation duration is zero or negative! "
+                   "Aborting attack update.",
+                   id);
+      isAttacking = false;    // Force exit attacking state
+      visualX = attackStartX; // Snap back
+      visualY = attackStartY;
+      attackAnimationTimer = 0.0f;
+      currentAttackFrame = 0;
+      return;
     }
 
-    // --- Update Movement (Only if not attacking) ---
-    if (isMoving) {
-        // +++ MOVEMENT DEBUG LOGGING START +++
-        moveTimer += deltaTime;
+    float currentLungeTargetX =
+        attackStartX + (attackTargetX - attackStartX) * lungeDistanceRatio;
+    float currentLungeTargetY =
+        attackStartY + (attackTargetY - attackStartY) * lungeDistanceRatio;
 
-        // Safety check for moveDuration
-        if (moveDuration <= 0.0f) {
-             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d moveDuration is zero or negative (%.4f)! Aborting move.", id, moveDuration);
-             isMoving = false; // Force exit moving state
-             // Snap to target tile logically and visually
-             x = targetTileX;
-             y = targetTileY;
-             visualX = targetTileX * tileWidth + tileWidth / 2.0f;
-             visualY = targetTileY * tileHeight + tileHeight / 2.0f;
-             moveTimer = 0.0f;
-             moveProgress = 0.0f;
-             walkAnimationTimer = 0.0f; currentWalkFrame = 0;
-             return; // Stop further processing this frame
-        }
+    if (attackAnimationTimer <= lungePhaseDuration) {
+      // --- Lunge Phase ---
+      float lungeProgress =
+          attackAnimationTimer /
+          lungePhaseDuration; // Progress within lunge phase (0-1)
+      // Non-linear interpolation for abruptness (e.g., quadratic ease-out: 1 -
+      // (1-p)^2 )
+      float easedProgress =
+          1.0f - (1.0f - lungeProgress) * (1.0f - lungeProgress);
+      visualX =
+          attackStartX + (currentLungeTargetX - attackStartX) * easedProgress;
+      visualY =
+          attackStartY + (currentLungeTargetY - attackStartY) * easedProgress;
 
-        moveProgress = moveTimer / moveDuration;
-
-        //SDL_Log("DEBUG_MOVE: Enemy %d Moving | Timer: %.4f | Duration: %.4f | Progress: %.4f",
-        //        id, moveTimer, moveDuration, moveProgress); // Reduce log spam
-        // +++ MOVEMENT DEBUG LOGGING END +++
-
-
-        // Update Walk Animation
-        if (!walkFrameTextureNames.empty() && walkAnimationSpeed > 0) {
-            walkAnimationTimer += deltaTime;
-            float walkFrameDuration = 1.0f / walkAnimationSpeed;
-            if (walkFrameDuration > 0 && walkAnimationTimer >= walkFrameDuration) {
-                 walkAnimationTimer -= walkFrameDuration;
-                 currentWalkFrame = (currentWalkFrame + 1) % walkFrameTextureNames.size();
-            }
-        } else {
-             currentWalkFrame = 0; // Default if no frames/speed
-        }
-        // Reset idle state
-        idleAnimationTimer = 0.0f; currentIdleFrame = 0;
-
-        // +++ MOVEMENT DEBUG LOGGING START +++
-        //SDL_Log("DEBUG_MOVE: Enemy %d Checking Completion | Progress: %.4f", id, moveProgress); // Reduce log spam
-        // +++ MOVEMENT DEBUG LOGGING END +++
-
-        if (moveProgress >= 1.0f) {
-             // +++ MOVEMENT DEBUG LOGGING START +++
-             SDL_Log("DEBUG_MOVE: Enemy %d COMPLETING Move | Old Logical: [%d,%d] | New Logical: [%d,%d]",
-                     id, startTileX, startTileY, targetTileX, targetTileY);
-             // +++ MOVEMENT DEBUG LOGGING END +++
-
-             // Snap logical position
-             x = targetTileX;
-             y = targetTileY;
-             // Snap visual position exactly
-             visualX = targetTileX * tileWidth + tileWidth / 2.0f;
-             visualY = targetTileY * tileHeight + tileHeight / 2.0f;
-
-             // Reset movement state
-             isMoving = false;
-             moveProgress = 0.0f; // Reset progress
-             moveTimer = 0.0f;    // Reset timer
-             walkAnimationTimer = 0.0f; currentWalkFrame = 0; // Reset walk anim
-             idleAnimationTimer = 0.0f; currentIdleFrame = 0; // Reset idle anim
-
-             // +++ MOVEMENT DEBUG LOGGING START +++
-             SDL_Log("DEBUG_MOVE: Enemy %d Move COMPLETE. isMoving = false.", id);
-             // +++ MOVEMENT DEBUG LOGGING END +++
-
-        } else {
-             // +++ MOVEMENT DEBUG LOGGING START +++
-            // SDL_Log("DEBUG_MOVE: Enemy %d Interpolating | Progress: %.4f", id, moveProgress); // Can be spammy
-             // +++ MOVEMENT DEBUG LOGGING END +++
-
-            // Interpolate visual position
-            float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
-            float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
-            float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
-            float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
-
-            visualX = startVisualX + (targetVisualX - startVisualX) * moveProgress;
-            visualY = startVisualY + (targetVisualY - startVisualY) * moveProgress;
-        }
+    } else {
+      // --- Retreat Phase ---
+      float retreatTimer = attackAnimationTimer -
+                           lungePhaseDuration; // Time elapsed in retreat phase
+      float retreatProgress =
+          retreatTimer /
+          retreatPhaseDuration; // Progress within retreat phase (0-1)
+      // Linear interpolation for slower retreat
+      visualX = currentLungeTargetX +
+                (attackStartX - currentLungeTargetX) * retreatProgress;
+      visualY = currentLungeTargetY +
+                (attackStartY - currentLungeTargetY) * retreatProgress;
     }
-    // --- Update Idle Animation (Only if not attacking AND not moving) ---
-    else { // Enemy is Idle
-        // Update Idle Animation
-        if (!idleFrameTextureNames.empty() && idleAnimationSpeed > 0) {
-             idleAnimationTimer += deltaTime;
-             float idleFrameDuration = 1.0f / idleAnimationSpeed;
-             if (idleFrameDuration > 0 && idleAnimationTimer >= idleFrameDuration) {
-                 idleAnimationTimer -= idleFrameDuration;
-                 currentIdleFrame = (currentIdleFrame + 1) % idleFrameTextureNames.size();
-             }
-        } else {
-             currentIdleFrame = 0; // Default if no frames/speed
-        }
 
-        // Reset other animation states
-        walkAnimationTimer = 0.0f; currentWalkFrame = 0;
-        attackAnimationTimer = 0.0f; currentAttackFrame = 0;
-        // Ensure visual matches logical when idle
-        visualX = x * tileWidth + tileWidth / 2.0f;
-        visualY = y * tileHeight + tileHeight / 2.0f;
+    // --- Update Attack Animation Frame ---
+    if (!attackFrameTextureNames.empty() && attackAnimationSpeed > 0) {
+      float frameDuration = 1.0f / attackAnimationSpeed;
+      if (frameDuration > 0) { // Safety check
+        currentAttackFrame =
+            static_cast<int>(floor(attackAnimationTimer / frameDuration));
+        // Ensure frame index stays within bounds, especially at the very end
+        currentAttackFrame = std::min(currentAttackFrame,
+                                      (int)attackFrameTextureNames.size() - 1);
+      } else {
+        currentAttackFrame = 0; // Default if speed is invalid
+      }
     }
+
+    // --- Check for Animation Completion ---
+    if (attackProgress >= 1.0f) {
+      isAttacking = false; // Animation finished
+      // Snap visual position back precisely to the starting tile center
+      visualX = attackStartX;
+      visualY = attackStartY;
+      // Reset all animation states
+      attackAnimationTimer = 0.0f;
+      currentAttackFrame = 0;
+      idleAnimationTimer = 0.0f;
+      currentIdleFrame = 0;
+      walkAnimationTimer = 0.0f;
+      currentWalkFrame = 0;
+      SDL_Log("Enemy %d finished attack animation.", id);
+    }
+    // While attacking, don't process movement or idle animation updates below
+    return;
+  }
+
+  // --- Update Movement (Only if not attacking) ---
+  if (isMoving) {
+    // +++ MOVEMENT DEBUG LOGGING START +++
+    moveTimer += deltaTime;
+
+    // Safety check for moveDuration
+    if (moveDuration <= 0.0f) {
+      SDL_LogError(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Enemy %d moveDuration is zero or negative (%.4f)! Aborting move.",
+          id, moveDuration);
+      isMoving = false; // Force exit moving state
+      // Snap to target tile logically and visually
+      x = targetTileX;
+      y = targetTileY;
+      visualX = targetTileX * tileWidth + tileWidth / 2.0f;
+      visualY = targetTileY * tileHeight + tileHeight / 2.0f;
+      moveTimer = 0.0f;
+      moveProgress = 0.0f;
+      walkAnimationTimer = 0.0f;
+      currentWalkFrame = 0;
+      return; // Stop further processing this frame
+    }
+
+    moveProgress = moveTimer / moveDuration;
+
+    // SDL_Log("DEBUG_MOVE: Enemy %d Moving | Timer: %.4f | Duration: %.4f |
+    // Progress: %.4f",
+    //         id, moveTimer, moveDuration, moveProgress); // Reduce log spam
+    //  +++ MOVEMENT DEBUG LOGGING END +++
+
+    // Update Walk Animation
+    if (!walkFrameTextureNames.empty() && walkAnimationSpeed > 0) {
+      walkAnimationTimer += deltaTime;
+      float walkFrameDuration = 1.0f / walkAnimationSpeed;
+      if (walkFrameDuration > 0 && walkAnimationTimer >= walkFrameDuration) {
+        walkAnimationTimer -= walkFrameDuration;
+        currentWalkFrame =
+            (currentWalkFrame + 1) % walkFrameTextureNames.size();
+      }
+    } else {
+      currentWalkFrame = 0; // Default if no frames/speed
+    }
+    // Reset idle state
+    idleAnimationTimer = 0.0f;
+    currentIdleFrame = 0;
+
+    // +++ MOVEMENT DEBUG LOGGING START +++
+    // SDL_Log("DEBUG_MOVE: Enemy %d Checking Completion | Progress: %.4f", id,
+    // moveProgress); // Reduce log spam
+    // +++ MOVEMENT DEBUG LOGGING END +++
+
+    if (moveProgress >= 1.0f) {
+      // +++ MOVEMENT DEBUG LOGGING START +++
+      SDL_Log("DEBUG_MOVE: Enemy %d COMPLETING Move | Old Logical: [%d,%d] | "
+              "New Logical: [%d,%d]",
+              id, startTileX, startTileY, targetTileX, targetTileY);
+      // +++ MOVEMENT DEBUG LOGGING END +++
+
+      // Snap logical position
+      x = targetTileX;
+      y = targetTileY;
+      // Snap visual position exactly
+      visualX = targetTileX * tileWidth + tileWidth / 2.0f;
+      visualY = targetTileY * tileHeight + tileHeight / 2.0f;
+
+      // Reset movement state
+      isMoving = false;
+      moveProgress = 0.0f; // Reset progress
+      moveTimer = 0.0f;    // Reset timer
+      walkAnimationTimer = 0.0f;
+      currentWalkFrame = 0; // Reset walk anim
+      idleAnimationTimer = 0.0f;
+      currentIdleFrame = 0; // Reset idle anim
+
+      // +++ MOVEMENT DEBUG LOGGING START +++
+      SDL_Log("DEBUG_MOVE: Enemy %d Move COMPLETE. isMoving = false.", id);
+      // +++ MOVEMENT DEBUG LOGGING END +++
+
+    } else {
+      // +++ MOVEMENT DEBUG LOGGING START +++
+      // SDL_Log("DEBUG_MOVE: Enemy %d Interpolating | Progress: %.4f", id,
+      // moveProgress); // Can be spammy
+      // +++ MOVEMENT DEBUG LOGGING END +++
+
+      // Interpolate visual position
+      float startVisualX = startTileX * tileWidth + tileWidth / 2.0f;
+      float startVisualY = startTileY * tileHeight + tileHeight / 2.0f;
+      float targetVisualX = targetTileX * tileWidth + tileWidth / 2.0f;
+      float targetVisualY = targetTileY * tileHeight + tileHeight / 2.0f;
+
+      visualX = startVisualX + (targetVisualX - startVisualX) * moveProgress;
+      visualY = startVisualY + (targetVisualY - startVisualY) * moveProgress;
+    }
+  }
+  // --- Update Idle Animation (Only if not attacking AND not moving) ---
+  else { // Enemy is Idle
+    // Update Idle Animation
+    if (!idleFrameTextureNames.empty() && idleAnimationSpeed > 0) {
+      idleAnimationTimer += deltaTime;
+      float idleFrameDuration = 1.0f / idleAnimationSpeed;
+      if (idleFrameDuration > 0 && idleAnimationTimer >= idleFrameDuration) {
+        idleAnimationTimer -= idleFrameDuration;
+        currentIdleFrame =
+            (currentIdleFrame + 1) % idleFrameTextureNames.size();
+      }
+    } else {
+      currentIdleFrame = 0; // Default if no frames/speed
+    }
+
+    // Reset other animation states
+    walkAnimationTimer = 0.0f;
+    currentWalkFrame = 0;
+    attackAnimationTimer = 0.0f;
+    currentAttackFrame = 0;
+    // Ensure visual matches logical when idle
+    visualX = x * tileWidth + tileWidth / 2.0f;
+    visualY = y * tileHeight + tileHeight / 2.0f;
+  }
 }
 
+void Enemy::startAttackAnimation(
+    const GameData &gameData) { // Now requires GameData
+  if (!isAttacking && !isMoving) {
+    SDL_Log("Enemy %d starting attack animation.", id);
+    isAttacking = true;
+    attackAnimationTimer = 0.0f;
+    currentAttackFrame = 0;
 
-void Enemy::startAttackAnimation(const GameData& gameData) { // Now requires GameData
-    if (!isAttacking && !isMoving) {
-        SDL_Log("Enemy %d starting attack animation.", id);
-        isAttacking = true;
-        attackAnimationTimer = 0.0f;
-        currentAttackFrame = 0;
+    // --- Capture Start and Target Positions ---
+    attackStartX = visualX; // Current visual position is the start
+    attackStartY = visualY;
+    // Target the player's current visual position
+    attackTargetX = gameData.currentGamePlayer.x;
+    attackTargetY = gameData.currentGamePlayer.y;
+    SDL_Log("   Attack Start: [%.1f, %.1f], Target: [%.1f, %.1f]", attackStartX,
+            attackStartY, attackTargetX, attackTargetY);
+    // ------------------------------------------
 
-        // --- Capture Start and Target Positions ---
-        attackStartX = visualX; // Current visual position is the start
-        attackStartY = visualY;
-        // Target the player's current visual position
-        attackTargetX = gameData.currentGamePlayer.x;
-        attackTargetY = gameData.currentGamePlayer.y;
-        SDL_Log("   Attack Start: [%.1f, %.1f], Target: [%.1f, %.1f]", attackStartX, attackStartY, attackTargetX, attackTargetY);
-        // ------------------------------------------
-
-        // Reset other animations
-        idleAnimationTimer = 0.0f; currentIdleFrame = 0;
-        walkAnimationTimer = 0.0f; currentWalkFrame = 0;
-    } else {
-         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Enemy %d failed to start attack animation (already attacking/moving?).", id);
-    }
+    // Reset other animations
+    idleAnimationTimer = 0.0f;
+    currentIdleFrame = 0;
+    walkAnimationTimer = 0.0f;
+    currentWalkFrame = 0;
+  } else {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Enemy %d failed to start attack animation (already "
+                "attacking/moving?).",
+                id);
+  }
 }
 
 // --- startMove Implementation (Update facing direction) ---
@@ -439,16 +560,17 @@ void Enemy::startMove(int targetX, int targetY) {
 
     // +++ Update Facing Direction +++
     if (targetTileX > startTileX) {
-        currentFacingDirection = FacingDirection::Right;
+      currentFacingDirection = FacingDirection::Right;
     } else if (targetTileX < startTileX) {
-        currentFacingDirection = FacingDirection::Left;
+      currentFacingDirection = FacingDirection::Left;
     }
     // If targetTileX == startTileX, direction remains unchanged (vertical move)
     // +++++++++++++++++++++++++++++++
 
-    SDL_Log("Enemy %d starting move animation from [%d,%d] to [%d,%d] (Facing: %s)", id,
-            startTileX, startTileY, targetTileX, targetTileY,
-            (currentFacingDirection == FacingDirection::Right ? "Right" : "Left"));
+    SDL_Log(
+        "Enemy %d starting move animation from [%d,%d] to [%d,%d] (Facing: %s)",
+        id, startTileX, startTileY, targetTileX, targetTileY,
+        (currentFacingDirection == FacingDirection::Right ? "Right" : "Left"));
   } else if (isMoving) {
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                 "Enemy %d told to startMove while already moving.", id);
@@ -527,17 +649,17 @@ void Enemy::render(SDL_Renderer *renderer, AssetManager &assets, int cameraX,
     // +++ Determine Flip based on Facing Direction +++
     SDL_RendererFlip flip = SDL_FLIP_NONE; // Default: no flip (faces left)
     if (currentFacingDirection == FacingDirection::Right) {
-        flip = SDL_FLIP_HORIZONTAL; // Flip horizontally if facing right
+      flip = SDL_FLIP_HORIZONTAL; // Flip horizontally if facing right
     }
     // ++++++++++++++++++++++++++++++++++++++++++++++++
 
     // +++ Use SDL_RenderCopyEx with Flip +++
     SDL_RenderCopyEx(renderer, textureToRender,
-                     nullptr,     // Source rect (entire texture)
-                     &destRect,   // Destination rect
-                     0.0,         // Angle (no rotation)
-                     nullptr,     // Center of rotation (not needed)
-                     flip);       // Apply flip
+                     nullptr,   // Source rect (entire texture)
+                     &destRect, // Destination rect
+                     0.0,       // Angle (no rotation)
+                     nullptr,   // Center of rotation (not needed)
+                     flip);     // Apply flip
     // ++++++++++++++++++++++++++++++++++++++
 
   } else {
@@ -564,7 +686,8 @@ void Enemy::takeDamage(int amount) {
     health = 0;
     SDL_Log("Enemy at (%d, %d) has been vanquished!", x, y);
   } else {
-      SDL_Log("Enemy %d took %d damage. Health: %d/%d", id, amount, health, maxHealth);
+    SDL_Log("Enemy %d took %d damage. Health: %d/%d", id, amount, health,
+            maxHealth);
   }
 }
 
@@ -573,16 +696,18 @@ int Enemy::GetAttackDamage() const {
   return baseAttackDamage;
 }
 
-void Enemy::applyFloorScaling(int currentFloorIndex, float scalingFactorPerFloor) {
+void Enemy::applyFloorScaling(int currentFloorIndex,
+                              float scalingFactorPerFloor) {
   if (currentFloorIndex <= 1) {
-      // No scaling on floor 1 or invalid floors
-      return;
+    // No scaling on floor 1 or invalid floors
+    return;
   }
 
   // Calculate the multiplier: 1.0 + (floors above 1) * scaling_factor
   // Example: Floor 2 -> 1.0 + (2-1)*0.05 = 1.05
   // Example: Floor 3 -> 1.0 + (3-1)*0.05 = 1.10
-  float multiplier = pow(1.0f + scalingFactorPerFloor,static_cast<float>(currentFloorIndex - 1));
+  float multiplier = pow(1.0f + scalingFactorPerFloor,
+                         static_cast<float>(currentFloorIndex - 1));
 
   // Store original values for logging if needed
   int oldMaxHealth = maxHealth;
@@ -590,19 +715,80 @@ void Enemy::applyFloorScaling(int currentFloorIndex, float scalingFactorPerFloor
   int oldArcana = arcanaValue;
 
   // Scale stats (round to nearest integer for health/damage/arcana)
-  maxHealth = static_cast<int>(std::round(static_cast<float>(maxHealth) * multiplier));
-  baseAttackDamage = static_cast<int>(std::round(static_cast<float>(baseAttackDamage) * multiplier));
-  arcanaValue = static_cast<int>(std::round(static_cast<float>(arcanaValue) * multiplier));
+  maxHealth =
+      static_cast<int>(std::round(static_cast<float>(maxHealth) * multiplier));
+  baseAttackDamage = static_cast<int>(
+      std::round(static_cast<float>(baseAttackDamage) * multiplier));
+  arcanaValue = static_cast<int>(
+      std::round(static_cast<float>(arcanaValue) * multiplier));
 
-  // Ensure stats don't become zero if they were non-zero before scaling very slightly down due to rounding
-  if (oldMaxHealth > 0 && maxHealth <= 0) maxHealth = 1;
-  if (oldDamage > 0 && baseAttackDamage <= 0) baseAttackDamage = 1;
-  if (oldArcana > 0 && arcanaValue <= 0) arcanaValue = 1;
-
+  // Ensure stats don't become zero if they were non-zero before scaling very
+  // slightly down due to rounding
+  if (oldMaxHealth > 0 && maxHealth <= 0)
+    maxHealth = 1;
+  if (oldDamage > 0 && baseAttackDamage <= 0)
+    baseAttackDamage = 1;
+  if (oldArcana > 0 && arcanaValue <= 0)
+    arcanaValue = 1;
 
   // Reset current health to the new max health after scaling
   health = maxHealth;
 
-  SDL_Log("INFO: Enemy %d scaled for Floor %d (Multiplier: %.2f). HP: %d -> %d, DMG: %d -> %d, Arcana: %d -> %d",
-          id, currentFloorIndex, multiplier, oldMaxHealth, maxHealth, oldDamage, baseAttackDamage, oldArcana, arcanaValue);
+  SDL_Log("INFO: Enemy %d scaled for Floor %d (Multiplier: %.2f). HP: %d -> "
+          "%d, DMG: %d -> %d, Arcana: %d -> %d",
+          id, currentFloorIndex, multiplier, oldMaxHealth, maxHealth, oldDamage,
+          baseAttackDamage, oldArcana, arcanaValue);
+}
+
+void Enemy::AddStatusEffect(StatusEffectType type, int duration) {
+  if (duration <= 0)
+    return;
+  // Refresh duration if same type exists
+  for (auto &existingEffect : activeStatusEffects) {
+    if (existingEffect.type == type) {
+      existingEffect.durationTurns =
+          std::max(existingEffect.durationTurns, duration);
+      SDL_Log("DEBUG: Enemy %d Status Refreshed: %d duration %d turns.", id,
+              (int)type, existingEffect.durationTurns);
+      return;
+    }
+  }
+  activeStatusEffects.emplace_back(type, duration);
+  SDL_Log("DEBUG: Enemy %d Status Added: %d duration %d turns.", id, (int)type,
+          duration);
+}
+
+void Enemy::RemoveStatusEffect(StatusEffectType type) {
+  activeStatusEffects.erase(std::remove_if(activeStatusEffects.begin(),
+                                           activeStatusEffects.end(),
+                                           [type](const StatusEffect &effect) {
+                                             return effect.type == type;
+                                           }),
+                            activeStatusEffects.end());
+  SDL_Log("DEBUG: Enemy %d Status Removed: %d.", id, (int)type);
+}
+
+bool Enemy::HasStatusEffect(StatusEffectType type) const {
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == type) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Called each turn end
+void Enemy::UpdateStatusEffectDurations() {
+  bool effectRemoved = false;
+  for (int i = activeStatusEffects.size() - 1; i >= 0; --i) {
+    activeStatusEffects[i].durationTurns--;
+    if (activeStatusEffects[i].durationTurns <= 0) {
+      SDL_Log("DEBUG: Enemy %d Status Expired: %d.", id,
+              (int)activeStatusEffects[i].type);
+      activeStatusEffects.erase(activeStatusEffects.begin() + i);
+      effectRemoved = true;
+    }
+  }
+  // Add hooks here if needed (e.g., recalculate enemy stats if effects modify
+  // them)
 }

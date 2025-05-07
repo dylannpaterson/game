@@ -11,6 +11,7 @@
 #include "enemy.h"      // For std::vector<Enemy>
 #include "level.h"      // For Level
 #include "projectile.h" // For std::vector<Projectile>
+#include "visual_effect.h"
 #include "orbital_missile.h" 
 #include <SDL.h>        // For SDL_Renderer*, SDL_Texture* etc.
 #include <SDL_ttf.h>    // For TTF_Font*
@@ -78,7 +79,7 @@ struct RunePedestal {
     // Constructor for placement
     RunePedestal(int posX, int posY) : x(posX), y(posY), idleAnimationSpeed(4.0f), deactivationAnimationSpeed(8.0f), isActive(true), isDeactivating(false) {
         // Populate IDLE frame names (ensure these match loaded assets)
-        for (int i = 1; i <= 10; ++i) {
+        for (int i = 1; i <= 9; ++i) {
             idleFrameTextureNames.push_back("rune_pedestal_" + std::to_string(i));
         }
         // Populate DEACTIVATION frame names (ensure these match loaded assets)
@@ -140,6 +141,7 @@ struct GameData {
     std::vector<Enemy> enemies;                 // Stores all enemies currently in the level
     std::vector<Projectile> activeProjectiles;  // Stores projectiles currently in flight
     std::vector<OrbitalMissile> activeOrbitals;
+    std::vector<VisualEffect> activeEffects; 
     std::vector<ItemDrop> droppedItems; // *** NEW: Container for dropped items ***
     Level currentLevel;                         // Holds the current level layout (tiles, dimensions)
     std::optional<RunePedestal> currentPedestal;// Stores the single pedestal for the current level
@@ -205,6 +207,19 @@ struct GameData {
     bool menuDownThisFrame = false;
     bool menuSelectThisFrame = false;
     bool menuCancelThisFrame = false;
+
+        // --- NEW: Hotkey Hold Tracking ---
+        static const int MAX_HOTKEY_SPELLS = 5; // Match spell bar size
+        Uint32 hotkeyPressTime[MAX_HOTKEY_SPELLS] = {0}; // Timestamp of key press
+        bool isHotkeyHeld[MAX_HOTKEY_SPELLS] = {false}; // Is the key currently down?
+        const Uint32 HOLD_THRESHOLD_MS = 250; // Time in milliseconds to differentiate tap/hold
+        // --- End Hotkey Hold Tracking ---
+
+            // --- NEW: Movement Key State ---
+    bool isMoveUpHeld = false;
+    bool isMoveDownHeld = false;
+    bool isMoveLeftHeld = false;
+    bool isMoveRightHeld = false;
 
 
     // --- Destructor ---
