@@ -54,6 +54,12 @@ public:
   // --- Status Effects ---
   std::vector<StatusEffect> activeStatusEffects; // <<< ADDED
 
+  // --- Pushback State --- // <<< ADDED
+  bool needsPushback = false;
+  int pushbackTargetX = -1;
+  int pushbackTargetY = -1;
+  // --- END ADDED ---
+
   // --- Facing Direction ---
   enum class FacingDirection { Left, Right };
   FacingDirection currentFacingDirection;
@@ -118,6 +124,12 @@ public:
       StatusEffectType type); // Optional: For dispel effects later
   bool HasStatusEffect(StatusEffectType type) const;
   void UpdateStatusEffectDurations(); // Called each turn end
+
+  void ClearPushbackState() {
+    needsPushback = false;
+    pushbackTargetX = -1;
+    pushbackTargetY = -1;
+  }
 
 private:
   // --- Static ID counter (remains private) ---

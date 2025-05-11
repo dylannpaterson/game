@@ -2081,6 +2081,76 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       SDL_Log("DEBUG: [UpdateLogic] Entering TurnEnd_Cleanup phase.");
       bool playerDied = gameData.currentGamePlayer.health <= 0;
       int arcanaGained = 0;
+
+      // --- <<< EXECUTE PUSHBACKS >>> ---
+      SDL_Log("DEBUG: Checking for enemy pushbacks...");
+      for (auto &enemy : gameData.enemies) {
+        if (enemy.health > 0 && enemy.needsPushback) {
+          SDL_Log("... Processing pushback for Enemy %d to [%d, %d]", enemy.id,
+                  enemy.pushbackTargetX, enemy.pushbackTargetY);
+
+          // Final check: Is the destination tile STILL free?
+          if (isWithinBounds(enemy.pushbackTargetX, enemy.pushbackTargetY,
+                             gameData.currentLevel.width,
+                             gameData.currentLevel.height)) {
+            if (!gameData.occupationGrid[enemy.pushbackTargetY]
+                                        [enemy.pushbackTargetX]) {
+              // Destination is valid and free, execute pushback!
+
+              // 1. Clear old grid position
+              if (isWithinBounds(enemy.x, enemy.y, gameData.currentLevel.width,
+                                 gameData.currentLevel.height)) {
+                gameData.occupationGrid[enemy.y][enemy.x] = false;
+                SDL_Log("... Cleared grid at old pos [%d, %d]", enemy.x,
+                        enemy.y);
+              }
+
+              // 2. Update enemy logical position
+              enemy.x = enemy.pushbackTargetX;
+              enemy.y = enemy.pushbackTargetY;
+
+              // 3. Snap enemy visual position
+              enemy.visualX =
+                  enemy.x * gameData.tileWidth + gameData.tileWidth / 2.0f;
+              enemy.visualY =
+                  enemy.y * gameData.tileHeight + gameData.tileHeight / 2.0f;
+              SDL_Log("... Snapped enemy logical and visual pos to [%d, %d]",
+                      enemy.x, enemy.y);
+
+              // 4. Set new grid position
+              gameData.occupationGrid[enemy.y][enemy.x] = true;
+              SDL_Log("... Set grid at new pos [%d, %d]", enemy.x, enemy.y);
+
+              // 5. Stop any ongoing movement animation (pushback overrides)
+              if (enemy.isMoving) {
+                enemy.isMoving = false;
+                enemy.moveProgress = 0.0f;
+                enemy.moveTimer = 0.0f;
+                SDL_Log("... Canceled ongoing move due to pushback.");
+              }
+
+            } else {
+              // Destination became occupied during resolution phase
+              SDL_Log("... Pushback for Enemy %d to [%d, %d] blocked by "
+                      "occupation grid at cleanup.",
+                      enemy.id, enemy.pushbackTargetX, enemy.pushbackTargetY);
+            }
+          } else {
+            // Destination became invalid (shouldn't happen if checked before,
+            // but safety)
+            SDL_Log("... Pushback for Enemy %d to [%d, %d] blocked (OOB) at "
+                    "cleanup.",
+                    enemy.id, enemy.pushbackTargetX, enemy.pushbackTargetY);
+          }
+
+          // 6. Clear the pushback state regardless of success
+          enemy.ClearPushbackState();
+
+        } // End if needsPushback
+      } // End loop through enemies for pushback
+      SDL_Log("DEBUG: Finished checking enemy pushbacks.");
+      // --- <<< END PUSHBACK EXECUTION >>> ---
+
       gameData.enemies.erase(
           std::remove_if(
               gameData.enemies.begin(), gameData.enemies.end(),
@@ -2580,18 +2650,6 @@ Y=[%d -> %d)", startTileX, endTileX, startTileY, endTileY);*/
     }
   }
 
-  // <<< ADD VISUAL EFFECT RENDERING >>>
-  // Render *after* tiles/items/pedestal, but potentially *before* or *after*
-  // entities Rendering before entities makes effects appear "on the ground"
-  // Rendering after entities makes effects appear "over" them
-  // Let's render them *before* entities for now (ground frost effect)
-  for (const auto &effect : gameData.activeEffects) {
-    // Optional: Add visibility check based on effect's center point if desired
-    effect.render(gameData.renderer, assets, gameData.cameraX,
-                  gameData.cameraY);
-  }
-  // <<< END VISUAL EFFECT RENDERING >>>
-
   // --- Render Entities ---
   for (const auto &enemy : gameData.enemies) {
     if (enemy.health > 0) {
@@ -2738,6 +2796,19 @@ Y=[%d -> %d)", startTileX, endTileX, startTileY, endTileY);*/
     }
   }
   // --- End Player Rendering ---
+
+  // <<< ADD VISUAL EFFECT RENDERING >>>
+  // Render *after* tiles/items/pedestal, but potentially *before* or *after*
+  // entities Rendering before entities makes effects appear "on the ground"
+  // Rendering after entities makes effects appear "over" them
+  // Let's render them *before* entities for now (ground frost effect)
+  for (const auto &effect : gameData.activeEffects) {
+    // Optional: Add visibility check based on effect's center point if desired
+    effect.render(gameData.renderer, assets, gameData.cameraX,
+                  gameData.cameraY);
+  }
+  // <<< END VISUAL EFFECT RENDERING >>>
+
   PlayerCharacter &player =
       gameData.currentGamePlayer; // Get reference for convenience
   if (player.currentShield > 0 && !player.wardFrameTextureKeys.empty()) {

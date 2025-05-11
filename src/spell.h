@@ -27,7 +27,8 @@ enum class SpellEffectType {
   Summon,
   ApplyShield,
   SummonOrbital,
-  AreaDamage // <<< ADDED: More explicit type for AoE damage
+  AreaDamage,      // <<< ADDED: More explicit type for AoE damage
+  AreaPushbackStun // <<< ADDED for Vortex
 };
 
 struct Spell {

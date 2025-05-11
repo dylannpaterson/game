@@ -60,10 +60,22 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
         8,                           // Range to center tile
         SpellTargetType::Tile,       // Target a tile for the center
         SpellEffectType::AreaDamage, // New Effect Type
-        4, 8, 0,                     // Damage: 4d8+5 (Moderate)
+        4, 8, 0,                     // Damage: 4d8+0 (Moderate)
         0.0f,                        // No distance bonus for AoE usually
         "blizzard_icon",             // Icon key
         1                            // AoE Radius (1 = 3x3 area)
+    );
+    // <<< DEFINE VORTEX >>>
+    knownSpells.emplace_back(
+        "Vortex", 10, // Mana Cost
+        0,            // Range (Self targeted, uses AoE radius)
+        SpellTargetType::Self,
+        SpellEffectType::AreaPushbackStun, // The new effect type
+        1, 6, 0,                           // 1d6 dice damage
+        "vortex_icon",                     // <<< Need to create vortex_icon.png
+        2, // AoE Radius (Affects 5x5 area around player) - Adjust as desired
+        StatusEffectType::Stunned, // Status to apply
+        1                          // Duration (1 turn)
     );
   }
 
@@ -885,6 +897,212 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
           "SummonOrbital effect currently only supports Self target type.");
     }
     break; // End SummonOrbital case
+
+  case SpellEffectType::AreaPushbackStun:            // <<< Vortex Logic >>>
+    if (spell.targetType != SpellTargetType::Self) { /* ... log warning ... */
+      break;
+    }
+
+    SDL_Log("CastSpell: Resolving Area Pushback/Stun for '%s' centered on "
+            "player [%d, %d], Radius: %d",
+            spell.name.c_str(), this->logicalTileX, this->logicalTileY,
+            spell.areaOfEffectRadius);
+
+    // Iterate through enemies directly
+    for (int enemyIdx = 0; enemyIdx < enemies.size(); ++enemyIdx) {
+      Enemy &currentEnemy = enemies[enemyIdx];
+      if (currentEnemy.health <= 0)
+        continue;
+
+      int dx = currentEnemy.x - this->logicalTileX;
+      int dy = currentEnemy.y - this->logicalTileY;
+      int distSq = dx * dx + dy * dy;
+      int radiusSq = spell.areaOfEffectRadius * spell.areaOfEffectRadius;
+
+      // Check if enemy is within the AoE
+      if (distSq <= radiusSq) {
+        if (dx == 0 && dy == 0)
+          continue; // Skip self tile
+
+        SDL_Log("... Vortex affects Enemy %d at [%d, %d]", currentEnemy.id,
+                currentEnemy.x, currentEnemy.y);
+        effectApplied = true;
+
+        // 1. Apply Status Effect (Stunned)
+        if (spell.statusEffectApplied != StatusEffectType::None &&
+            spell.statusEffectDuration > 0) {
+          currentEnemy.AddStatusEffect(spell.statusEffectApplied,
+                                       spell.statusEffectDuration);
+        }
+
+        // --- 2. Calculate and Mark for Pushback (Revised Logic) ---
+        int finalPushX = currentEnemy.x; // Default to current position
+        int finalPushY = currentEnemy.y;
+        bool pushTargetFound = false;
+
+        float magnitude = std::sqrt(static_cast<float>(distSq));
+        float normDx = 0.0f, normDy = 0.0f;
+        if (magnitude > 0.001f) {
+          normDx = static_cast<float>(dx) / magnitude;
+          normDy = static_cast<float>(dy) / magnitude;
+        } else {
+          continue;
+        } // Skip pushback if on player tile
+
+        SDL_Log("... Calculating pushback for Enemy %d from [%d,%d] along "
+                "vector (%.2f, %.2f)",
+                currentEnemy.id, currentEnemy.x, currentEnemy.y, normDx,
+                normDy);
+
+        // --- Step Outwards to Find Target ---
+        int lastValidX = currentEnemy.x; // Track the last valid tile checked
+        int lastValidY = currentEnemy.y;
+        int currentCheckX = currentEnemy.x;
+        int currentCheckY = currentEnemy.y;
+        int steps = 0;
+        // Search a bit beyond the radius
+        const int MAX_PUSH_STEPS = spell.areaOfEffectRadius + 3;
+
+        while (steps < MAX_PUSH_STEPS) {
+          steps++;
+          // Calculate next tile coordinates based on normalized vector
+          int nextX =
+              static_cast<int>(std::round(currentEnemy.x + normDx * steps));
+          int nextY =
+              static_cast<int>(std::round(currentEnemy.y + normDy * steps));
+
+          // Prevent getting stuck if rounding doesn't move
+          if (nextX == currentCheckX && nextY == currentCheckY) {
+            SDL_Log("... Pushback step %d resulted in no coordinate change. "
+                    "Using last valid [%d, %d].",
+                    steps, lastValidX, lastValidY);
+            break; // Use the last valid position found
+          }
+          currentCheckX = nextX;
+          currentCheckY = nextY;
+
+          SDL_Log("... Checking step %d: Tile [%d, %d]", steps, currentCheckX,
+                  currentCheckY);
+
+          // Check if this tile is valid (in bounds and not a wall)
+          if (!isWithinBounds(currentCheckX, currentCheckY,
+                              gameData.currentLevel.width,
+                              gameData.currentLevel.height) ||
+              gameData.currentLevel.tiles[currentCheckY][currentCheckX] ==
+                  '#') {
+            SDL_Log("... Tile [%d, %d] is invalid (OOB or Wall). Stopping "
+                    "search. Will use last valid [%d, %d].",
+                    currentCheckX, currentCheckY, lastValidX, lastValidY);
+            break; // Hit an invalid tile, stop searching outward. lastValidX/Y
+                   // holds the best spot.
+          }
+
+          // Tile is valid, update last valid position
+          lastValidX = currentCheckX;
+          lastValidY = currentCheckY;
+          SDL_Log("... Tile [%d, %d] is valid.", lastValidX, lastValidY);
+
+          // Check if this valid tile is outside the AoE radius (using squared
+          // distance)
+          int checkDx = lastValidX - this->logicalTileX;
+          int checkDy = lastValidY - this->logicalTileY;
+          if (checkDx * checkDx + checkDy * checkDy > radiusSq) {
+            SDL_Log("... Valid Tile [%d, %d] is OUTSIDE AoE radius %d. Target "
+                    "found.",
+                    lastValidX, lastValidY, spell.areaOfEffectRadius);
+            pushTargetFound = true; // Mark that we found a spot outside
+            break; // Found the first valid tile outside the AoE
+          }
+        } // End while loop stepping outwards
+
+        // --- Set Final Target and Mark ---
+        // Use the last valid tile found by the loop.
+        // If pushTargetFound is true, it's the first valid tile outside the
+        // radius. If pushTargetFound is false, it's the furthest valid tile
+        // reached before hitting an obstacle or max steps.
+        finalPushX = lastValidX;
+        finalPushY = lastValidY;
+
+        // Only mark for pushback if the final position is different from the
+        // start.
+        if (finalPushX != currentEnemy.x || finalPushY != currentEnemy.y) {
+          SDL_Log("... Final pushback target for Enemy %d set to [%d, %d]. "
+                  "Marking for pushback.",
+                  currentEnemy.id, finalPushX, finalPushY);
+          currentEnemy.needsPushback = true;
+          currentEnemy.pushbackTargetX = finalPushX;
+          currentEnemy.pushbackTargetY = finalPushY;
+        } else {
+          SDL_Log("... Enemy %d could not be pushed from [%d, %d]. No valid "
+                  "destination found or already outside.",
+                  currentEnemy.id, currentEnemy.x, currentEnemy.y);
+          currentEnemy.ClearPushbackState(); // Ensure flags are clear
+        }
+        // --- END Pushback Calculation ---
+
+      } // End if enemy is within AoE
+    } // End loop through enemies
+
+    // --- <<< SPAWN VORTEX VISUAL EFFECT >>> ---
+    { // Scope for effect variables
+      std::vector<std::string> vortexFrames;
+      // --- Define parameters based on how assets were loaded ---
+      // These should match the parameters used in the loadAnimationSequence
+      // call in asset_manager.cpp (vortex_asset_load artifact) Logs show 8
+      // frames were loaded (0-7), so frameCount should be 7.
+      int frameCount = 7; // <<< CORRECTED: Based on logs (0 through 7)
+      // int padding = 4; // Padding is NOT used in the loaded texture keys
+      // based on logs
+      std::string baseName =
+          "vortex_effect"; // Base name from vortex_asset_load
+
+      // --- Generate frame keys ---
+      // Generate keys WITHOUT padding to match the loaded asset keys like
+      // "vortex_effect_0", "vortex_effect_1", etc. Loop from 0 up to and
+      // including frameCount (0 to 7 for 8 frames).
+      for (int i = 0; i <= frameCount; ++i) {
+        // --- CORRECTED: Generate key without padding ---
+        vortexFrames.push_back(baseName + "_" + std::to_string(i));
+        // Example generated key: "vortex_effect_0", "vortex_effect_1", ...,
+        // "vortex_effect_7"
+      }
+
+      if (!vortexFrames.empty()) {
+        // Center the effect visually on the player's *current* visual position
+        float effectCenterX = this->x;
+        float effectCenterY = this->y;
+
+        // Size the effect to cover the full AoE diameter based on the spell's
+        // radius
+        int effectDiameterTiles =
+            1 + (2 * spell.areaOfEffectRadius); // Diameter in tiles (e.g.,
+                                                // radius 2 -> 5 tiles)
+        int effectWidth = gameData.tileWidth * effectDiameterTiles;
+        int effectHeight = gameData.tileHeight * effectDiameterTiles;
+
+        // Animation parameters (adjust speed as desired)
+        float effectSpeed = 12.0f; // Frames per second for the animation
+        float effectDuration =
+            0.0f; // Duration 0 means play once based on frame count/speed
+        bool loops = false; // Vortex effect likely does not loop
+
+        // Add the VisualEffect instance to the game's active effects list
+        gameData.activeEffects.emplace_back(
+            effectCenterX, effectCenterY, effectWidth, effectHeight,
+            vortexFrames, effectSpeed, effectDuration, loops);
+        SDL_Log("... Spawned Vortex visual effect (%dx%d) centered on player "
+                "at (%.1f, %.1f). Using %zu frames.",
+                effectWidth, effectHeight, effectCenterX, effectCenterY,
+                vortexFrames.size());
+      } else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not generate frame keys for Vortex effect. Visual "
+                    "effect not spawned.");
+      }
+    } // End scope for effect variables
+    // --- <<< END SPAWN VISUAL EFFECT >>> ---
+
+    break; // End AreaPushbackStun case
 
   // Add cases for Buff, Debuff, Summon, etc.
   default:
