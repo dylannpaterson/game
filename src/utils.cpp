@@ -55,7 +55,7 @@ bool isWithinBounds(int x, int y, int width, int height) {
 SDL_Context initializeSDL(int width, int height) {
   SDL_Context context;
 
-  //SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
+  // SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengles2");
 
   // Initialize SDL Video
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -153,13 +153,14 @@ bool findNearestValidTarget(const GameData &gameData, int spellIndex,
   }
   const Spell &spell = player.knownSpells[spellIndex]; // Get the spell details
 
-
   // --- *** CORRECTED LINE *** ---
-  // Use the spellIndex parameter passed to this function, NOT gameData.currentSpellIndex
+  // Use the spellIndex parameter passed to this function, NOT
+  // gameData.currentSpellIndex
   int effectiveRange = player.GetEffectiveSpellRange(spellIndex);
   // --- *** END CORRECTION *** ---
-  SDL_Log("DEBUG: [NearestTarget] Checking for spell '%s' (Index: %d) with Effective Range: %d", spell.name.c_str(), spellIndex, effectiveRange);
-
+  SDL_Log("DEBUG: [NearestTarget] Checking for spell '%s' (Index: %d) with "
+          "Effective Range: %d",
+          spell.name.c_str(), spellIndex, effectiveRange);
 
   // Check if the spell targets enemies (required for this function)
   if (spell.targetType != SpellTargetType::Enemy) {
@@ -260,3 +261,39 @@ int rollDice(int numDice, int dieType, int bonus) {
   // return total + bonus;
   // --- End rand() ---
 }
+
+// --- Implementation of getLineTiles using Bresenham's Algorithm ---
+std::vector<std::pair<int, int>> getLineTiles(int x0, int y0, int x1, int y1) {
+  std::vector<std::pair<int, int>> tiles;
+
+  int dx = std::abs(x1 - x0);
+  int dy = std::abs(y1 - y0);
+  int sx = (x0 < x1) ? 1 : -1;
+  int sy = (y0 < y1) ? 1 : -1;
+  int err = dx - dy;
+
+  int x = x0;
+  int y = y0;
+
+  while (true) {
+    tiles.push_back({x, y}); // Add the current tile
+
+    if (x == x1 && y == y1) {
+      break; // Reached the end point
+    }
+
+    int e2 = 2 * err;
+
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+  }
+
+  return tiles;
+}
+// --- End of getLineTiles Implementation ---

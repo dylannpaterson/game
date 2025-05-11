@@ -46,7 +46,7 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
         0.20f, // Decay 20% of max per turn
         "ward_icon");
     // ---> ADD Magic Missiles <---
-    knownSpells.emplace_back(
+    /*knownSpells.emplace_back(
         "Magic Missiles", 15, SpellTargetType::Self,
         SpellEffectType::SummonOrbital, 3, 6,
         500.0f,  // Summon 3 orbitals, 6 tile range, 3 sec lifetime
@@ -76,7 +76,14 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
         2, // AoE Radius (Affects 5x5 area around player) - Adjust as desired
         StatusEffectType::Stunned, // Status to apply
         1                          // Duration (1 turn)
-    );
+    );*/
+    // Lightning Bolt (Linear Damage)
+    knownSpells.emplace_back(
+        "Lightning Bolt", 15, 8, SpellTargetType::Tile,
+        SpellEffectType::LinearDamage, // <<< Use new effect type
+        3, 8, 0,                       // 3d8 damage
+        -0.10f,                        // 10% less damage per tile distance
+        "lightning_icon", 0, StatusEffectType::None, 0);
   }
 
   // CRITICAL: Calculate initial stats based on starting level and base stats
@@ -652,6 +659,9 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
   SDL_Log("CastSpell: Spent %d mana for '%s'. Remaining: %d/%d",
           effectiveManaCost, spell.name.c_str(), mana, maxMana);
 
+  // Declare lineTiles outside the switch to avoid "jump to case label" error
+  std::vector<std::pair<int, int>> lineTiles;
+
   // 5. Apply Spell Effect / Create Projectile
   bool effectApplied = false;
   switch (spell.effectType) {
@@ -715,6 +725,208 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
     } else { /* ... log target type warning ... */
     }
     break;
+
+  case SpellEffectType::LinearDamage: // Handles linear damage like Lightning
+                                      // Bolt
+    SDL_Log(
+        "CastSpell: Resolving Linear Damage for '%s' from [%d,%d] to [%d,%d]",
+        spell.name.c_str(), logicalTileX, logicalTileY, castTargetX,
+        castTargetY);
+
+    // Get tiles along the line for damage application and visibility update
+    { // Scope for line tiles calculation
+      int effectiveRange = GetEffectiveSpellRange(spellIndex);
+      // Calculate the endpoint at the full effective range in the direction of
+      // the target
+      float deltaX_tiles = static_cast<float>(castTargetX - logicalTileX);
+      float deltaY_tiles = static_cast<float>(castTargetY - logicalTileY);
+      float distance_to_target_tiles =
+          std::sqrt(deltaX_tiles * deltaX_tiles + deltaY_tiles * deltaY_tiles);
+
+      int endTileX_full_range = castTargetX;
+      int endTileY_full_range = castTargetY;
+
+      if (distance_to_target_tiles >
+          0.001f) { // Avoid division by zero if target is on player tile
+        float normalizedDeltaX = deltaX_tiles / distance_to_target_tiles;
+        float normalizedDeltaY = deltaY_tiles / distance_to_target_tiles;
+
+        endTileX_full_range = static_cast<int>(
+            std::round(logicalTileX + normalizedDeltaX * effectiveRange));
+        endTileY_full_range = static_cast<int>(
+            std::round(logicalTileY + normalizedDeltaY * effectiveRange));
+      } else {
+        // If target is on the player tile, the line is just the player's tile.
+        // Damage application loop will start from i=1, effectively skipping the
+        // player's tile. The visual effect will still be a point at the
+        // player's location.
+        endTileX_full_range = logicalTileX;
+        endTileY_full_range = logicalTileY;
+      }
+
+      lineTiles = getLineTiles(logicalTileX, logicalTileY, endTileX_full_range,
+                               endTileY_full_range);
+    } // End scope for line tiles calculation
+
+    // Iterate through tiles along the line for damage (excluding the player's
+    // tile)
+    for (size_t i = 1; i < lineTiles.size(); ++i) {
+      int currentTileX = lineTiles[i].first;
+      int currentTileY = lineTiles[i].second;
+
+      // Check if the tile is within level bounds
+      if (!isWithinBounds(currentTileX, currentTileY,
+                          gameData.currentLevel.width,
+                          gameData.currentLevel.height)) {
+        SDL_Log("... Tile [%d, %d] along line is out of bounds. Stopping "
+                "damage application.",
+                currentTileX, currentTileY);
+        break; // Stop damage application if the line goes out of bounds
+      }
+
+      // --- Stop damage if it hits a wall --- // <<< ADDED
+      if (gameData.currentLevel.tiles[currentTileY][currentTileX] == '#') {
+        SDL_Log("... Linear Damage spell hit a wall at [%d, %d]. Stopping "
+                "damage application.",
+                currentTileX, currentTileY);
+        // Optional: Spawn a wall impact effect here
+        // gameData.activeEffects.emplace_back(...)
+        lineTiles.erase(
+            lineTiles.begin() + i,
+            lineTiles.end()); // Truncate lineTiles for visual effect
+        break;                // Stop iterating along the line if it hits a wall
+      }
+      // --- End wall collision check ---
+
+      // Find if any enemy is on this tile and apply damage
+      for (int enemyIdx = 0; enemyIdx < enemies.size(); ++enemyIdx) {
+        Enemy &currentEnemy = enemies[enemyIdx];
+
+        if (currentEnemy.health > 0 && currentEnemy.x == currentTileX &&
+            currentEnemy.y == currentTileY) {
+          // Found a living enemy on the line
+          SDL_Log("... Linear Damage spell hitting Enemy %d at [%d, %d]",
+                  currentEnemy.id, currentTileX, currentTileY);
+
+          // Calculate damage for this specific enemy, applying distance penalty
+          int damageToEnemy = this->calculateSpellDamage(
+              spellIndex, currentTileX, currentTileY, &currentEnemy);
+
+          SDL_Log("... Applying %d damage to Enemy %d", damageToEnemy,
+                  currentEnemy.id);
+          currentEnemy.takeDamage(damageToEnemy); // Apply damage
+
+          effectApplied = true; // Mark that at least one enemy was hit
+          // Continue to hit other enemies further down the line on the same
+          // tile if necessary
+        }
+      } // End loop through enemies for one tile
+
+      // --- Visibility Update for this tile (Handled by VisualEffect now) ---
+      // The VisualEffect will manage the visibility of the tiles in its
+      // 'affectedTiles' list over its lifetime. We no longer set visibility
+      // here instantly.
+      // --- End Visibility Update ---
+
+    } // End loop through line tiles for damage
+
+    // --- SPAWN VISUAL EFFECT (Lightning Bolt) ---
+    { // Scope for effect variables
+      std::vector<std::string> lightningFrames;
+      int frameCount = 8; // User specified 8 frames
+      std::string baseName =
+          "lightning_bolt_effect"; // Base name for animation frames
+
+      for (int i = 0; i < frameCount; ++i) {
+        lightningFrames.push_back(baseName + "_" + std::to_string(i));
+      }
+
+      if (!lightningFrames.empty()) {
+        // Calculate visual start and end points
+        float startVisualX = this->x; // Player's visual center
+        float startVisualY = this->y;
+        // The visual effect should extend to the end of the calculated
+        // lineTiles (which might be truncated by a wall)
+        float endVisualX_actual = startVisualX; // Default to start if lineTiles
+                                                // is empty after wall check
+        float endVisualY_actual = startVisualY;
+
+        if (!lineTiles.empty()) {
+          // Use the last tile in the (potentially truncated) lineTiles for the
+          // visual end point
+          endVisualX_actual = lineTiles.back().first * gameData.tileWidth +
+                              gameData.tileWidth / 2.0f;
+          endVisualY_actual = lineTiles.back().second * gameData.tileHeight +
+                              gameData.tileHeight / 2.0f;
+        }
+
+        // Calculate the direction vector from start to actual end
+        float deltaX_visual = endVisualX_actual - startVisualX;
+        float deltaY_visual = endVisualY_actual - startVisualY;
+        float visualEffectDistance = std::sqrt(deltaX_visual * deltaX_visual +
+                                               deltaY_visual * deltaY_visual);
+
+        // Calculate the angle in radians, then convert to degrees for
+        // SDL_RenderCopyEx
+        float angleRadians = std::atan2(
+            deltaY_visual,
+            deltaX_visual); // Angle based on player to actual end point
+        float angleDegrees =
+            angleRadians * (180.0f / M_PI); // Convert radians to degrees
+
+        // The visual effect will be positioned at the start point (player's
+        // visual center) Its width will be the calculated visual effect
+        // distance, height will be a fixed thickness
+        float effectWidth = visualEffectDistance; // Length of the visual line
+        float effectHeight =
+            gameData.tileWidth /
+            0.8f; // Fixed thickness (using your requested scaling)
+
+        // The rotation origin should be at the left edge, vertically centered
+        // of the texture This is because the texture is a horizontal line
+        // animation, and we want it to rotate from the player's center.
+        SDL_Point origin = {0, static_cast<int>(effectHeight / 2.0f)};
+
+        // Define the visibility fade start time ratio for this specific effect
+        float visibilityFadeStartRatio =
+            0.5f; // As requested, fade starts at 50% animation progress
+
+        // Pass only the tiles *after* the player's tile to the VisualEffect for
+        // visibility
+        std::vector<std::pair<int, int>> tilesForVisibility;
+        if (lineTiles.size() > 1) {
+          tilesForVisibility.assign(lineTiles.begin() + 1, lineTiles.end());
+        }
+
+        gameData.activeEffects.emplace_back(
+            startVisualX, startVisualY, // Position at player's visual center
+            static_cast<int>(effectWidth),
+            static_cast<int>(effectHeight), // Size
+            lightningFrames, 24.0f, 0.0f,
+            false,        // Animation speed, duration, loops
+            angleDegrees, // Pass the calculated angle
+            origin,       // Pass the calculated origin
+            &gameData,    // Pass pointer to gameData for visibility updates
+            tilesForVisibility,      // Pass the list of affected tiles for
+                                     // visibility
+            visibilityFadeStartRatio // Pass the visibility fade start ratio
+        );
+
+        SDL_Log("... Spawned Linear Damage visual effect from (%.1f, %.1f) to "
+                "(%.1f, %.1f) (actual end). Length: %.2f, Angle: %.2f degrees. "
+                "Origin: {%d, %d}. Visibility Fade Start: %.2f. Affected tiles "
+                "for visibility: %zu",
+                startVisualX, startVisualY, endVisualX_actual,
+                endVisualY_actual, visualEffectDistance, angleDegrees, origin.x,
+                origin.y, visibilityFadeStartRatio, tilesForVisibility.size());
+
+      } else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Could not generate frame keys for Linear Damage effect.");
+      }
+    }
+    // --- END SPAWN VISUAL EFFECT ---
+    break; // End LinearDamage case
 
   case SpellEffectType::AreaDamage: // <<< NEW CASE for Blizzard
     SDL_Log("CastSpell: Resolving Area Damage for '%s' centered at [%d, %d], "

@@ -202,8 +202,12 @@ bool loadAllAssets(AssetManager &assetManager) {
       "blizzard_icon",
       "../assets/sprites/icons/blizzard_icon.png"); // Add the actual PNG file
                                                     // here
+
   loadSuccess &= assetManager.loadTexture(
       "vortex_icon", "../assets/sprites/icons/vortex_icon.png");
+
+  loadSuccess &= assetManager.loadTexture(
+      "lightning_icon", "../assets/sprites/icons/vortex_icon.png");
 
   loadSuccess &= assetManager.loadTexture(
       "magic_missile_orbiting", "../assets/sprites/animations/spells/"
@@ -265,6 +269,14 @@ bool loadAllAssets(AssetManager &assetManager) {
   loadSuccess &= loadAnimationSequence(
       assetManager, "vortex_effect", // Base name (e.g., vortex_effect)
       "../assets/sprites/animations/spells/vortex/", // Base path
+      8,  // <<< Number of frames in your vortex animation
+      4); // <<< Padding for frame numbers (e.g., 4 for 0001)
+  // <<< END Vortex Effect Load >>>
+
+  // Adjust baseName, path, frameCount, and padding to match your actual files
+  loadSuccess &= loadAnimationSequence(
+      assetManager, "lightning_bolt_effect", // Base name (e.g., vortex_effect)
+      "../assets/sprites/animations/spells/lightning_bolt/", // Base path
       8,  // <<< Number of frames in your vortex animation
       4); // <<< Padding for frame numbers (e.g., 4 for 0001)
   // <<< END Vortex Effect Load >>>
