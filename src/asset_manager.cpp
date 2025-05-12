@@ -207,7 +207,7 @@ bool loadAllAssets(AssetManager &assetManager) {
       "vortex_icon", "../assets/sprites/icons/vortex_icon.png");
 
   loadSuccess &= assetManager.loadTexture(
-      "lightning_icon", "../assets/sprites/icons/vortex_icon.png");
+      "lightning_icon", "../assets/sprites/icons/lightning_bolt_icon.png");
 
   loadSuccess &= assetManager.loadTexture(
       "magic_missile_orbiting", "../assets/sprites/animations/spells/"
