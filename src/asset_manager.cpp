@@ -210,6 +210,9 @@ bool loadAllAssets(AssetManager &assetManager) {
       "lightning_icon", "../assets/sprites/icons/lightning_bolt_icon.png");
 
   loadSuccess &= assetManager.loadTexture(
+      "void_infusion_icon", "../assets/sprites/icons/void_infusion_icon.png");
+
+  loadSuccess &= assetManager.loadTexture(
       "magic_missile_orbiting", "../assets/sprites/animations/spells/"
                                 "magic_missile/magic_missile_launched.png");
   loadSuccess &= assetManager.loadTexture(
@@ -277,6 +280,14 @@ bool loadAllAssets(AssetManager &assetManager) {
   loadSuccess &= loadAnimationSequence(
       assetManager, "lightning_bolt_effect", // Base name (e.g., vortex_effect)
       "../assets/sprites/animations/spells/lightning_bolt/", // Base path
+      8,  // <<< Number of frames in your vortex animation
+      4); // <<< Padding for frame numbers (e.g., 4 for 0001)
+  // <<< END Vortex Effect Load >>>
+
+  // Adjust baseName, path, frameCount, and padding to match your actual files
+  loadSuccess &= loadAnimationSequence(
+      assetManager, "void_infusion_active", // Base name (e.g., vortex_effect)
+      "../assets/sprites/animations/spells/void_infusion/", // Base path
       8,  // <<< Number of frames in your vortex animation
       4); // <<< Padding for frame numbers (e.g., 4 for 0001)
   // <<< END Vortex Effect Load >>>

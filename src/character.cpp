@@ -10,6 +10,7 @@
 #include <algorithm> // For std::max/min
 #include <cmath>
 #include <iostream> // For debugging output
+#include <variant>  // Include for std::get
 
 // --- Constructor Implementation ---
 PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
@@ -84,6 +85,17 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
         3, 8, 0,                       // 3d8 damage
         -0.10f,                        // 10% less damage per tile distance
         "lightning_icon", 0, StatusEffectType::None, 0);
+
+    // Add Void Infusion spell
+    knownSpells.emplace_back(
+        "Void Infusion", 30, // Mana Cost
+        SpellTargetType::Self,
+        SpellEffectType::Buff,          // Buff effect type
+        "void_infusion_icon",           // Needs an icon asset
+        StatusEffectType::VoidInfusion, // Apply VoidInfusion status
+        10,                             // Base duration of 10 turns
+        1.50f                           // 50% increase magnitude (as a float)
+    );
   }
 
   // CRITICAL: Calculate initial stats based on starting level and base stats
@@ -110,6 +122,16 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
     for (int i = 0; i < 8; ++i) {
       wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
     }
+
+    // --- NEW: Initialize Void Infusion Animation Frames ---
+    // Assuming your frames are named "void_infusion_anim_0" to
+    // "void_infusion_anim_7" (adjust count as needed)
+    int voidInfusionFrameCount = 8; // Example: 8 frames
+    for (int i = 0; i < voidInfusionFrameCount; ++i) {
+      voidInfusionFrameTextureNames.push_back("void_infusion_active_" +
+                                              std::to_string(i));
+    }
+    // --- END NEW ---
   } else if (type == CharacterType::MaleMage) {
     // Add male frames here if/when you create them
     idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
@@ -117,24 +139,75 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
     for (int i = 1; i <= 9; ++i) {
       wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
     }
+
+    // --- NEW: Initialize Void Infusion Animation Frames ---
+    // Assuming your frames are named "void_infusion_anim_0" to
+    // "void_infusion_anim_7" (adjust count as needed)
+    int voidInfusionFrameCount = 8; // Example: 8 frames
+    for (int i = 0; i < voidInfusionFrameCount; ++i) {
+      voidInfusionFrameTextureNames.push_back("void_infusion_active_" +
+                                              std::to_string(i));
+    }
+    // --- END NEW ---
   }
 }
 
 // --- NEW: Getter Methods ---
 int PlayerCharacter::GetEffectiveVitality() const {
-  return baseVitality + (level - 1) * VITALITY_PER_LEVEL;
+  float effectiveVitality = baseVitality + (level - 1) * VITALITY_PER_LEVEL;
+  // Apply Void Infusion buff
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == StatusEffectType::VoidInfusion) {
+      if (std::holds_alternative<float>(effect.magnitude)) {
+        effectiveVitality *= std::get<float>(effect.magnitude);
+      }
+      break; // Assuming only one instance of a buff type
+    }
+  }
+  return static_cast<int>(std::round(effectiveVitality));
 }
 
 int PlayerCharacter::GetEffectiveIntelligence() const {
-  return baseIntelligence + (level - 1) * INTELLIGENCE_PER_LEVEL;
+  float effectiveIntelligence =
+      baseIntelligence + (level - 1) * INTELLIGENCE_PER_LEVEL;
+  // Apply Void Infusion buff
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == StatusEffectType::VoidInfusion) {
+      if (std::holds_alternative<float>(effect.magnitude)) {
+        effectiveIntelligence *= std::get<float>(effect.magnitude);
+      }
+      break; // Assuming only one instance of a buff type
+    }
+  }
+  return static_cast<int>(std::round(effectiveIntelligence));
 }
 
 int PlayerCharacter::GetEffectiveSpirit() const {
-  return baseSpirit + (level - 1) * SPIRIT_PER_LEVEL;
+  float effectiveSpirit = baseSpirit + (level - 1) * SPIRIT_PER_LEVEL;
+  // Apply Void Infusion buff
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == StatusEffectType::VoidInfusion) {
+      if (std::holds_alternative<float>(effect.magnitude)) {
+        effectiveSpirit *= std::get<float>(effect.magnitude);
+      }
+      break; // Assuming only one instance of a buff type
+    }
+  }
+  return static_cast<int>(std::round(effectiveSpirit));
 }
 
 int PlayerCharacter::GetEffectiveAgility() const {
-  return baseAgility + (level - 1) * AGILITY_PER_LEVEL;
+  float effectiveAgility = baseAgility + (level - 1) * AGILITY_PER_LEVEL;
+  // Apply Void Infusion buff
+  for (const auto &effect : activeStatusEffects) {
+    if (effect.type == StatusEffectType::VoidInfusion) {
+      if (std::holds_alternative<float>(effect.magnitude)) {
+        effectiveAgility *= std::get<float>(effect.magnitude);
+      }
+      break; // Assuming only one instance of a buff type
+    }
+  }
+  return static_cast<int>(std::round(effectiveAgility));
 }
 
 // --- NEW: Stat Calculation ---
@@ -332,6 +405,32 @@ void PlayerCharacter::update(float deltaTime, GameData &gameData) {
     currentWardFrame = 0;
   }
   // --- END Ward Animation Update ---
+  // ---> NEW: Void Infusion Animation Update <---
+  if (HasStatusEffect(StatusEffectType::VoidInfusion) &&
+      !voidInfusionFrameTextureNames.empty()) {
+    voidInfusionAnimationTimer += deltaTime;
+    // Ensure speed is positive to avoid division by zero or excessively slow
+    // animation
+    float effectiveVoidInfusionAnimSpeed =
+        std::max(0.1f, voidInfusionAnimationSpeed);
+    float voidInfusionFrameDuration = 1.0f / effectiveVoidInfusionAnimSpeed;
+
+    if (voidInfusionAnimationTimer >= voidInfusionFrameDuration) {
+      voidInfusionAnimationTimer -=
+          voidInfusionFrameDuration; // Subtract duration, don't just reset
+      currentVoidInfusionFrame =
+          (currentVoidInfusionFrame + 1) % voidInfusionFrameTextureNames.size();
+      // Optional: Log frame change for debugging
+      // SDL_Log("DEBUG: Void Infusion Frame Updated. NewFrame=%d",
+      // currentVoidInfusionFrame);
+    }
+  } else {
+    // Reset void infusion animation if the effect is gone or no frames are
+    // defined
+    voidInfusionAnimationTimer = 0.0f;
+    currentVoidInfusionFrame = 0;
+  }
+  // --- END NEW: Void Infusion Animation Update ---
   if (isMoving) {
     // --- Handle Movement Interpolation ---
     moveTimer += deltaTime;
@@ -768,6 +867,10 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
                                endTileY_full_range);
     } // End scope for line tiles calculation
 
+    // Declare effectWidth and effectHeight here
+    float effectWidth;
+    float effectHeight;
+
     // Iterate through tiles along the line for damage (excluding the player's
     // tile)
     for (size_t i = 1; i < lineTiles.size(); ++i) {
@@ -814,7 +917,7 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
 
           SDL_Log("... Applying %d damage to Enemy %d", damageToEnemy,
                   currentEnemy.id);
-          currentEnemy.takeDamage(damageToEnemy); // Apply damage
+          currentEnemy.takeDamage(damageToEnemy, gameData); // Apply damage
 
           effectApplied = true; // Mark that at least one enemy was hit
           // Continue to hit other enemies further down the line on the same
@@ -877,10 +980,9 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
         // The visual effect will be positioned at the start point (player's
         // visual center) Its width will be the calculated visual effect
         // distance, height will be a fixed thickness
-        float effectWidth = visualEffectDistance; // Length of the visual line
-        float effectHeight =
-            gameData.tileWidth /
-            0.8f; // Fixed thickness (using your requested scaling)
+        effectWidth = visualEffectDistance; // Length of the visual line
+        effectHeight = gameData.tileWidth /
+                       0.8f; // Fixed thickness (using your requested scaling)
 
         // The rotation origin should be at the left edge, vertically centered
         // of the texture This is because the texture is a horizontal line
@@ -974,7 +1076,7 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
 
             SDL_Log("... Applying %d damage to Enemy %d", damageToEnemy,
                     currentEnemy.id);
-            currentEnemy.takeDamage(damageToEnemy); // Apply damage
+            currentEnemy.takeDamage(damageToEnemy, gameData); // Apply damage
 
             effectApplied = true; // Mark that at least one enemy was hit
             // Optional: Don't break here, hit all enemies on the same tile if
@@ -1002,13 +1104,18 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
         float effectCenterX =
             (castTargetX + 0.5f) * gameData.tileWidth; // Center of target tile
         float effectCenterY = (castTargetY + 0.5f) * gameData.tileHeight;
-        // Size covers the whole AoE (radius 1 = 3x3 tiles)
-        int effectWidth =
-            gameData.tileWidth * (1 + 2 * spell.areaOfEffectRadius);
-        int effectHeight =
-            gameData.tileHeight * (1 + 2 * spell.areaOfEffectRadius);
-        float effectSpeed = 16.0f;   // Animation speed (FPS) - Adjust!
-        float effectDuration = 0.0f; // Play once based on animation length
+        // Size covers the full AoE diameter based on the spell's
+        // radius
+        int effectDiameterTiles =
+            1 + (2 * spell.areaOfEffectRadius); // Diameter in tiles (e.g.,
+                                                // radius 2 -> 5 tiles)
+        int effectWidth = gameData.tileWidth * effectDiameterTiles;
+        int effectHeight = gameData.tileHeight * effectDiameterTiles;
+
+        // Animation parameters (adjust speed as desired)
+        float effectSpeed = 16.0f; // Animation speed (FPS) - Adjust!
+        float effectDuration =
+            0.0f; // Duration 0 means play once based on animation length
         bool loops = false;
 
         gameData.activeEffects.emplace_back(
@@ -1073,6 +1180,35 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
       SDL_LogWarn(
           SDL_LOG_CATEGORY_APPLICATION,
           "ApplyShield effect currently only supports Self target type.");
+    }
+    break;
+
+  case SpellEffectType::Buff: // Handle general Buff effects
+    if (spell.targetType == SpellTargetType::Self) {
+      if (spell.statusEffectApplied != StatusEffectType::None &&
+          spell.statusEffectDuration > 0) {
+        AddStatusEffect(spell.statusEffectApplied, spell.statusEffectDuration,
+                        spell.statusEffectMagnitude); // Pass magnitude
+        // Immediately recalculate stats when a stat-modifying buff is applied
+        RecalculateStats();
+        SDL_Log("CastSpell: Applied buff '%s' (Status %d) with duration %d and "
+                "magnitude %f.",
+                spell.name.c_str(), (int)spell.statusEffectApplied,
+                spell.statusEffectDuration,
+                std::holds_alternative<float>(spell.statusEffectMagnitude)
+                    ? std::get<float>(spell.statusEffectMagnitude)
+                    : 0.0f); // Log magnitude
+        effectApplied = true;
+      } else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "CastSpell: Buff spell '%s' has no status effect or zero "
+                    "duration defined.",
+                    spell.name.c_str());
+      }
+    } else {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "CastSpell: Buff effect currently only supports Self target type.");
     }
     break;
 
@@ -1298,7 +1434,6 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
             0.0f; // Duration 0 means play once based on frame count/speed
         bool loops = false; // Vortex effect likely does not loop
 
-        // Add the VisualEffect instance to the game's active effects list
         gameData.activeEffects.emplace_back(
             effectCenterX, effectCenterY, effectWidth, effectHeight,
             vortexFrames, effectSpeed, effectDuration, loops);
@@ -1322,6 +1457,11 @@ bool PlayerCharacter::castSpell(int spellIndex, int castTargetX,
                 "CastSpell: Effect type %d not yet implemented.",
                 (int)spell.effectType);
     break;
+  }
+
+  // If a status effect was applied by the spell, trigger stat recalculation
+  if (effectApplied && spell.statusEffectApplied != StatusEffectType::None) {
+    RecalculateStats();
   }
 
   return effectApplied;
@@ -1383,7 +1523,8 @@ int PlayerCharacter::GetEffectiveManaCost(int spellIndex) const {
   return std::max(0, effectiveCost); // Cannot have negative mana cost
 }
 
-void PlayerCharacter::AddStatusEffect(StatusEffectType type, int duration) {
+void PlayerCharacter::AddStatusEffect(StatusEffectType type, int duration,
+                                      EffectMagnitude magnitude) {
   if (duration <= 0)
     return; // Don't add effects with no duration
 
@@ -1393,16 +1534,26 @@ void PlayerCharacter::AddStatusEffect(StatusEffectType type, int duration) {
     if (existingEffect.type == type) {
       existingEffect.durationTurns = std::max(
           existingEffect.durationTurns, duration); // Take the longer duration
-      SDL_Log("DEBUG: Player Status Refreshed: %d duration %d turns.",
-              (int)type, existingEffect.durationTurns);
+      // Optional: Update magnitude if the new one is different
+      existingEffect.magnitude = magnitude;
+      SDL_Log(
+          "DEBUG: Player Status Refreshed: %d duration %d turns, magnitude %f.",
+          (int)type, existingEffect.durationTurns,
+          std::holds_alternative<float>(existingEffect.magnitude)
+              ? std::get<float>(existingEffect.magnitude)
+              : 0.0f);
       return; // Refreshed, no need to add new
     }
   }
 
   // If not found, add the new effect
-  activeStatusEffects.emplace_back(type, duration);
-  SDL_Log("DEBUG: Player Status Added: %d duration %d turns.", (int)type,
-          duration);
+  activeStatusEffects.emplace_back(type, duration,
+                                   magnitude); // Pass magnitude to constructor
+
+  SDL_Log("DEBUG: Player Status Added: %d duration %d turns, magnitude %f.",
+          (int)type, duration,
+          std::holds_alternative<float>(magnitude) ? std::get<float>(magnitude)
+                                                   : 0.0f);
 }
 
 void PlayerCharacter::RemoveStatusEffect(StatusEffectType type) {
@@ -1440,7 +1591,10 @@ void PlayerCharacter::UpdateStatusEffectDurations() {
     }
   }
   // If any effects were removed, potentially recalculate stats if effects
-  // modify them if (effectRemoved) { RecalculateStats(); } // Example hook
+  // modify them
+  if (effectRemoved || HasStatusEffect(StatusEffectType::VoidInfusion)) {
+    RecalculateStats();
+  }
 }
 
 void PlayerCharacter::ApplyTurnEndEffects() {
@@ -1542,7 +1696,7 @@ int PlayerCharacter::calculateSpellDamage(int numDice, int dieType, int bonus,
 
   // 3. Apply Distance Bonus (Placeholder - Requires Spell Struct access or
   // parameters) NOTE: This overload currently CANNOT apply spell-specific
-  // distance bonuses because it doesn't know which spell is being calculated.
+  // distance bonuses because it doesn't knows which spell is being calculated.
   // If distance bonus needs to apply to orbital payloads, the orbital needs
   // to pass more info OR this function needs the spell reference again.
   // For now, distance bonus is only applied via the spellIndex overload.
@@ -1560,4 +1714,173 @@ int PlayerCharacter::calculateSpellDamage(int numDice, int dieType, int bonus,
   int finalDamage = std::max(0, currentDamage);
   SDL_Log("DEBUG [CalcDmg]: Final Damage = %d", finalDamage);
   return finalDamage;
+}
+
+// --- NEW: Player Render Function ---
+void PlayerCharacter::render(SDL_Renderer *renderer, AssetManager &assets,
+                             int cameraX, int cameraY) const {
+  SDL_Texture *baseTextureToRender = nullptr;
+  std::string baseKeyToUse;
+
+  // Determine which base texture to use: Moving -> Idle -> Targeting (if not
+  // moving)
+  if (isMoving && !walkFrameTextureNames.empty()) {
+    // Use current walk frame if moving and frames available
+    if (currentWalkFrame >= 0 &&
+        currentWalkFrame < walkFrameTextureNames.size()) {
+      baseKeyToUse = walkFrameTextureNames[currentWalkFrame];
+    } else {
+      baseKeyToUse =
+          idleFrameTextureNames.empty()
+              ? ""
+              : idleFrameTextureNames[0]; // Fallback to first idle or empty
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Player: Invalid walk frame index %d. Falling back.",
+                  currentWalkFrame);
+    }
+  } else if (!idleFrameTextureNames.empty()) { // Player is not moving
+    if (/*gameData.showTargetingReticle &&*/ !targetingFrameTextureNames
+            .empty()) { // Check if targeting is active
+      if (currentTargetingFrame >= 0 &&
+          currentTargetingFrame < targetingFrameTextureNames.size()) {
+        baseKeyToUse = targetingFrameTextureNames[currentTargetingFrame];
+      } else {
+        baseKeyToUse = idleFrameTextureNames[0]; // Fallback to first idle
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Player: Invalid targeting frame index %d. Falling back.",
+                    currentTargetingFrame);
+      }
+    } else { // Not moving and not targeting, use idle
+      if (currentIdleFrame >= 0 &&
+          currentIdleFrame < idleFrameTextureNames.size()) {
+        baseKeyToUse = idleFrameTextureNames[currentIdleFrame];
+      } else {
+        baseKeyToUse = idleFrameTextureNames[0]; // Fallback to first idle
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Player: Invalid idle frame index %d. Falling back.",
+                    currentIdleFrame);
+      }
+    }
+  } else {
+    // Fallback if no animations available at all
+    baseKeyToUse = ""; // No texture to render
+    SDL_LogWarn(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Player: No base animation frames available. Cannot render base.");
+  }
+
+  // Get the base texture from the asset manager
+  if (!baseKeyToUse.empty()) {
+    baseTextureToRender = assets.getTexture(baseKeyToUse);
+  }
+
+  // Calculate destination rectangle for the base player sprite
+  SDL_Rect destRect;
+  destRect.w = tileWidth;  // Assuming player sprite is tile size
+  destRect.h = tileHeight; // Assuming player sprite is tile size
+  // Center the texture on the player's visual position
+  destRect.x = static_cast<int>(x - destRect.w / 2.0f) - cameraX;
+  destRect.y = static_cast<int>(y - destRect.h / 2.0f) - cameraY;
+
+  // Determine flip based on facing direction
+  SDL_RendererFlip flip = (currentFacingDirection == FacingDirection::Right)
+                              ? SDL_FLIP_HORIZONTAL
+                              : SDL_FLIP_NONE;
+
+  // Render the base player texture
+  if (baseTextureToRender) {
+    SDL_RenderCopyEx(renderer, baseTextureToRender,
+                     nullptr,   // Source rect (entire texture)
+                     &destRect, // Destination rect
+                     0.0,       // Angle (no rotation)
+                     nullptr,   // Center of rotation (nullptr for center)
+                     flip);     // Apply flip
+  } else {
+    // Fallback rendering for base player
+    SDL_LogWarn(
+        SDL_LOG_CATEGORY_APPLICATION,
+        "Player base texture key '%s' not found, drawing fallback rectangle.",
+        baseKeyToUse.c_str());
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // Red
+    SDL_RenderFillRect(renderer, &destRect);
+  }
+
+  // --- Render Void Infusion Overlay (if active) ---
+  if (HasStatusEffect(StatusEffectType::VoidInfusion) &&
+      !voidInfusionFrameTextureNames.empty()) {
+    SDL_Texture *infusionTexture = nullptr;
+    if (currentVoidInfusionFrame >= 0 &&
+        currentVoidInfusionFrame < voidInfusionFrameTextureNames.size()) {
+      infusionTexture = assets.getTexture(
+          voidInfusionFrameTextureNames[currentVoidInfusionFrame]);
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Player: Invalid Void Infusion overlay frame index %d.",
+                  currentVoidInfusionFrame);
+    }
+
+    if (infusionTexture) {
+      // Position and size for the overlay (same as player base for now)
+      SDL_Rect overlayRect =
+          destRect; // Use the same destination rect as the player base
+
+      // Set alpha for transparency (optional, adjust as needed)
+      // SDL_SetTextureAlphaMod(infusionTexture, 128); // Example: 50%
+      // transparent
+
+      SDL_SetTextureBlendMode(
+          infusionTexture, SDL_BLENDMODE_BLEND); // Ensure blending is enabled
+
+      SDL_RenderCopyEx(renderer, infusionTexture,
+                       nullptr,      // Source rect (entire texture)
+                       &overlayRect, // Destination rect
+                       0.0,          // Angle
+                       nullptr,      // Center
+                       flip);        // Apply the same flip as the player
+    } else {
+      SDL_LogWarn(
+          SDL_LOG_CATEGORY_APPLICATION,
+          "Player: Void Infusion overlay texture not found for key '%s'.",
+          voidInfusionFrameTextureNames.empty()
+              ? ""
+              : voidInfusionFrameTextureNames[currentVoidInfusionFrame]
+                    .c_str());
+    }
+  }
+  // --- END Render Void Infusion Overlay ---
+
+  // --- Render Shield Overlay (if active) ---
+  if (currentShield > 0 && !wardFrameTextureKeys.empty()) {
+    SDL_Texture *shieldTexture = nullptr;
+    if (currentWardFrame >= 0 &&
+        currentWardFrame < wardFrameTextureKeys.size()) {
+      shieldTexture = assets.getTexture(wardFrameTextureKeys[currentWardFrame]);
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Player: Invalid shield frame index %d.", currentWardFrame);
+    }
+
+    if (shieldTexture) {
+      // Position and size for the shield overlay (same as player for now)
+      SDL_Rect shieldRect =
+          destRect; // Use the same destination rect as the player
+
+      // Set alpha based on remaining shield percentage (optional, but nice
+      // visual feedback) float shieldAlpha = static_cast<float>(currentShield)
+      // / maxShieldCapacity; // You might need a maxShieldCapacity member Uint8
+      // alpha = static_cast<Uint8>(std::min(1.0f, shieldAlpha) * 255);
+      // SDL_SetTextureAlphaMod(shieldTexture, alpha);
+
+      SDL_SetTextureBlendMode(
+          shieldTexture, SDL_BLENDMODE_BLEND); // Ensure blending is enabled
+
+      SDL_RenderCopyEx(renderer, shieldTexture,
+                       nullptr,     // Source rect (entire texture)
+                       &shieldRect, // Destination rect
+                       0.0,         // Angle
+                       nullptr,     // Center
+                       flip);       // Apply the same flip as the player
+    }
+  }
+  // --- END Render Shield Overlay ---
 }

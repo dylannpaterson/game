@@ -110,7 +110,7 @@ public:
               int cameraY, float visibilityAlpha) const;
   void startMove(int targetX, int targetY);
   void startAttackAnimation(const GameData &gameData);
-  void takeDamage(int amount);
+  void takeDamage(int amount, GameData &gameData);
   int GetAttackDamage() const;
   void applyFloorScaling(int currentFloorIndex, float scalingFactorPerFloor);
 

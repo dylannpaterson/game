@@ -5,6 +5,7 @@
 #include "status_effect.h"
 #include <SDL.h>
 #include <string>
+#include <variant> // Include for std::variant
 #include <vector>
 
 // Forward declarations
@@ -31,6 +32,9 @@ enum class SpellEffectType {
   AreaPushbackStun, // <<< ADDED for Vortex
   LinearDamage      // <<< ADDED: For spells affecting enemies in a line
 };
+
+// Define a variant to hold different effect magnitudes
+using EffectMagnitude = std::variant<int, float>;
 
 struct Spell {
   std::string name;
@@ -59,7 +63,8 @@ struct Spell {
 
   // --- Status Effect Application --- // <<< ADDED MEMBERS
   StatusEffectType statusEffectApplied = StatusEffectType::None;
-  int statusEffectDuration = 0; // In turns
+  int statusEffectDuration = 0;          // In turns
+  EffectMagnitude statusEffectMagnitude; // Use variant for different types
   // Optional future additions:
   // int statusEffectChance = 100;
   // float statusEffectMagnitude = 0.0f;
@@ -70,15 +75,17 @@ struct Spell {
         SpellEffectType et, int numDice, int dieType, int dmgBonus,
         float distBonusPct, std::string iconKey, int aoe = 0,
         StatusEffectType statusType = StatusEffectType::None,
-        int statusDuration = 0)
+        int statusDuration = 0,
+        EffectMagnitude statusMagnitude = 0) // Add magnitude parameter
       : name(std::move(n)), baseManaCost(cost), baseRange(rng), targetType(tt),
         effectType(et), numDamageDice(numDice), damageDieType(dieType),
         baseDamageBonus(dmgBonus), baseHealAmount(0.0f),
         areaOfEffectRadius(aoe), // <<< Initialize AoE here
         iconName(std::move(iconKey)),
         baseDistanceDamageBonusPercent(distBonusPct),
-        statusEffectApplied(statusType),     // <<< INITIALIZE
-        statusEffectDuration(statusDuration) // <<< INITIALIZE
+        statusEffectApplied(statusType),       // <<< INITIALIZE
+        statusEffectDuration(statusDuration),  // <<< INITIALIZE
+        statusEffectMagnitude(statusMagnitude) // Initialize magnitude
   // Zero out other irrelevant fields explicitly if desired
   {}
 
@@ -86,15 +93,21 @@ struct Spell {
   Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
         float shieldMagnitude, // Use baseHealAmount conceptually for magnitude
         float decayPercent,    // Pass in the decay rate
-        std::string iconKey)
+        std::string iconKey,
+        StatusEffectType statusType = StatusEffectType::None, // Add params
+        int statusDuration = 0,
+        EffectMagnitude statusMagnitude = 0) // Add params
       : name(std::move(n)), baseManaCost(cost), baseRange(0), targetType(tt),
         effectType(et), numDamageDice(0), damageDieType(0),
         baseDamageBonus(0),              // Zero damage dice
         baseHealAmount(shieldMagnitude), // Store magnitude here
         areaOfEffectRadius(0),           // Ensure AoE is 0
         iconName(std::move(iconKey)),
-        baseDistanceDamageBonusPercent(0.0f), // Zero distance bonus
-        shieldDecayPercent(decayPercent)      // <<< Store decay rate
+        baseDistanceDamageBonusPercent(0.0f),  // Zero distance bonus
+        shieldDecayPercent(decayPercent),      // <<< Store decay rate
+        statusEffectApplied(statusType),       // Initialize
+        statusEffectDuration(statusDuration),  // Initialize
+        statusEffectMagnitude(statusMagnitude) // Initialize
   {
     if (effectType != SpellEffectType::ApplyShield) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -107,14 +120,19 @@ struct Spell {
   Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
         int count, int acqRange, float lifetime, int numDice, int dieType,
         int dmgBonus, const std::string &projTexKey, float projSpeed,
-        std::string iconKey)
+        std::string iconKey,
+        StatusEffectType statusType = StatusEffectType::None, // Add params
+        int statusDuration = 0,
+        EffectMagnitude statusMagnitude = 0) // Add params
       : name(std::move(n)), baseManaCost(cost), baseRange(0), targetType(tt),
         effectType(et), numDamageDice(numDice), damageDieType(dieType),
         baseDamageBonus(dmgBonus), iconName(std::move(iconKey)),
         numOrbitals(count), orbitalAcquisitionRange(acqRange),
         orbitalLifetime(lifetime), orbitalProjectileTextureKey(projTexKey),
-        orbitalProjectileSpeed(projSpeed),
-        statusEffectApplied(StatusEffectType::None), statusEffectDuration(0) {
+        orbitalProjectileSpeed(projSpeed), statusEffectApplied(statusType),
+        statusEffectDuration(statusDuration),
+        statusEffectMagnitude(statusMagnitude) // Initialize
+  {
     if (effectType != SpellEffectType::SummonOrbital) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                    "SummonOrbital constructor used for non-orbital spell: %s",
@@ -127,13 +145,32 @@ struct Spell {
         SpellEffectType et, int numDice, int dieType, int dmgBonus,
         std::string iconKey, int aoe,
         StatusEffectType statusType = StatusEffectType::None,
-        int statusDuration = 0) // <<< ADDED PARAMS
+        int statusDuration = 0,
+        EffectMagnitude statusMagnitude = 0) // Add magnitude parameter
       : name(std::move(n)), baseManaCost(cost), baseRange(rng), targetType(tt),
         effectType(et), numDamageDice(numDice), damageDieType(dieType),
         baseDamageBonus(dmgBonus), areaOfEffectRadius(aoe),
         iconName(std::move(iconKey)), statusEffectApplied(statusType),
-        statusEffectDuration(statusDuration) // <<< INITIALIZE
+        statusEffectDuration(statusDuration),  // <<< INITIALIZE
+        statusEffectMagnitude(statusMagnitude) // Initialize magnitude
   { /* Validation */ }
+
+  // Constructor for Buff/Debuff spells (Simplified)
+  Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
+        std::string iconKey, StatusEffectType statusType, int statusDuration,
+        EffectMagnitude
+            statusMagnitude) // Constructor specifically for buffs/debuffs
+      : name(std::move(n)), baseManaCost(cost), baseRange(0), targetType(tt),
+        effectType(et), iconName(std::move(iconKey)),
+        statusEffectApplied(statusType), statusEffectDuration(statusDuration),
+        statusEffectMagnitude(statusMagnitude) {
+    if (effectType != SpellEffectType::Buff &&
+        effectType != SpellEffectType::Debuff) {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Buff/Debuff constructor used for non-buff/debuff spell: %s",
+                  n.c_str());
+    }
+  }
 
   // Potentially add a function to apply the effect, though this might be better
   // handled elsewhere void applyEffect(PlayerCharacter& caster, /* target(s) */

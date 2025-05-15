@@ -1963,7 +1963,8 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
             // Apply damage if a living target was found
             if (targetEnemy != nullptr) { // Check if pointer is valid
               // 1. Apply Damage
-              targetEnemy->takeDamage(proj.damage); // Log is inside takeDamage
+              targetEnemy->takeDamage(proj.damage,
+                                      gameData); // Log is inside takeDamage
 
               // 2. Apply Status Effect (if any)
               // Retrieve the source spell definition using the index stored in
@@ -2670,204 +2671,21 @@ Y=[%d -> %d)", startTileX, endTileX, startTileY, endTileY);*/
   }
 
   // --- Render Player ---
-  SDL_Texture *playerTexture = nullptr;
-  std::string textureKeyToUse;
-  bool isTargeting = gameData.showTargetingReticle; // Cache flags
-  bool isPlayerMoving = gameData.currentGamePlayer.isMoving;
-
-  // --- MODIFIED: Select Animation Frame ---
-  if (isTargeting) {
-    // --- Use Targeting Animation ---
-    SDL_Log("DEBUG: [RenderPlayer] Player IS targeting. TargetFrames=%zu, "
-            "CurrentTargetFrame=%d",
-            gameData.currentGamePlayer.targetingFrameTextureNames.size(),
-            gameData.currentGamePlayer.currentTargetingFrame);
-    if (!gameData.currentGamePlayer.targetingFrameTextureNames.empty() &&
-        gameData.currentGamePlayer.currentTargetingFrame <
-            gameData.currentGamePlayer.targetingFrameTextureNames.size()) {
-      textureKeyToUse = gameData.currentGamePlayer.targetingFrameTextureNames
-                            [gameData.currentGamePlayer.currentTargetingFrame];
-      SDL_Log("DEBUG: [RenderPlayer] Using TARGETING key: %s",
-              textureKeyToUse.c_str());
-    } else if (!gameData.currentGamePlayer.idleFrameTextureNames
-                    .empty()) { // Fallback to idle if targeting frames
-                                // missing
-      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
-      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                  "[RenderPlayer] Targeting frame invalid/missing, fallback to "
-                  "IDLE key: %s",
-                  textureKeyToUse.c_str());
-    }
-
-  } else if (isPlayerMoving) {
-    // Use Walking Animation
-    if (!gameData.currentGamePlayer.walkFrameTextureNames.empty() &&
-        gameData.currentGamePlayer.currentWalkFrame <
-            gameData.currentGamePlayer.walkFrameTextureNames.size()) {
-      textureKeyToUse = gameData.currentGamePlayer.walkFrameTextureNames
-                            [gameData.currentGamePlayer.currentWalkFrame];
-    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
-      // Fallback to first idle frame if walk frames are missing/invalid
-      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
-      if (gameData.currentGamePlayer.walkFrameTextureNames.empty()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Player is moving but has no walk frames defined!");
-      }
-    }
-  } else {
-    // Use Idle Animation (existing logic)
-    bool shouldAnimateIdle =
-        (currentAppState == AppState::Gameplay &&
-         gameData.currentPhase == TurnPhase::Planning_PlayerInput &&
-         !gameData.showTargetingReticle); // Check idle conditions
-    if (shouldAnimateIdle &&
-        !gameData.currentGamePlayer.idleFrameTextureNames.empty() &&
-        gameData.currentGamePlayer.currentIdleFrame <
-            gameData.currentGamePlayer.idleFrameTextureNames.size()) {
-      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames
-                            [gameData.currentGamePlayer.currentIdleFrame];
-    } else if (!gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
-      // Default to first idle frame if not animating idle or frames missing
-      textureKeyToUse = gameData.currentGamePlayer.idleFrameTextureNames[0];
-      if (gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Player is idle but has no idle frames defined!");
-      }
-    }
-  }
-
-  // Get the texture using the determined key
-  if (!textureKeyToUse.empty()) {
-    playerTexture = assets.getTexture(textureKeyToUse);
-  }
-  // --- END MODIFIED Frame Selection ---
-
-  // Render the texture if found, otherwise use fallback
-  if (playerTexture) {
-    SDL_Rect playerRect;
-    int texW, texH;
-    SDL_QueryTexture(playerTexture, NULL, NULL, &texW, &texH);
-    playerRect.w = gameData.tileWidth;  // Example fixed width
-    playerRect.h = gameData.tileHeight; // Example fixed height
-    playerRect.x = static_cast<int>(std::round(gameData.currentGamePlayer.x -
-                                               playerRect.w / 2.0f)) -
-                   gameData.cameraX;
-    playerRect.y = static_cast<int>(std::round(gameData.currentGamePlayer.y -
-                                               playerRect.h / 2.0f)) -
-                   gameData.cameraY;
-
-    // <<< DETERMINE FLIP BASED ON FACING DIRECTION >>>
-    SDL_RendererFlip flip = SDL_FLIP_NONE; // Default: no flip (facing left)
-    if (gameData.currentGamePlayer.currentFacingDirection ==
-        PlayerCharacter::FacingDirection::Right) {
-      flip = SDL_FLIP_HORIZONTAL; // Flip horizontally if facing left
-    }
-
-    // <<< USE SDL_RenderCopyEx WITH FLIP >>>
-    SDL_RenderCopyEx(gameData.renderer, playerTexture,
-                     nullptr,     // Source rect (entire texture)
-                     &playerRect, // Destination rect
-                     0.0,         // Angle (no rotation)
-                     nullptr,     // Center of rotation (not needed)
-                     flip);       // Apply flip
-
-  } else {
-    // Fallback green rectangle
-    SDL_Rect playerRect;
-    playerRect.w = gameData.tileWidth / 2;
-    playerRect.h = gameData.tileHeight / 2;
-    playerRect.x =
-        static_cast<int>(gameData.currentGamePlayer.x - playerRect.w / 2.0f) -
-        gameData.cameraX;
-    playerRect.y =
-        static_cast<int>(gameData.currentGamePlayer.y - playerRect.h / 2.0f) -
-        gameData.cameraY;
-    SDL_SetRenderDrawColor(gameData.renderer, 0, 255, 0, 255);
-    SDL_RenderFillRect(gameData.renderer, &playerRect);
-    // Logging for missing textures...
-    if (!gameData.currentGamePlayer.idleFrameTextureNames.empty() &&
-        !textureKeyToUse.empty()) {
-      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                  "Player texture '%s' not found!", textureKeyToUse.c_str());
-    } else if (gameData.currentGamePlayer.idleFrameTextureNames.empty()) {
-      SDL_LogWarn(
-          SDL_LOG_CATEGORY_APPLICATION,
-          "Player has no idle frame textures defined in character.cpp!");
-    }
-  }
+  gameData.currentGamePlayer.render(gameData.renderer, assets, gameData.cameraX,
+                                    gameData.cameraY);
   // --- End Player Rendering ---
 
   // <<< ADD VISUAL EFFECT RENDERING >>>
-  // Render *after* tiles/items/pedestal, but potentially *before* or *after*
-  // entities Rendering before entities makes effects appear "on the ground"
-  // Rendering after entities makes effects appear "over" them
-  // Let's render them *before* entities for now (ground frost effect)
+  // Render *after* tiles/items/pedestal, but potentially *before* or
+  // *after* entities Rendering before entities makes effects appear "on the
+  // ground" Rendering after entities makes effects appear "over" them Let's
+  // render them *before* entities for now (ground frost effect)
   for (const auto &effect : gameData.activeEffects) {
     // Optional: Add visibility check based on effect's center point if desired
     effect.render(gameData.renderer, assets, gameData.cameraX,
                   gameData.cameraY);
   }
   // <<< END VISUAL EFFECT RENDERING >>>
-
-  PlayerCharacter &player =
-      gameData.currentGamePlayer; // Get reference for convenience
-  if (player.currentShield > 0 && !player.wardFrameTextureKeys.empty()) {
-    // Get the correct texture key for the current frame
-    int frameIndex = player.currentWardFrame;
-    // Basic bounds check for safety
-    if (frameIndex >= 0 && frameIndex < player.wardFrameTextureKeys.size()) {
-      std::string wardTextureKey = player.wardFrameTextureKeys[frameIndex];
-      SDL_Texture *wardTexture = assets.getTexture(wardTextureKey);
-
-      if (wardTexture) {
-        // Calculate destination rectangle for the ward effect
-        // Let's make it slightly larger than the player's render rect
-        // (Assuming playerRect is still in scope from player rendering above,
-        // otherwise recalculate player render size/pos)
-        // Note: We might need playerRect calculation from earlier, let's assume
-        // a size for now
-        int playerRenderWidth = static_cast<int>(
-            gameData.tileWidth * 0.8); // Use consistent size if possible
-        int playerRenderHeight = static_cast<int>(gameData.tileHeight * 0.8);
-        int wardWidth =
-            static_cast<int>(playerRenderWidth * 1.2f); // Slightly larger
-        int wardHeight =
-            static_cast<int>(playerRenderHeight * 1.2f); // Slightly larger
-
-        SDL_Rect wardRect;
-        wardRect.w = wardWidth;
-        wardRect.h = wardHeight;
-        // Center it precisely on player's visual coordinates
-        wardRect.x =
-            static_cast<int>(std::round(player.x - wardRect.w / 2.0f)) -
-            gameData.cameraX;
-        wardRect.y =
-            static_cast<int>(std::round(player.y - wardRect.h / 2.0f)) -
-            gameData.cameraY;
-
-        // Set transparency (alpha value 0-255)
-        Uint8 wardAlpha = 70; // Adjust for desired transparency
-        SDL_SetTextureAlphaMod(wardTexture, wardAlpha);
-        SDL_SetTextureBlendMode(
-            wardTexture, SDL_BLENDMODE_BLEND); // Crucial for transparency
-
-        // Render the current ward frame
-        SDL_RenderCopy(gameData.renderer, wardTexture, nullptr, &wardRect);
-
-        // It's good practice to reset alpha/blend for the texture if it might
-        // be reused differently, though getting it via AssetManager might
-        // mitigate this need. SDL_SetTextureAlphaMod(wardTexture, 255);
-
-      } else {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Ward texture key '%s' not found!", wardTextureKey.c_str());
-      }
-    } else {
-      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Invalid ward frame index: %d",
-                  frameIndex);
-    }
-  }
-  // --- END WARD EFFECT RENDERING ---
 
   // ---> ADD Orbital Rendering <---
   for (const auto &orbital : gameData.activeOrbitals) {

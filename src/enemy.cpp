@@ -677,7 +677,7 @@ void Enemy::render(SDL_Renderer *renderer, AssetManager &assets, int cameraX,
 }
 
 // --- takeDamage Implementation (No changes needed for this refactor) ---
-void Enemy::takeDamage(int amount) {
+void Enemy::takeDamage(int amount, GameData &gameData) {
   if (health <= 0) {
     return;
   }
@@ -685,6 +685,46 @@ void Enemy::takeDamage(int amount) {
   if (health <= 0) {
     health = 0;
     SDL_Log("Enemy at (%d, %d) has been vanquished!", x, y);
+
+    // --- NEW: Extend Void Infusion Duration on Enemy Kill ---
+    // Assuming you have access to the player character instance here.
+    // This might require passing a pointer or reference to the PlayerCharacter
+    // to the takeDamage function, or accessing it via a GameData object if
+    // available. For this example, let's assume 'gameData.currentGamePlayer' is
+    // accessible and represents the player. You may need to adjust this based
+    // on your actual game structure.
+
+    // We need a pointer to the player character to call AddStatusEffect on
+    // them. Since takeDamage is called on an Enemy, it doesn't inherently know
+    // about the player. The most common pattern is for the system that
+    // *applies* the damage (e.g., a projectile hitting an enemy) to have access
+    // to both the damage source (player) and the target (enemy). Alternatively,
+    // if damage is applied by the player directly, the player object is already
+    // available.
+
+    // **** IMPORTANT: This is a placeholder assuming gameData.currentGamePlayer
+    // is available.
+    // **** You will need to ensure the PlayerCharacter instance is accessible
+    // in this context.
+    if (gameData.currentGamePlayer.HasStatusEffect(
+            StatusEffectType::VoidInfusion)) {
+      // Find the Void Infusion effect to get its magnitude
+      EffectMagnitude currentMagnitude = 1.0f; // Default magnitude
+      for (const auto &effect :
+           gameData.currentGamePlayer.activeStatusEffects) {
+        if (effect.type == StatusEffectType::VoidInfusion) {
+          currentMagnitude = effect.magnitude; // Get the current magnitude
+          break;
+        }
+      }
+      // Add 2 turns. AddStatusEffect will refresh the duration and keep the
+      // existing magnitude.
+      gameData.currentGamePlayer.AddStatusEffect(
+          StatusEffectType::VoidInfusion, 2,
+          currentMagnitude); // Pass the current magnitude
+      SDL_Log("Void Infusion duration extended by 2 turns on enemy kill.");
+    }
+    // --- END NEW ---
   } else {
     SDL_Log("Enemy %d took %d damage. Health: %d/%d", id, amount, health,
             maxHealth);

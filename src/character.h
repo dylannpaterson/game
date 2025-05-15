@@ -2,9 +2,9 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
-#include "projectile.h" // Include projectile definition for casting spells
-#include "spell.h"      // Include your spell definitions
-#include "status_effect.h"
+#include "projectile.h"    // Include projectile definition for casting spells
+#include "spell.h"         // Include your spell definitions
+#include "status_effect.h" // Include for StatusEffect and EffectMagnitude
 #include <SDL.h> // For SDL_Texture* forward declaration if needed, or include fully
 #include <string> // For spell names eventually, if not already included by spell.h
 #include <vector> // For std::vector
@@ -110,6 +110,14 @@ struct PlayerCharacter {
   int currentWardFrame = 0;
   float wardAnimationSpeed = 8.0f; // Frames per second (adjust speed)
 
+  // --- NEW: Void Infusion Animation Data ---
+  std::vector<std::string>
+      voidInfusionFrameTextureNames; // Keys for Void Infusion frames
+  float voidInfusionAnimationTimer = 0.0f;
+  int currentVoidInfusionFrame = 0;
+  float voidInfusionAnimationSpeed = 10.0f; // Adjust speed as needed
+  // --- END NEW ---
+
   // ADDED: Enum for facing direction INSIDE the struct
   enum class FacingDirection { Right, Left };
   // ADDED: Member variable to store current direction
@@ -124,6 +132,8 @@ struct PlayerCharacter {
   void startMove(int targetX, int targetY);
   void update(float deltaTime,
               GameData &gameData); // Pass GameData for occupation grid updates
+  void render(SDL_Renderer *renderer, AssetManager &assets, int cameraX,
+              int cameraY) const; // Modified to use buff animation
 
   // --- Leveling & Stat Methods ---
   void GainArcana(int amount);
@@ -154,7 +164,8 @@ struct PlayerCharacter {
                            const Enemy *target = nullptr) const;
 
   // --- Status Effect Methods --- // <<< ADDED
-  void AddStatusEffect(StatusEffectType type, int duration);
+  void AddStatusEffect(StatusEffectType type, int duration,
+                       EffectMagnitude magnitude); // Updated signature
   void RemoveStatusEffect(
       StatusEffectType type); // Optional: For dispel effects later
   bool HasStatusEffect(StatusEffectType type) const;
