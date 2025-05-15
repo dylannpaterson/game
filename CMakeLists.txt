@@ -31,6 +31,7 @@ add_executable(WizardRoguelike
     src/asset_manager.cpp
     src/orbital_missile.cpp
     src/visual_effect.cpp
+    src/rune_pedestal.cpp
 )
 
 target_link_libraries(WizardRoguelike PUBLIC

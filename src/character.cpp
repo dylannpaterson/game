@@ -32,71 +32,31 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
       currentFacingDirection(FacingDirection::Left), tileWidth(tileW),
       tileHeight(tileH) {
   // Initialize known spells based on type
-  if (type == CharacterType::FemaleMage || type == CharacterType::MaleMage) {
-    knownSpells.emplace_back("Fireball", 7, 10, SpellTargetType::Enemy,
-                             SpellEffectType::Damage, 6, 6, 0, // Damage: 6d6+0
-                             0.05f, // 5% bonus dmg per tile beyond adjacent
-                             "fireball_icon",
-                             0, // AoE Radius (0 for single target)
-                             StatusEffectType::None, // <<< APPLY Stunned
-                             0                       // <<< DURATION 1 turn
-    );
-    knownSpells.emplace_back(
-        "Ward", 20, SpellTargetType::Self, SpellEffectType::ApplyShield,
-        50.0f, // Shield Magnitude (using baseHealAmount field)
-        0.20f, // Decay 20% of max per turn
-        "ward_icon");
-    // ---> ADD Magic Missiles <---
-    /*knownSpells.emplace_back(
-        "Magic Missiles", 15, SpellTargetType::Self,
-        SpellEffectType::SummonOrbital, 3, 6,
-        500.0f,  // Summon 3 orbitals, 6 tile range, 3 sec lifetime
-        2, 6, 0, // Payload: 2d6 damage
-        "magic_missile_launched",
-        700.0f,                 // Launched projectile texture key & speed
-        "magic_missiles_icon"); // Icon for spell bar/menu
 
-    knownSpells.emplace_back(
-        "Blizzard", 40,              // High Cost
-        8,                           // Range to center tile
-        SpellTargetType::Tile,       // Target a tile for the center
-        SpellEffectType::AreaDamage, // New Effect Type
-        4, 8, 0,                     // Damage: 4d8+0 (Moderate)
-        0.0f,                        // No distance bonus for AoE usually
-        "blizzard_icon",             // Icon key
-        1                            // AoE Radius (1 = 3x3 area)
-    );
-    // <<< DEFINE VORTEX >>>
-    knownSpells.emplace_back(
-        "Vortex", 10, // Mana Cost
-        0,            // Range (Self targeted, uses AoE radius)
-        SpellTargetType::Self,
-        SpellEffectType::AreaPushbackStun, // The new effect type
-        1, 6, 0,                           // 1d6 dice damage
-        "vortex_icon",                     // <<< Need to create vortex_icon.png
-        2, // AoE Radius (Affects 5x5 area around player) - Adjust as desired
-        StatusEffectType::Stunned, // Status to apply
-        1                          // Duration (1 turn)
-    );*/
-    // Lightning Bolt (Linear Damage)
-    knownSpells.emplace_back(
-        "Lightning Bolt", 15, 8, SpellTargetType::Tile,
-        SpellEffectType::LinearDamage, // <<< Use new effect type
-        3, 8, 0,                       // 3d8 damage
-        -0.10f,                        // 10% less damage per tile distance
-        "lightning_icon", 0, StatusEffectType::None, 0);
+  knownSpells.clear();
+  // Manually add Fireball (or fetch from a very early initialized master list
+  // if absolutely necessary, but direct construction is simpler for a fixed
+  // starting spell). Ensure the arguments match your UPDATED Spell
+  // constructor in spell.h.
+  knownSpells.emplace_back(
+      "Fireball", 7, 5, SpellTargetType::Enemy, SpellEffectType::Damage, 6, 6,
+      0, 0.05f, "fireball_icon", RuneType::NUM_RUNE_TYPES,
+      0, // No specific rune, 0 arcana (effectively pre-unlocked)
+      0, StatusEffectType::None, 0, EffectMagnitude(0) // Default magnitude
+  );
 
-    // Add Void Infusion spell
-    knownSpells.emplace_back(
-        "Void Infusion", 30, // Mana Cost
-        SpellTargetType::Self,
-        SpellEffectType::Buff,          // Buff effect type
-        "void_infusion_icon",           // Needs an icon asset
-        StatusEffectType::VoidInfusion, // Apply VoidInfusion status
-        10,                             // Base duration of 10 turns
-        1.50f                           // 50% increase magnitude (as a float)
-    );
+  spellBarSlots.fill(""); // Initialize all slots to empty string
+  if (!knownSpells.empty()) {
+    spellBarSlots[0] = knownSpells[0].name; // Assign Fireball to the first slot
   }
+
+  // --- NEW: Initialize rune counts ---
+  for (int i = 0; i < static_cast<int>(RuneType::NUM_RUNE_TYPES); ++i) {
+    runes[static_cast<RuneType>(i)] = 0;
+  }
+  // Logging for verification
+  SDL_Log("PlayerCharacter: Runes initialized. Fire runes: %d",
+          runes[RuneType::Fire]);
 
   // CRITICAL: Calculate initial stats based on starting level and base stats
   RecalculateStats();
@@ -107,48 +67,29 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
 
   // Idle animation frames
   // Initialize the vector of texture names
-  if (type == CharacterType::FemaleMage) {
-    for (int i = 0; i < 8; ++i) {
-      idleFrameTextureNames.push_back("mage_idle_" + std::to_string(i));
-    }
 
-    for (int i = 0; i < 8; ++i) {
-      walkFrameTextureNames.push_back("mage_walk_" + std::to_string(i));
-    }
-    for (int i = 8; i < 8; ++i) {
-      targetingFrameTextureNames.push_back("mage_target_" + std::to_string(i));
-    }
+  for (int i = 0; i < 8; ++i) {
+    idleFrameTextureNames.push_back("mage_idle_" + std::to_string(i));
+  }
 
-    for (int i = 0; i < 8; ++i) {
-      wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
-    }
+  for (int i = 0; i < 8; ++i) {
+    walkFrameTextureNames.push_back("mage_walk_" + std::to_string(i));
+  }
+  for (int i = 8; i < 8; ++i) {
+    targetingFrameTextureNames.push_back("mage_target_" + std::to_string(i));
+  }
 
-    // --- NEW: Initialize Void Infusion Animation Frames ---
-    // Assuming your frames are named "void_infusion_anim_0" to
-    // "void_infusion_anim_7" (adjust count as needed)
-    int voidInfusionFrameCount = 8; // Example: 8 frames
-    for (int i = 0; i < voidInfusionFrameCount; ++i) {
-      voidInfusionFrameTextureNames.push_back("void_infusion_active_" +
-                                              std::to_string(i));
-    }
-    // --- END NEW ---
-  } else if (type == CharacterType::MaleMage) {
-    // Add male frames here if/when you create them
-    idleFrameTextureNames = {/* e.g., "male_mage_idle_1", ... */};
+  for (int i = 0; i < 8; ++i) {
+    wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
+  }
 
-    for (int i = 1; i <= 9; ++i) {
-      wardFrameTextureKeys.push_back("ward_active_" + std::to_string(i));
-    }
-
-    // --- NEW: Initialize Void Infusion Animation Frames ---
-    // Assuming your frames are named "void_infusion_anim_0" to
-    // "void_infusion_anim_7" (adjust count as needed)
-    int voidInfusionFrameCount = 8; // Example: 8 frames
-    for (int i = 0; i < voidInfusionFrameCount; ++i) {
-      voidInfusionFrameTextureNames.push_back("void_infusion_active_" +
-                                              std::to_string(i));
-    }
-    // --- END NEW ---
+  // --- NEW: Initialize Void Infusion Animation Frames ---
+  // Assuming your frames are named "void_infusion_anim_0" to
+  // "void_infusion_anim_7" (adjust count as needed)
+  int voidInfusionFrameCount = 8; // Example: 8 frames
+  for (int i = 0; i < voidInfusionFrameCount; ++i) {
+    voidInfusionFrameTextureNames.push_back("void_infusion_active_" +
+                                            std::to_string(i));
   }
 }
 
@@ -1883,4 +1824,249 @@ void PlayerCharacter::render(SDL_Renderer *renderer, AssetManager &assets,
     }
   }
   // --- END Render Shield Overlay ---
+}
+void PlayerCharacter::addRune(RuneType type, int count) {
+  // Check if the rune type is valid (optional, but good practice)
+  if (type < RuneType::Fire || type >= RuneType::NUM_RUNE_TYPES) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "PlayerCharacter::addRune: Invalid rune type %d",
+                static_cast<int>(type));
+    return;
+  }
+
+  runes[type] += count;
+  SDL_Log("PlayerCharacter: Added %d of rune type %d. New count: %d", count,
+          static_cast<int>(type), runes[type]);
+  // Consider adding a small visual/audio cue for the player here in the future.
+}
+int PlayerCharacter::getRuneCount(RuneType type) const {
+  // Check if the rune type is valid (optional)
+  if (type < RuneType::Fire || type >= RuneType::NUM_RUNE_TYPES) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "PlayerCharacter::getRuneCount: Invalid rune type %d",
+                static_cast<int>(type));
+    return 0;
+  }
+
+  auto it = runes.find(type);
+  if (it != runes.end()) {
+    return it->second;
+  }
+  // This case should ideally not be hit if the constructor initializes all rune
+  // types.
+  SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+              "PlayerCharacter::getRuneCount: Rune type %d not found in map, "
+              "returning 0.",
+              static_cast<int>(type));
+  return 0;
+}
+
+bool PlayerCharacter::canSpendRunes(RuneType type, int count) const {
+  if (type < RuneType::Fire || type >= RuneType::NUM_RUNE_TYPES)
+    return false;
+  if (count <= 0)
+    return true; // Spending 0 or negative is always "possible" (though usually
+                 // disallowed elsewhere)
+
+  auto it = runes.find(type);
+  if (it != runes.end()) {
+    return it->second >= count;
+  }
+  return false; // Rune type not found or count insufficient
+}
+
+bool PlayerCharacter::spendRunes(RuneType type, int count) {
+  if (type < RuneType::Fire || type >= RuneType::NUM_RUNE_TYPES) {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "PlayerCharacter::spendRunes: Invalid rune type %d",
+                static_cast<int>(type));
+    return false;
+  }
+  if (count <= 0) { // Cannot spend zero or negative runes
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "PlayerCharacter::spendRunes: Cannot spend non-positive amount "
+                "%d of rune type %d",
+                count, static_cast<int>(type));
+    return false;
+  }
+
+  if (canSpendRunes(type, count)) {
+    runes[type] -= count;
+    SDL_Log("PlayerCharacter: Spent %d of rune type %d. Remaining: %d", count,
+            static_cast<int>(type), runes[type]);
+    return true;
+  }
+  SDL_Log(
+      "PlayerCharacter: Failed to spend %d of rune type %d. Current count: %d",
+      count, static_cast<int>(type), getRuneCount(type));
+  return false;
+}
+
+// --- Spell Unlocking Logic ---
+bool PlayerCharacter::hasSpellUnlocked(const std::string &spellName) const {
+  for (const auto &spell : knownSpells) {
+    if (spell.name == spellName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool PlayerCharacter::attemptToUnlockSpell(const std::string &spellNameToUnlock,
+                                           const GameData &gameData) {
+  const Spell *spellDefinition = nullptr;
+  for (const auto &def : gameData.allSpellDefinitions) {
+    if (def.name == spellNameToUnlock) {
+      spellDefinition = &def;
+      break;
+    }
+  }
+
+  if (!spellDefinition) {
+    SDL_Log("PlayerCharacter::attemptToUnlockSpell: Spell definition '%s' not "
+            "found.",
+            spellNameToUnlock.c_str());
+    return false;
+  }
+  if (hasSpellUnlocked(spellNameToUnlock)) {
+    SDL_Log("PlayerCharacter::attemptToUnlockSpell: Player already knows '%s'.",
+            spellNameToUnlock.c_str());
+    return false;
+  }
+  if (!CanAffordArcana(spellDefinition->arcanaCostToUnlock)) {
+    SDL_Log("PlayerCharacter::attemptToUnlockSpell: Cannot unlock '%s'. Need "
+            "%d Arcana, have %d.",
+            spellNameToUnlock.c_str(), spellDefinition->arcanaCostToUnlock,
+            currentArcana);
+    return false;
+  }
+  bool hasRequiredRune =
+      (spellDefinition->requiredRuneTypeToUnlock == RuneType::NUM_RUNE_TYPES) ||
+      (getRuneCount(spellDefinition->requiredRuneTypeToUnlock) >= 1);
+  if (!hasRequiredRune) {
+    SDL_Log("PlayerCharacter::attemptToUnlockSpell: Cannot unlock '%s'. "
+            "Missing RuneType %d.",
+            spellNameToUnlock.c_str(),
+            static_cast<int>(spellDefinition->requiredRuneTypeToUnlock));
+    return false;
+  }
+
+  SpendArcana(spellDefinition->arcanaCostToUnlock);
+  if (spellDefinition->requiredRuneTypeToUnlock != RuneType::NUM_RUNE_TYPES) {
+    if (!spendRunes(spellDefinition->requiredRuneTypeToUnlock, 1)) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                   "CRITICAL: Failed to spend rune for %s post-check!",
+                   spellNameToUnlock.c_str());
+    }
+  }
+
+  knownSpells.push_back(*spellDefinition);
+  SDL_Log("PlayerCharacter::attemptToUnlockSpell: Successfully unlocked spell "
+          "'%s'!",
+          spellNameToUnlock.c_str());
+
+  // Auto-assign to first empty spell bar slot if possible
+  for (int i = 0; i < MAX_SPELL_BAR_SLOTS; ++i) {
+    if (spellBarSlots[i].empty()) {
+      spellBarSlots[i] = spellDefinition->name;
+      SDL_Log("Auto-assigned '%s' to spell bar slot %d.",
+              spellDefinition->name.c_str(), i + 1);
+      break;
+    }
+  }
+
+  // Sort knownSpells by name - this is what caused the reordering on the bar
+  // previously. Now, the bar is driven by spellBarSlots, so this sort only
+  // affects the Arcane Library view.
+  std::sort(knownSpells.begin(), knownSpells.end(),
+            [](const Spell &a, const Spell &b) { return a.name < b.name; });
+  return true;
+}
+
+// --- Spell Bar Management ---
+void PlayerCharacter::assignSpellToBar(int slotIndex,
+                                       const std::string &spellName) {
+  if (slotIndex >= 0 && slotIndex < MAX_SPELL_BAR_SLOTS) {
+    if (spellName.empty() ||
+        hasSpellUnlocked(spellName)) { // Allow assigning empty or known spell
+      spellBarSlots[slotIndex] = spellName;
+      SDL_Log("Assigned spell '%s' to bar slot %d.", spellName.c_str(),
+              slotIndex + 1);
+    } else {
+      SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                  "Cannot assign unknown spell '%s' to bar.",
+                  spellName.c_str());
+    }
+  } else {
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                "Invalid spell bar slot index: %d.", slotIndex);
+  }
+}
+
+void PlayerCharacter::clearSpellBarSlot(int slotIndex) {
+  if (slotIndex >= 0 && slotIndex < MAX_SPELL_BAR_SLOTS) {
+    spellBarSlots[slotIndex] = ""; // Set to empty string
+    SDL_Log("Cleared spell bar slot %d.", slotIndex + 1);
+  }
+}
+
+// --- Spellcasting Helper Getters ---
+const Spell *PlayerCharacter::getKnownSpellByIndex(int knownSpellIndex) const {
+  if (knownSpellIndex >= 0 &&
+      knownSpellIndex < static_cast<int>(knownSpells.size())) {
+    return &knownSpells[knownSpellIndex];
+  }
+  return nullptr;
+}
+
+const Spell *
+PlayerCharacter::getKnownSpellByName(const std::string &spellName) const {
+  for (const auto &spell : knownSpells) {
+    if (spell.name == spellName) {
+      return &spell;
+    }
+  }
+  return nullptr;
+}
+
+int PlayerCharacter::getKnownSpellIndexByName(
+    const std::string &spellName) const {
+  for (int i = 0; i < static_cast<int>(knownSpells.size()); ++i) {
+    if (knownSpells[i].name == spellName) {
+      return i;
+    }
+  }
+  return -1; // Not found
+}
+
+// --- NEW: Method to get theoretical damage range ---
+std::pair<int, int>
+PlayerCharacter::getTheoreticalSpellDamageRange(const Spell &spell) const {
+  if (spell.numDamageDice <= 0 ||
+      spell.effectType != SpellEffectType::Damage &&
+          spell.effectType != SpellEffectType::AreaDamage &&
+          spell.effectType != SpellEffectType::LinearDamage) {
+    // Not a direct damage spell or no dice to roll
+    return {0, 0};
+  }
+
+  // Minimum damage from dice (each die rolls 1)
+  int minDiceDamage = spell.numDamageDice * 1;
+  // Maximum damage from dice (each die rolls its max type)
+  int maxDiceDamage = spell.numDamageDice * spell.damageDieType;
+
+  // Add base damage bonus
+  int minBaseDamage = minDiceDamage + spell.baseDamageBonus;
+  int maxBaseDamage = maxDiceDamage + spell.baseDamageBonus;
+
+  // Apply player's spell damage modifier
+  // Note: Distance bonus is not included here as it depends on target location.
+  // This function provides the raw potential before situational modifiers like
+  // distance.
+  int finalMinDamage = static_cast<int>(std::round(
+      static_cast<float>(minBaseDamage) * this->spellDamageModifier));
+  int finalMaxDamage = static_cast<int>(std::round(
+      static_cast<float>(maxBaseDamage) * this->spellDamageModifier));
+
+  return {std::max(0, finalMinDamage), std::max(0, finalMaxDamage)};
 }

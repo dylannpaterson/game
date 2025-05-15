@@ -297,3 +297,18 @@ std::vector<std::pair<int, int>> getLineTiles(int x0, int y0, int x1, int y1) {
   return tiles;
 }
 // --- End of getLineTiles Implementation ---
+
+// A more robust getRandomInt, if you don't have one:
+int getRandomInt(int min, int max) {
+  static std::random_device rd;  // Obtain a random number from hardware
+  static std::mt19937 gen(rd()); // Seed the generator
+  std::uniform_int_distribution<> distrib(min, max); // Define the range
+  return distrib(gen);
+}
+
+RuneType getRandomRune() {
+  // Get a random integer between 0 and the number of rune types minus 1
+  int randomIndex =
+      getRandomInt(0, static_cast<int>(RuneType::NUM_RUNE_TYPES) - 1);
+  return static_cast<RuneType>(randomIndex);
+}

@@ -246,12 +246,12 @@ bool loadAllAssets(AssetManager &assetManager) {
   // Rune Pedestal Animations
   loadSuccess &= loadAnimationSequence(
       assetManager, "rune_pedestal",
-      "../assets/sprites/animations/environment/rune_pedestal/", 8,
+      "../assets/sprites/animations/environment/rune_pedestal/", 10,
       1); // No padding needed if filenames are just rune_pedestal_1.png etc.
           // Adjust padding if needed.
   loadSuccess &= loadAnimationSequence(
       assetManager, "rune_pedestal_off",
-      "../assets/sprites/animations/environment/rune_pedestal/", 8,
+      "../assets/sprites/animations/environment/rune_pedestal/", 10,
       1); // Assuming files are rune_pedestal_deactivating_1.png etc. Adjust
           // base path and padding if different.
 

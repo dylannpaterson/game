@@ -12,6 +12,7 @@
 class PlayerCharacter;
 class Enemy;
 struct Level;
+enum class RuneType;
 
 enum class SpellTargetType {
   Self,
@@ -70,10 +71,16 @@ struct Spell {
   // float statusEffectMagnitude = 0.0f;
   // --- END ADDED MEMBERS ---
 
+  // --- NEW: Fields for Unlocking Spells ---
+  RuneType requiredRuneTypeToUnlock;
+  int arcanaCostToUnlock;
+  // --- END NEW FIELDS ---
+
   // --- Constructor for Damage Spells (Tile/Enemy Target) ---
   Spell(std::string n, int cost, int rng, SpellTargetType tt,
         SpellEffectType et, int numDice, int dieType, int dmgBonus,
-        float distBonusPct, std::string iconKey, int aoe = 0,
+        float distBonusPct, std::string iconKey, RuneType unlockRune,
+        int unlockArcana, int aoe = 0,
         StatusEffectType statusType = StatusEffectType::None,
         int statusDuration = 0,
         EffectMagnitude statusMagnitude = 0) // Add magnitude parameter
@@ -83,9 +90,11 @@ struct Spell {
         areaOfEffectRadius(aoe), // <<< Initialize AoE here
         iconName(std::move(iconKey)),
         baseDistanceDamageBonusPercent(distBonusPct),
-        statusEffectApplied(statusType),       // <<< INITIALIZE
-        statusEffectDuration(statusDuration),  // <<< INITIALIZE
-        statusEffectMagnitude(statusMagnitude) // Initialize magnitude
+        statusEffectApplied(statusType),        // <<< INITIALIZE
+        statusEffectDuration(statusDuration),   // <<< INITIALIZE
+        statusEffectMagnitude(statusMagnitude), // Initialize magnitude
+        requiredRuneTypeToUnlock(unlockRune),   // <<< INITIALIZE
+        arcanaCostToUnlock(unlockArcana)        // <<< INITIALIZE
   // Zero out other irrelevant fields explicitly if desired
   {}
 
@@ -93,7 +102,7 @@ struct Spell {
   Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
         float shieldMagnitude, // Use baseHealAmount conceptually for magnitude
         float decayPercent,    // Pass in the decay rate
-        std::string iconKey,
+        std::string iconKey, RuneType unlockRune, int unlockArcana,
         StatusEffectType statusType = StatusEffectType::None, // Add params
         int statusDuration = 0,
         EffectMagnitude statusMagnitude = 0) // Add params
@@ -103,11 +112,13 @@ struct Spell {
         baseHealAmount(shieldMagnitude), // Store magnitude here
         areaOfEffectRadius(0),           // Ensure AoE is 0
         iconName(std::move(iconKey)),
-        baseDistanceDamageBonusPercent(0.0f),  // Zero distance bonus
-        shieldDecayPercent(decayPercent),      // <<< Store decay rate
-        statusEffectApplied(statusType),       // Initialize
-        statusEffectDuration(statusDuration),  // Initialize
-        statusEffectMagnitude(statusMagnitude) // Initialize
+        baseDistanceDamageBonusPercent(0.0f),   // Zero distance bonus
+        shieldDecayPercent(decayPercent),       // <<< Store decay rate
+        statusEffectApplied(statusType),        // Initialize
+        statusEffectDuration(statusDuration),   // Initialize
+        statusEffectMagnitude(statusMagnitude), // Initialize
+        requiredRuneTypeToUnlock(unlockRune),   // <<< INITIALIZE
+        arcanaCostToUnlock(unlockArcana)        // <<< INITIALIZE
   {
     if (effectType != SpellEffectType::ApplyShield) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -120,7 +131,7 @@ struct Spell {
   Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
         int count, int acqRange, float lifetime, int numDice, int dieType,
         int dmgBonus, const std::string &projTexKey, float projSpeed,
-        std::string iconKey,
+        std::string iconKey, RuneType unlockRune, int unlockArcana,
         StatusEffectType statusType = StatusEffectType::None, // Add params
         int statusDuration = 0,
         EffectMagnitude statusMagnitude = 0) // Add params
@@ -131,8 +142,9 @@ struct Spell {
         orbitalLifetime(lifetime), orbitalProjectileTextureKey(projTexKey),
         orbitalProjectileSpeed(projSpeed), statusEffectApplied(statusType),
         statusEffectDuration(statusDuration),
-        statusEffectMagnitude(statusMagnitude) // Initialize
-  {
+        statusEffectMagnitude(statusMagnitude), // Initialize
+        requiredRuneTypeToUnlock(unlockRune),   // <<< INITIALIZE
+        arcanaCostToUnlock(unlockArcana) {
     if (effectType != SpellEffectType::SummonOrbital) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                    "SummonOrbital constructor used for non-orbital spell: %s",
@@ -143,7 +155,7 @@ struct Spell {
   // Constructor for Area Damage Spells (like Blizzard)
   Spell(std::string n, int cost, int rng, SpellTargetType tt,
         SpellEffectType et, int numDice, int dieType, int dmgBonus,
-        std::string iconKey, int aoe,
+        std::string iconKey, RuneType unlockRune, int unlockArcana, int aoe,
         StatusEffectType statusType = StatusEffectType::None,
         int statusDuration = 0,
         EffectMagnitude statusMagnitude = 0) // Add magnitude parameter
@@ -151,19 +163,25 @@ struct Spell {
         effectType(et), numDamageDice(numDice), damageDieType(dieType),
         baseDamageBonus(dmgBonus), areaOfEffectRadius(aoe),
         iconName(std::move(iconKey)), statusEffectApplied(statusType),
-        statusEffectDuration(statusDuration),  // <<< INITIALIZE
-        statusEffectMagnitude(statusMagnitude) // Initialize magnitude
+        statusEffectDuration(statusDuration),   // <<< INITIALIZE
+        statusEffectMagnitude(statusMagnitude), // Initialize magnitude
+        requiredRuneTypeToUnlock(unlockRune),   // <<< INITIALIZE
+        arcanaCostToUnlock(unlockArcana)        // <<< INITIALIZE
   { /* Validation */ }
 
   // Constructor for Buff/Debuff spells (Simplified)
   Spell(std::string n, int cost, SpellTargetType tt, SpellEffectType et,
-        std::string iconKey, StatusEffectType statusType, int statusDuration,
+        std::string iconKey, RuneType unlockRune, int unlockArcana,
+        StatusEffectType statusType, int statusDuration,
         EffectMagnitude
             statusMagnitude) // Constructor specifically for buffs/debuffs
       : name(std::move(n)), baseManaCost(cost), baseRange(0), targetType(tt),
         effectType(et), iconName(std::move(iconKey)),
         statusEffectApplied(statusType), statusEffectDuration(statusDuration),
-        statusEffectMagnitude(statusMagnitude) {
+        statusEffectMagnitude(statusMagnitude),
+        requiredRuneTypeToUnlock(unlockRune), // <<< INITIALIZE
+        arcanaCostToUnlock(unlockArcana)      // <<< INITIALIZE
+  {
     if (effectType != SpellEffectType::Buff &&
         effectType != SpellEffectType::Debuff) {
       SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,

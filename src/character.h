@@ -6,14 +6,19 @@
 #include "spell.h"         // Include your spell definitions
 #include "status_effect.h" // Include for StatusEffect and EffectMagnitude
 #include <SDL.h> // For SDL_Texture* forward declaration if needed, or include fully
+#include <array> // For std::array
+#include <map>
+#include <optional> // Potentially for spell bar slots if allowing empty
 #include <string> // For spell names eventually, if not already included by spell.h
 #include <vector> // For std::vector
 
 // Forward declaration to avoid circular dependency if AssetManager is only used
 // for pointer/ref in header
 class AssetManager;
-class Enemy;     // Forward declare Enemy
-struct GameData; // Forward declare GameData
+class Enemy;         // Forward declare Enemy
+struct GameData;     // Forward declare GameData
+enum class RuneType; // Forward-declare RuneType from game_data.h to break
+                     // circular dependency
 
 // --- Constants for Leveling (Example Placeholder Values) ---
 const int ARCANA_PER_LEVEL = 100;
@@ -27,6 +32,9 @@ const int HP_PER_VITALITY = 10;
 const int MANA_PER_INTELLIGENCE = 5;
 const float MANA_REGEN_PER_SPIRIT = 0.1f;
 const float SPEED_MOD_PER_AGILITY = 0.005f;
+
+const int MAX_SPELL_BAR_SLOTS =
+    5; // Define this constant, should match GameData::MAX_HOTKEY_SPELLS
 
 enum class CharacterType { FemaleMage, MaleMage };
 
@@ -124,6 +132,8 @@ struct PlayerCharacter {
   FacingDirection currentFacingDirection =
       FacingDirection::Left; // Default direction
 
+  std::array<std::string, MAX_SPELL_BAR_SLOTS> spellBarSlots;
+
   // --- Constructor ---
   PlayerCharacter(CharacterType t, int initialTileX, int initialTileY,
                   int tileW, int tileH);
@@ -148,6 +158,12 @@ struct PlayerCharacter {
   int GetEffectiveAgility() const;
 
   // --- Spellcasting Methods ---
+  const Spell *getKnownSpellByIndex(int knownSpellIndex)
+      const; // Returns pointer to allow checking for nullptr
+  const Spell *getKnownSpellByName(const std::string &spellName) const;
+  int getKnownSpellIndexByName(
+      const std::string &spellName) const; // Helper to get index from name
+
   bool canCastSpell(int spellIndex) const;
   // Pass AssetManager by pointer or reference if needed for textures
   bool castSpell(int spellIndex, int targetX, int targetY, GameData &gameData,
@@ -175,6 +191,24 @@ struct PlayerCharacter {
   void takeDamage(int amount);
   void RegenerateMana(float timeStep);
   void ApplyTurnEndEffects();
+
+  // --- NEW: Rune Inventory ---
+  std::map<RuneType, int> runes;
+
+  void addRune(RuneType type, int count = 1);
+  int getRuneCount(RuneType type) const;
+  bool canSpendRunes(RuneType type, int count) const; // For later use
+  bool spendRunes(RuneType type, int count);          // For later use
+
+  // Spellbook
+  bool attemptToUnlockSpell(const std::string &spellNameToUnlock,
+                            const GameData &gameData);
+  bool hasSpellUnlocked(const std::string &spellName) const;
+  std::pair<int, int> getTheoreticalSpellDamageRange(const Spell &spell) const;
+
+  // --- NEW: Spell Bar Management ---
+  void assignSpellToBar(int slotIndex, const std::string &spellName);
+  void clearSpellBarSlot(int slotIndex);
 
 }; // End of PlayerCharacter struct declaration
 
