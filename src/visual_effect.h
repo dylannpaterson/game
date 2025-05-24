@@ -47,7 +47,7 @@ struct VisualEffect {
   float visibilityFadeStartTimeRatio =
       0.5f; // Animation progress ratio where visibility fade starts
   float currentVisibility =
-      0.0f; // Current visibility value applied by this effect
+      1.0f; // Current visibility value applied by this effect
 
   // --- State ---
   bool markedForRemoval = false;

@@ -46,8 +46,8 @@ PlayerCharacter::PlayerCharacter(CharacterType t, int initialTileX,
   );
 
   spellBarSlots.fill(""); // Initialize all slots to empty string
-  if (!knownSpells.empty()) {
-    spellBarSlots[0] = knownSpells[0].name; // Assign Fireball to the first slot
+  if (knownSpells.size() > 0) {
+    spellBarSlots[0] = knownSpells[0].name; // Fireball (or first spell added)
   }
 
   // --- NEW: Initialize rune counts ---

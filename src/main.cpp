@@ -936,30 +936,47 @@ void handleEvents(GameData &gameData, AssetManager &assets, bool &running,
                 0) { // Key is down and press time recorded
           if (SDL_GetTicks() - gameData.hotkeyPressTime[i] >=
               gameData.HOLD_THRESHOLD_MS) {
-            if (i < static_cast<int>(
-                        gameData.currentGamePlayer.knownSpells.size())) {
-              const Spell &spell = gameData.currentGamePlayer.getSpell(i);
-              if (spell.targetType == SpellTargetType::Enemy ||
-                  spell.targetType == SpellTargetType::Tile ||
-                  spell.targetType == SpellTargetType::Area) {
-                if (gameData.currentGamePlayer.canCastSpell(i)) {
-                  gameData.currentSpellCastIndex = i;
-                  gameData.showTargetingReticle = true;
-                  // Initialize reticle position (e.g., at player or nearest
-                  // enemy)
-                  SDL_Point targetPos = {
-                      gameData.currentGamePlayer.logicalTileX,
-                      gameData.currentGamePlayer.logicalTileY};
-                  // if (spell.targetType == SpellTargetType::Enemy) {
-                  //    findNearestValidTarget(gameData, i, targetPos); //
-                  //    Update targetPos if enemy found
-                  // }
-                  gameData.targetIndicatorX = targetPos.x;
-                  gameData.targetIndicatorY = targetPos.y;
-                  SDL_Log("DEBUG: Hold Threshold for Hotkey %d. Entering "
-                          "Targeting.",
-                          i + 1);
-                  break;
+            const std::string &spellNameInSlot =
+                gameData.currentGamePlayer.spellBarSlots[i];
+            if (!spellNameInSlot.empty()) {
+              int knownSpellActualIndex =
+                  gameData.currentGamePlayer.getKnownSpellIndexByName(
+                      spellNameInSlot);
+              if (knownSpellActualIndex != -1) {
+                // Use getKnownSpellByIndex to get a pointer, or getSpell if you
+                // prefer reference and handle exceptions
+                const Spell *spellPtr =
+                    gameData.currentGamePlayer.getKnownSpellByIndex(
+                        knownSpellActualIndex);
+                if (spellPtr &&
+                    (spellPtr->targetType == SpellTargetType::Enemy ||
+                     spellPtr->targetType == SpellTargetType::Tile ||
+                     spellPtr->targetType == SpellTargetType::Area)) {
+                  if (gameData.currentGamePlayer.canCastSpell(
+                          knownSpellActualIndex)) {
+                    gameData.currentSpellCastIndex =
+                        knownSpellActualIndex; // Use the correct index
+                    gameData.showTargetingReticle = true;
+                    // Initialize reticle position (e.g., at player or nearest
+                    // enemy)
+                    SDL_Point targetPos = {
+                        gameData.currentGamePlayer.logicalTileX,
+                        gameData.currentGamePlayer.logicalTileY};
+                    // Example: If spell targets enemy, you might find nearest
+                    // valid target here to init reticle if
+                    // (spellPtr->targetType == SpellTargetType::Enemy) {
+                    //    findNearestValidTarget(gameData,
+                    //    knownSpellActualIndex, targetPos);
+                    // }
+                    gameData.targetIndicatorX = targetPos.x;
+                    gameData.targetIndicatorY = targetPos.y;
+                    SDL_Log("DEBUG: Hold Threshold for Hotkey %d (Spell: %s, "
+                            "Index: %d). Entering Targeting.",
+                            i + 1, spellNameInSlot.c_str(),
+                            knownSpellActualIndex);
+                    break; // Exit loop once targeting is initiated for one
+                           // spell
+                  }
                 }
               }
             }
@@ -1151,12 +1168,17 @@ void updateLogic(GameData &gameData, AssetManager &assets, float deltaTime) {
       // Reset Player Position to New Start
       player.targetTileX = gameData.currentLevel.startCol;
       player.targetTileY = gameData.currentLevel.startRow;
+
+      player.logicalTileX = gameData.currentLevel.startCol;
+      player.logicalTileY = gameData.currentLevel.startRow;
+
       player.x =
-          player.targetTileX * gameData.tileWidth + gameData.tileWidth / 2.0f;
-      player.y =
-          player.targetTileY * gameData.tileHeight + gameData.tileHeight / 2.0f;
-      player.startTileX = player.targetTileX;
-      player.startTileY = player.targetTileY;
+          player.logicalTileX * gameData.tileWidth + gameData.tileWidth / 2.0f;
+      player.y = player.logicalTileY * gameData.tileHeight +
+                 gameData.tileHeight / 2.0f;
+      player.startTileX = player.logicalTileX;
+      player.startTileY = player.logicalTileY;
+
       player.isMoving = false; // Ensure player is not moving
       // Mark new player position on grid
       if (isWithinBounds(player.targetTileX, player.targetTileY,

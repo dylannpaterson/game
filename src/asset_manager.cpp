@@ -293,10 +293,10 @@ bool loadAllAssets(AssetManager &assetManager) {
   // <<< END Vortex Effect Load >>>
 
   // --- Fonts ---
-  loadSuccess &=
-      assetManager.loadFont("main_font", "../assets/fonts/LUMOS.TTF", 36);
-  loadSuccess &=
-      assetManager.loadFont("spellbar_font", "../assets/fonts/LUMOS.TTF", 18);
+  loadSuccess &= assetManager.loadFont(
+      "main_font", "../assets/fonts/LiberationSans-Regular.ttf", 36);
+  loadSuccess &= assetManager.loadFont(
+      "spellbar_font", "../assets/fonts/LiberationSans-Regular.ttf", 18);
 
   SDL_Log("--- End Asset Loading (%s) ---",
           loadSuccess ? "Success" : "FAILURE");
